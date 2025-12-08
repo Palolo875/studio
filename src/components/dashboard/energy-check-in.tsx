@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -15,12 +14,20 @@ const energyStates = [
   { id: "creative", label: "Créatif", icon: Paintbrush, color: "text-purple-500", bgColor: "bg-purple-100 dark:bg-purple-900/30" },
 ];
 
-export function EnergyCheckIn() {
+type EnergyStateId = "energized" | "normal" | "slow" | "focused" | "creative";
+
+interface EnergyCheckInProps {
+    onEnergyChange: (energy: EnergyStateId) => void;
+    onIntentionChange: (intention: string) => void;
+}
+
+export function EnergyCheckIn({ onEnergyChange, onIntentionChange }: EnergyCheckInProps) {
   const [selectedState, setSelectedState] = useState<string | null>(null);
   const [showIntention, setShowIntention] = useState(false);
 
-  const handleSelectState = (id: string) => {
+  const handleSelectState = (id: EnergyStateId) => {
     setSelectedState(id);
+    onEnergyChange(id);
     setTimeout(() => setShowIntention(true), 300);
   };
 
@@ -34,7 +41,7 @@ export function EnergyCheckIn() {
             whileTap={{ scale: 0.95 }}
           >
             <button
-              onClick={() => handleSelectState(state.id)}
+              onClick={() => handleSelectState(state.id as EnergyStateId)}
               className={cn(
                 "flex flex-col items-center justify-center gap-2 w-20 h-20 rounded-2xl border-2 transition-all duration-200",
                 selectedState === state.id
@@ -67,6 +74,7 @@ export function EnergyCheckIn() {
               name="intention"
               placeholder="Ex: Terminer la présentation pour le client..."
               className="bg-background/50 rounded-xl h-12"
+              onChange={(e) => onIntentionChange(e.target.value)}
             />
           </motion.div>
         )}

@@ -7,12 +7,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from 'react';
 
+type EnergyState = "energized" | "normal" | "slow" | "focused" | "creative" | null;
+
 interface DailyGreetingProps {
   name: string;
+  onEnergyChange: (energy: EnergyState) => void;
+  onIntentionChange: (intention: string) => void;
 }
 
-export function DailyGreeting({ name }: DailyGreetingProps) {
-  const [greeting, setGreeting] = useState({ icon: Sun, color: "text-yellow-400", message: "Prêt pour une nouvelle journée productive ?" });
+export function DailyGreeting({ name, onEnergyChange, onIntentionChange }: DailyGreetingProps) {
+  const [greeting, setGreeting] = useState({ icon: Sunrise, color: "text-yellow-400", message: "Prêt pour une nouvelle matinée productive ?" });
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -60,7 +64,10 @@ export function DailyGreeting({ name }: DailyGreetingProps) {
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80" side="bottom" align="start">
-            <EnergyCheckIn />
+            <EnergyCheckIn 
+              onEnergyChange={onEnergyChange}
+              onIntentionChange={onIntentionChange}
+            />
           </PopoverContent>
         </Popover>
 

@@ -12,9 +12,22 @@ import { PlaylistGenerator } from "./playlist-generator";
 import { Button } from "../ui/button";
 import { DailyGreeting } from "./daily-greeting";
 
+type EnergyState = "energized" | "normal" | "slow" | "focused" | "creative" | null;
+
+const dynamicMessages: Record<string, string> = {
+  energized: "Vous êtes en feu ! Voici vos défis :",
+  normal: "Voici votre journée, claire et faisable :",
+  slow: "On y va doucement. Voici 3 choses simples :",
+  focused: "Mode concentration activé. Voici vos défis :",
+  creative: "L'inspiration est là ! Voici comment la canaliser :",
+};
+
+
 export function DashboardClient() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [searchTerm, setSearchTerm] = useState("");
+  const [energyLevel, setEnergyLevel] = useState<EnergyState>(null);
+  const [intention, setIntention] = useState("");
 
   const handleSetTasks = (newTasks: Task[]) => {
     setTasks(newTasks);
@@ -31,11 +44,17 @@ export function DashboardClient() {
   const filteredTasks = tasks.filter((task) =>
     task.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  const playlistMessage = energyLevel ? dynamicMessages[energyLevel] : "Voici votre journée, claire et faisable :";
 
   return (
     <div className="space-y-8">
       {/* Section 1: Daily Greeting */}
-      <DailyGreeting name="Junior" />
+      <DailyGreeting 
+        name="Junior" 
+        onEnergyChange={setEnergyLevel}
+        onIntentionChange={setIntention}
+      />
 
       {/* Section 2: Barre de recherche */}
       <div className="relative">
@@ -60,7 +79,7 @@ export function DashboardClient() {
       {/* Section 4: Task List */}
       <div>
         <h3 className="text-lg font-medium mb-4">Votre playlist du jour</h3>
-        <p className="text-lg font-medium text-foreground mt-4 mb-6">Voici votre journée, claire et faisable :</p>
+        <p className="text-lg font-medium text-foreground mt-4 mb-6">{playlistMessage}</p>
         <TaskList
             tasks={filteredTasks}
             onToggleCompletion={toggleTaskCompletion}
