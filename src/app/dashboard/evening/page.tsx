@@ -118,7 +118,6 @@ function EveningContent() {
 
           <div className="mt-12">
             <h3 className="text-lg font-medium text-muted-foreground mb-4">Focus Score du jour</h3>
-            {/* Placeholder for Gauge */}
             <div className="text-6xl font-bold text-primary">{Math.round(completionPercentage)}%</div>
             <p className="text-muted-foreground mt-2">{getFocusScoreMessage()}</p>
           </div>
