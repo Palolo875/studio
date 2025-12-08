@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -67,7 +66,7 @@ export function SettingsForm() {
                 <FormItem>
                   <FormLabel>Nom</FormLabel>
                   <FormControl>
-                    <Input placeholder="Votre nom" {...field} />
+                    <Input placeholder="Votre nom" {...field} className="h-12 rounded-xl" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -80,7 +79,7 @@ export function SettingsForm() {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="Votre e-mail" {...field} />
+                    <Input type="email" placeholder="Votre e-mail" {...field} className="h-12 rounded-xl" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -113,7 +112,7 @@ export function SettingsForm() {
                         <RadioGroupItem value="light" id="light" className="sr-only" />
                         <Label
                           htmlFor="light"
-                          className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                          className="flex flex-col items-center justify-center rounded-2xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer aspect-square"
                         >
                           <Sun className="mb-3 h-6 w-6" />
                           Clair
@@ -123,7 +122,7 @@ export function SettingsForm() {
                         <RadioGroupItem value="dark" id="dark" className="sr-only" />
                         <Label
                           htmlFor="dark"
-                           className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                           className="flex flex-col items-center justify-center rounded-2xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer aspect-square"
                         >
                           <Moon className="mb-3 h-6 w-6" />
                           Sombre
@@ -137,7 +136,7 @@ export function SettingsForm() {
                         />
                         <Label
                           htmlFor="system"
-                           className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                           className="flex flex-col items-center justify-center rounded-2xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer aspect-square"
                         >
                            <Monitor className="mb-3 h-6 w-6" />
                           Système
@@ -151,7 +150,7 @@ export function SettingsForm() {
             />
           </CardContent>
         </Card>
-        <Button type="submit">Enregistrer les modifications</Button>
+        <Button type="submit" className="h-12 rounded-full px-8">Enregistrer les modifications</Button>
       </form>
     </Form>
   );
