@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import type { Task } from '@/lib/types';
-import { addDays, format, isSameDay } from 'date-fns';
+import { addDays, format, isSameDay, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { ReservoirTaskCard } from './reservoir-task-card';
-import { Plus, SlidersHorizontal, X } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, SlidersHorizontal } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
 import {
@@ -30,16 +30,25 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { energyLevels } from '@/lib/data';
-import { initialTasks } from '@/lib/data';
 import { Checkbox } from '../ui/checkbox';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { initialTasks } from '@/lib/data';
+
 
 type Filters = {
   status: 'all' | 'completed' | 'not_completed';
   priorities: ('low' | 'medium' | 'high')[];
   energy: ('low' | 'medium' | 'high')[];
 };
+
+type GroupedTasks = {
+  [key: string]: Task[];
+};
+
 
 export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: Task[] }) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
@@ -53,6 +62,18 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     priorities: [],
     energy: [],
   });
+
+  const dateRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    const dateString = format(date, 'yyyy-MM-dd');
+    const element = dateRefs.current[dateString];
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
@@ -100,6 +121,9 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     const completionRate = formData.get('completionRate')
       ? Number(formData.get('completionRate'))
       : 0;
+      
+    const scheduledDateString = formData.get('scheduledDate') as string;
+    const scheduledDate = scheduledDateString ? new Date(scheduledDateString).toISOString() : undefined;
 
     const taskData = {
       name,
@@ -112,6 +136,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
       tags,
       completionRate,
       completed: completionRate === 100,
+      scheduledDate,
     };
 
     if (isCreatingNewTask) {
@@ -131,12 +156,12 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     handleSheetClose();
   };
 
-  const dates = Array.from({ length: 7 }).map((_, i) =>
-    addDays(new Date(), i - 3)
+  const dates = Array.from({ length: 14 }).map((_, i) =>
+    addDays(new Date(), i - 7)
   );
 
- const filteredTasks = useMemo(() => {
-    return tasks.filter(task => {
+  const { filteredAndGroupedTasks, sortedGroupKeys } = useMemo(() => {
+    const filtered = tasks.filter(task => {
       const statusMatch =
         filters.status === 'all' ||
         (filters.status === 'completed' && task.completed) ||
@@ -152,7 +177,26 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
 
       return statusMatch && priorityMatch && energyMatch;
     });
+
+    const grouped = filtered.reduce((acc: GroupedTasks, task) => {
+      const dateKey = task.scheduledDate ? format(startOfDay(new Date(task.scheduledDate)), 'yyyy-MM-dd') : 'unplanned';
+      if (!acc[dateKey]) {
+        acc[dateKey] = [];
+      }
+      acc[dateKey].push(task);
+      return acc;
+    }, {});
+    
+    const sortedKeys = Object.keys(grouped).sort((a, b) => {
+        if (a === 'unplanned') return 1;
+        if (b === 'unplanned') return -1;
+        return new Date(a).getTime() - new Date(b).getTime();
+    });
+
+    return { filteredAndGroupedTasks: grouped, sortedGroupKeys: sortedKeys };
+
   }, [tasks, filters]);
+
 
   const handleFilterChange = <K extends keyof Filters>(key: K, value: Filters[K]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -177,7 +221,15 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     });
   }
   
-  const activeFilterCount = (filters.priorities.length > 0 ? 1 : 0) + (filters.energy.length > 0 ? 1 : 0) + (filters.status !== 'all' ? 1 : 0);
+  const activeFilterCount = (filters.priorities.length > 0 ? 1 : 0) + (filters.energy.length > 0 ? 1 : 0) + (filters.status !== 'not_completed' ? 1 : 0);
+  
+  const [sheetTaskDate, setSheetTaskDate] = useState<Date | undefined>(
+    selectedTask?.scheduledDate ? new Date(selectedTask.scheduledDate) : undefined
+  );
+
+  useEffect(() => {
+    setSheetTaskDate(selectedTask?.scheduledDate ? new Date(selectedTask.scheduledDate) : undefined)
+  }, [selectedTask]);
 
 
   return (
@@ -199,7 +251,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
       </div>
 
       {/* Timeline */}
-      <ScrollArea className="w-full whitespace-nowrap">
+      <ScrollArea className="w-full whitespace-nowrap -mx-8 px-8">
         <div className="flex space-x-2 pb-4">
           {dates.map((date, index) => {
             const isSelected = isSameDay(date, selectedDate);
@@ -218,7 +270,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                       ? 'bg-primary text-primary-foreground shadow-lg'
                       : 'bg-card'
                   }`}
-                  onClick={() => setSelectedDate(date)}
+                  onClick={() => handleDateSelect(date)}
                 >
                   <span className="text-xs capitalize font-medium text-muted-foreground">
                     {format(date, 'EEE', { locale: fr })}
@@ -238,14 +290,30 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
       </ScrollArea>
 
       {/* Task List */}
-      <ScrollArea className="flex-1">
-         {filteredTasks.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pr-4 pb-4">
-            {filteredTasks.map((task) => (
-              <div key={task.id} onClick={() => handleTaskClick(task)}>
-                <ReservoirTaskCard task={task} />
-              </div>
-            ))}
+      <ScrollArea className="flex-1 -mx-8 px-8">
+        {sortedGroupKeys.length > 0 ? (
+          <div className="space-y-8 pr-4 pb-4">
+             {sortedGroupKeys.map(dateKey => {
+                const tasksForDay = filteredAndGroupedTasks[dateKey];
+                if (!tasksForDay || tasksForDay.length === 0) return null;
+
+                const isUnplanned = dateKey === 'unplanned';
+                const groupDate = isUnplanned ? null : new Date(dateKey);
+                const title = isUnplanned ? 'Non planifié' : format(groupDate!, 'EEEE d MMMM', { locale: fr });
+                
+                return (
+                  <div key={dateKey} ref={(el) => { if (!isUnplanned) dateRefs.current[dateKey] = el; }}>
+                    <h2 className="text-lg font-bold sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10">{title}</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {tasksForDay.map(task => (
+                        <div key={task.id} onClick={() => handleTaskClick(task)}>
+                          <ReservoirTaskCard task={task} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+             })}
           </div>
         ) : (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
@@ -277,6 +345,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
           >
             <ScrollArea className="flex-1">
               <div className="space-y-6 py-6 px-6">
+                 <input type="hidden" name="scheduledDate" value={sheetTaskDate ? sheetTaskDate.toISOString() : ''} />
                 <div className="space-y-2">
                   <Label htmlFor="name" className="font-semibold">
                     Titre de la tâche
@@ -302,6 +371,33 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                     rows={4}
                     className="rounded-xl"
                   />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="scheduledDate" className="font-semibold">
+                      Date planifiée
+                    </Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                            variant={"outline"}
+                            className={cn(
+                                "w-full justify-start text-left font-normal h-12 rounded-xl",
+                                !sheetTaskDate && "text-muted-foreground"
+                            )}
+                            >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {sheetTaskDate ? format(sheetTaskDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                            mode="single"
+                            selected={sheetTaskDate}
+                            onSelect={setSheetTaskDate}
+                            initialFocus
+                            />
+                        </PopoverContent>
+                    </Popover>
                 </div>
                 <div className="space-y-3">
                   <Label className="font-semibold">Priorité</Label>

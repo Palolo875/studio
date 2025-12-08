@@ -13,6 +13,7 @@ export type Task = {
   autoSelected?: boolean;
   tags?: string[];
   completedAt?: string; // ISO string
+  scheduledDate?: string; // ISO string
 };
 
 export type DailyRituals = {
