@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Moon, Sun, Monitor } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 const formSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères."),
