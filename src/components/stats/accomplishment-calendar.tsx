@@ -17,8 +17,8 @@ const intensityColors = {
 
 const legend = [
   { label: "Journée intense", color: "bg-yellow-400/80" },
-  { label: "Journée productive", color: "bg-green-900/50" },
-  { label: "Journée légère", color: "bg-yellow-900/50" },
+  { label: "Objectif atteint", color: "bg-green-900/50" },
+  { label: "Journée calme", color: "bg-yellow-900/50" },
   { label: "Repos", color: "bg-muted" },
 ]
 
@@ -94,13 +94,16 @@ export function AccomplishmentCalendar() {
             )
           })}
         </div>
-        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 pt-4">
-            {legend.map(item => (
-                <div key={item.label} className="flex items-center gap-2">
-                    <div className={cn("h-3 w-3 rounded-full", item.color)} />
-                    <span className="text-sm text-muted-foreground">{item.label}</span>
-                </div>
-            ))}
+        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-4 pt-4">
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+                {legend.map(item => (
+                    <div key={item.label} className="flex items-center gap-2">
+                        <div className={cn("h-3 w-3 rounded-full", item.color)} />
+                        <span className="text-sm text-muted-foreground">{item.label}</span>
+                    </div>
+                ))}
+            </div>
+            <Button variant="outline" size="sm" className="rounded-full">Modifier</Button>
         </div>
       </CardContent>
     </Card>
