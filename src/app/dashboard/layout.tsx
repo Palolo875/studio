@@ -15,6 +15,7 @@ import Link from "next/link";
 import { UserNav } from "@/components/user-nav";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { EveningButton } from "@/components/dashboard/evening-button";
 
 export default function DashboardLayout({
   children,
@@ -65,6 +66,7 @@ export default function DashboardLayout({
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <EveningButton />
             </SidebarMenu>
           </SidebarContent>
         </Sidebar>

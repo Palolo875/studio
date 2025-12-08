@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useRouter } from "next/navigation";
 
 type EnergyState = "energized" | "normal" | "slow" | "focused" | "creative" | null;
 
@@ -47,6 +48,7 @@ export function DashboardClient() {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [showBonusCard, setShowBonusCard] = useState(false);
+  const router = useRouter();
 
   const handleSetTasks = (newTasks: Task[]) => {
     setTasks(newTasks);
@@ -130,11 +132,7 @@ export function DashboardClient() {
     if (currentHour < 16) {
       setShowBonusCard(true);
     } else {
-      // Trigger evening celebration
-       toast({
-        title: "🎉 Bravo !",
-        description: "Vous avez terminé toutes vos tâches pour aujourd'hui !",
-      });
+       router.push('/dashboard/evening');
     }
   };
 
