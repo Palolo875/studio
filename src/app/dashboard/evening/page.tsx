@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Lightbulb } from 'lucide-react';
-import useWindowSize from 'react-use/lib/useWindowSize';
+import { useWindowSize } from 'react-use';
 import Confetti from 'react-confetti';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
