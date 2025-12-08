@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useActionState, useEffect } from "react";
@@ -34,7 +33,7 @@ function SubmitButton() {
   );
 }
 
-export function PlaylistGenerator({ onPlaylistGenerated, dailyRituals = { playlistShuffledCount: 0 } }: PlaylistGeneratorProps) {
+export function PlaylistGenerator({ onPlaylistGenerated, dailyRituals = { playlistShuffledCount: 0, completedTaskCount: 0, completedTasks: [] } }: PlaylistGeneratorProps) {
   const [state, formAction] = useActionState(handleGeneratePlaylist, initialState);
   const { toast } = useToast();
 

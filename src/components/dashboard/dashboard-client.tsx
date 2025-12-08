@@ -47,6 +47,7 @@ export function DashboardClient() {
   const [dailyRituals, setDailyRituals] = useState<DailyRituals>({
     playlistShuffledCount: 0,
     completedTaskCount: 0,
+    completedTasks: [],
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [energyLevel, setEnergyLevel] = useState<EnergyState>(null);
@@ -121,15 +122,14 @@ export function DashboardClient() {
     setTasks(newTasks);
 
     if (completedTask) {
-      let newCompletedCount = dailyRituals.completedTaskCount;
-      if (completedTask.completed) {
-        newCompletedCount++;
-      } else {
-        newCompletedCount = Math.max(0, newCompletedCount - 1);
-      }
+      const updatedCompletedTasks = completedTask.completed
+        ? [...dailyRituals.completedTasks, completedTask]
+        : dailyRituals.completedTasks.filter(t => t.id !== taskId);
+
       setDailyRituals(prev => ({
         ...prev,
-        completedTaskCount: newCompletedCount,
+        completedTaskCount: updatedCompletedTasks.length,
+        completedTasks: updatedCompletedTasks,
       }));
 
       if (completedTask.completed) {
@@ -151,7 +151,12 @@ export function DashboardClient() {
     if (currentHour < 16) {
       setShowBonusCard(true);
     } else {
-      router.push('/dashboard/evening');
+      const completedTaskNames = dailyRituals.completedTasks
+        .map(t => t.name)
+        .join(',');
+      router.push(
+        `/dashboard/evening?completed=${encodeURIComponent(completedTaskNames)}`
+      );
     }
   };
 

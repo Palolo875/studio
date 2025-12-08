@@ -1,4 +1,3 @@
-
 export type Task = {
   id: string;
   name: string;
@@ -19,4 +18,5 @@ export type Task = {
 export type DailyRituals = {
   playlistShuffledCount: number;
   completedTaskCount: number;
+  completedTasks: Task[];
 };
