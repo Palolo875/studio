@@ -36,14 +36,14 @@ export function EnergyCheckIn() {
             <button
               onClick={() => handleSelectState(state.id)}
               className={cn(
-                "flex flex-col items-center justify-center gap-2 w-24 h-24 rounded-2xl border-2 transition-all duration-200",
+                "flex flex-col items-center justify-center gap-2 w-20 h-20 rounded-2xl border-2 transition-all duration-200",
                 selectedState === state.id
                   ? `shadow-lg border-primary ${state.bgColor}`
                   : "bg-card hover:bg-accent border-transparent",
                   selectedState && selectedState !== state.id ? "opacity-50" : ""
               )}
             >
-              <state.icon className={cn("w-7 h-7", selectedState === state.id ? state.color : "text-muted-foreground")} />
+              <state.icon className={cn("w-6 h-6", selectedState === state.id ? state.color : "text-muted-foreground")} />
               <span className="text-xs font-medium text-center">{state.label}</span>
             </button>
           </motion.div>
