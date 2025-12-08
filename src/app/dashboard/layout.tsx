@@ -59,7 +59,7 @@ export default function DashboardLayout({
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <Link href="#">
+                  <Link href="/dashboard/settings">
                     <Settings />
                     Settings
                   </Link>
@@ -75,7 +75,11 @@ export default function DashboardLayout({
                 <UserNav />
             </header>
             <main className="flex-1 p-4 md:p-6 lg:p-8">
-                {children}
+                <ScrollArea className="h-full">
+                  <div className="pr-4">
+                    {children}
+                  </div>
+                </ScrollArea>
             </main>
         </SidebarInset>
       </div>
