@@ -97,17 +97,13 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
                  <Checkbox
                   id={task.id}
                   checked={task.completed}
-                  onCheckedChange={(e) => {
-                    e.stopPropagation();
-                    onToggleCompletion(task.id)
-                  }}
-                  onClick={(e) => e.stopPropagation()}
+                  onCheckedChange={() => onToggleCompletion(task.id)}
                   aria-label={`Mark task ${task.name} as ${
                     task.completed ? "incomplete" : "complete"
                   }`}
                   className="h-6 w-6 rounded-md mt-1"
                 />
-                <Link href={`/dashboard/focus/${encodeURIComponent(task.name)}`} className="flex-1 space-y-2 cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                <Link href={`/dashboard/focus/${encodeURIComponent(task.name)}`} className="flex-1 space-y-2 cursor-pointer">
                   <label
                     htmlFor={task.id}
                     className={`text-base font-medium leading-none cursor-pointer ${
@@ -149,7 +145,7 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-border -m-4 p-4 mt-4">
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="sm" className="text-muted-foreground">
                     <Lightbulb className="mr-2 h-4 w-4" />
                     Comment l'aborder ?
                   </Button>
@@ -157,7 +153,7 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="sm" className="text-muted-foreground">
                       Pas maintenant
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>

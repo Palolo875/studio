@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
@@ -15,6 +16,16 @@ import { DailyGreeting } from "./daily-greeting";
 import { handleGeneratePlaylist } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type EnergyState = "energized" | "normal" | "slow" | "focused" | "creative" | null;
 
@@ -35,6 +46,7 @@ export function DashboardClient() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showBonusCard, setShowBonusCard] = useState(false);
 
   const handleSetTasks = (newTasks: Task[]) => {
     setTasks(newTasks);
@@ -69,12 +81,12 @@ export function DashboardClient() {
                 setDailyRituals(prev => ({...prev, playlistShuffledCount: response.playlistShuffledCount!}))
               }
               setIsGenerating(false);
-            }, 200);
+            }, 500); // Animation duration
         }
     });
   };
 
-  const toggleTaskCompletion = (taskId: string) => {
+  const handleTaskCompletion = (taskId: string) => {
     const newTasks = tasks.map((task) =>
       task.id === taskId 
         ? { 
@@ -87,22 +99,54 @@ export function DashboardClient() {
     setTasks(newTasks);
 
     const task = tasks.find(t => t.id === taskId);
+    let newCompletedCount = dailyRituals.completedTaskCount;
     if (task && !task.completed) {
-        setDailyRituals(prev => ({
-            ...prev,
-            completedTaskCount: prev.completedTaskCount + 1
-        }));
+        newCompletedCount++;
     } else if (task && task.completed) {
-        setDailyRituals(prev => ({
-            ...prev,
-            completedTaskCount: Math.max(0, prev.completedTaskCount - 1)
-        }));
+        newCompletedCount = Math.max(0, newCompletedCount - 1);
     }
+    
+    setDailyRituals(prev => ({ ...prev, completedTaskCount: newCompletedCount }));
 
+    // Disappear animation
     setTimeout(() => {
-        setTasks(currentTasks => currentTasks.filter(t => t.id !== taskId || !t.completed));
+        const updatedTasks = tasks.filter(t => t.id !== taskId || !t.completed);
+        setTasks(updatedTasks);
+        
+        // Check for completion
+        const remainingTasks = updatedTasks.filter(t => !t.completed);
+        if (remainingTasks.length === 0) {
+          handleAllTasksCompleted();
+        }
     }, 800);
   };
+  
+  const handleAllTasksCompleted = () => {
+    const currentHour = new Date().getHours();
+    if (currentHour < 16) {
+      setShowBonusCard(true);
+    } else {
+      // Trigger evening celebration
+       toast({
+        title: "🎉 Bravo !",
+        description: "Vous avez terminé toutes vos tâches pour aujourd'hui !",
+      });
+    }
+  };
+
+  const addBonusTask = () => {
+    const bonusTask: Task = {
+        id: `bonus-task-${Date.now()}`,
+        name: "Tâche bonus : Préparer la journée de demain",
+        completed: false,
+        subtasks: 2,
+        lastAccessed: new Date().toISOString(),
+        completionRate: 0,
+        priority: "low"
+    };
+    setTasks(prev => [...prev, bonusTask]);
+    setShowBonusCard(false);
+  }
 
   const filteredTasks = tasks.filter((task) =>
     task.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -112,14 +156,12 @@ export function DashboardClient() {
 
   return (
     <div className="space-y-8">
-      {/* Section 1: Daily Greeting */}
       <DailyGreeting 
         name="Junior" 
         onEnergyChange={setEnergyLevel}
         onIntentionChange={setIntention}
       />
 
-      {/* Section 2: Barre de recherche */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         <Input
@@ -130,7 +172,6 @@ export function DashboardClient() {
         />
       </div>
 
-      {/* Section 3: Recommandations */}
       <div>
         <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Ton énergie du jour</h2>
@@ -139,12 +180,11 @@ export function DashboardClient() {
         <Recommendations tasks={tasks} />
       </div>
 
-      {/* Section 4: Task List */}
       <div>
         <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium">Votre playlist du jour</h3>
             <Button variant="ghost" size="sm" onClick={handleRegeneratePlaylist} disabled={isPending || dailyRituals.playlistShuffledCount >= 2}>
-                <RefreshCw className={`mr-2 h-4 w-4 ${isPending ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`mr-2 h-4 w-4 ${isPending || isGenerating ? 'animate-spin' : ''}`} />
                 Rafraîchir la playlist
             </Button>
         </div>
@@ -164,7 +204,7 @@ export function DashboardClient() {
                     <TaskList
                         key={tasks.map(t => t.id).join('-')}
                         tasks={filteredTasks}
-                        onToggleCompletion={toggleTaskCompletion}
+                        onToggleCompletion={handleTaskCompletion}
                     />
                 )}
                 </motion.div>
@@ -173,13 +213,30 @@ export function DashboardClient() {
 
       </div>
 
-      {/* Playlist Generator (Hidden for now, can be a modal or separate page) */}
+      <AlertDialog open={showBonusCard} onOpenChange={setShowBonusCard}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>🎉 Incroyable, vous avez fini en avance !</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vous avez encore de l’énergie ? Voici une tâche bonus pour aujourd’hui :
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="p-3 rounded-md bg-muted/50">
+            <p className="font-semibold">Préparer la journée de demain</p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowBonusCard(false)}>Non merci, je profite</AlertDialogCancel>
+            <AlertDialogAction onClick={addBonusTask}>Ajouter à ma journée</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Card className="hidden">
         <CardHeader>
           <CardTitle>Daily Playlist</CardTitle>
         </CardHeader>
         <CardContent>
-          <PlaylistGenerator onPlaylistGenerated={handleSetTasks} />
+          <PlaylistGenerator onPlaylistGenerated={handleSetTasks} dailyRituals={dailyRituals} />
         </CardContent>
       </Card>
     </div>
