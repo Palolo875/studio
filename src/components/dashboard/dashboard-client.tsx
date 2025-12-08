@@ -44,6 +44,7 @@ const dynamicMessages: Record<string, string> = {
 
 export function DashboardClient() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [initialTaskCount, setInitialTaskCount] = useState(initialTasks.length);
   const [dailyRituals, setDailyRituals] = useState<DailyRituals>({
     playlistShuffledCount: 0,
     completedTaskCount: 0,
@@ -60,6 +61,7 @@ export function DashboardClient() {
 
   const handleSetTasks = (newTasks: Task[]) => {
     setTasks(newTasks);
+    setInitialTaskCount(newTasks.length);
     // Also increment shuffle count if it's a regeneration
     if (newTasks !== initialTasks) {
       setDailyRituals(prev => ({
@@ -93,6 +95,7 @@ export function DashboardClient() {
         setIsGenerating(true);
         setTimeout(() => {
           setTasks(response.tasks);
+          setInitialTaskCount(response.tasks.length);
           if (response.playlistShuffledCount) {
             setDailyRituals(prev => ({
               ...prev,
@@ -126,11 +129,12 @@ export function DashboardClient() {
         ? [...dailyRituals.completedTasks, completedTask]
         : dailyRituals.completedTasks.filter(t => t.id !== taskId);
 
-      setDailyRituals(prev => ({
-        ...prev,
+      const newDailyRituals = {
+        ...dailyRituals,
         completedTaskCount: updatedCompletedTasks.length,
         completedTasks: updatedCompletedTasks,
-      }));
+      };
+      setDailyRituals(newDailyRituals);
 
       if (completedTask.completed) {
         setTimeout(() => {
@@ -139,23 +143,25 @@ export function DashboardClient() {
 
           const remainingTasks = updatedTasks.filter(t => !t.completed);
           if (remainingTasks.length === 0) {
-            setTimeout(() => handleAllTasksCompleted(), 2000);
+            setTimeout(() => handleAllTasksCompleted(newDailyRituals), 2000);
           }
         }, 800);
       }
     }
   };
 
-  const handleAllTasksCompleted = () => {
+  const handleAllTasksCompleted = (currentRituals: DailyRituals) => {
     const currentHour = new Date().getHours();
     if (currentHour < 16) {
       setShowBonusCard(true);
     } else {
-      const completedTaskNames = dailyRituals.completedTasks
+      const completedTaskNames = currentRituals.completedTasks
         .map(t => t.name)
         .join(',');
       router.push(
-        `/dashboard/evening?completed=${encodeURIComponent(completedTaskNames)}`
+        `/dashboard/evening?completed=${encodeURIComponent(
+          completedTaskNames
+        )}&total=${initialTaskCount}`
       );
     }
   };

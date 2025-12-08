@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { CheckCircle2 } from 'lucide-react';
@@ -16,9 +16,18 @@ function EveningContent() {
   const [showConfetti, setShowConfetti] = useState(true);
 
   const completedTasksParam = searchParams.get('completed');
-  const completedTasks = completedTasksParam
-    ? decodeURIComponent(completedTasksParam).split(',')
-    : [];
+  const totalTasksParam = searchParams.get('total');
+  
+  const completedTasks = useMemo(() => completedTasksParam
+    ? decodeURIComponent(completedTasksParam).split(',').filter(t => t)
+    : [], [completedTasksParam]);
+
+  const totalTasks = useMemo(() => totalTasksParam ? parseInt(totalTasksParam, 10) : 0, [totalTasksParam]);
+
+  const completionPercentage = useMemo(() => {
+    if (totalTasks === 0) return 0;
+    return (completedTasks.length / totalTasks) * 100;
+  }, [completedTasks, totalTasks]);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowConfetti(false), 2500);
@@ -26,8 +35,7 @@ function EveningContent() {
   }, []);
 
   const name = 'Junior';
-  const completionPercentage = completedTasks.length > 0 ? 100 : 50;
-
+  
   const getTitle = () => {
     if (completionPercentage >= 80) {
       return `Bravo, ${name}. Mission accomplie.`;
@@ -36,6 +44,13 @@ function EveningContent() {
       return `Bravo, ${name}. Une journée solide.`;
     }
     return `Vous avez avancé, c'est l'essentiel.`;
+  };
+
+  const getFocusScoreMessage = () => {
+    if (completionPercentage > 90) return "Journée exceptionnelle !";
+    if (completionPercentage > 75) return "Solide performance.";
+    if (completionPercentage > 60) return "Une bonne journée.";
+    return "Vous avez avancé, c'est l'essentiel.";
   };
 
   return (
@@ -66,7 +81,7 @@ function EveningContent() {
             {getTitle()}
           </h1>
 
-          {completedTasks.length > 0 && (
+          {completedTasks.length > 0 ? (
             <motion.div
               initial="hidden"
               animate="visible"
@@ -96,7 +111,16 @@ function EveningContent() {
                 ))}
               </ul>
             </motion.div>
+          ) : (
+            <p className="mt-8 text-muted-foreground">Demain est un nouveau jour. Reposez-vous.</p>
           )}
+
+          <div className="mt-12">
+            <h3 className="text-lg font-medium text-muted-foreground mb-4">Focus Score du jour</h3>
+            {/* Placeholder for Gauge */}
+            <div className="text-6xl font-bold text-primary">{Math.round(completionPercentage)}%</div>
+            <p className="text-muted-foreground mt-2">{getFocusScoreMessage()}</p>
+          </div>
 
           <motion.div
             initial={{ opacity: 0 }}
