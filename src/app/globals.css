@@ -32,7 +32,7 @@ body {
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    --radius: 0.8rem;
     --sidebar-background: 40 10% 85%;
     --sidebar-foreground: 45 4% 18%;
     --sidebar-primary: 45 4% 18%;
@@ -84,6 +84,6 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body;
   }
 }
