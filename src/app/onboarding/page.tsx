@@ -27,7 +27,7 @@ export default function OnboardingWelcomePage() {
         transition={{ delay: 0.5, duration: 0.5 }}
         className="mt-12"
       >
-        <Link href="/dashboard">
+        <Link href="/onboarding/profile-setup">
           <Button size="lg" className="h-14 px-8 rounded-full text-lg">
             Commencer l'aventure
             <ArrowRight className="ml-2 h-5 w-5" />
