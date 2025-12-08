@@ -3,7 +3,7 @@ import { initialTasks } from "@/lib/data";
 
 export default function AtelierPage() {
   return (
-    <div className="h-full">
+    <div className="h-[calc(100vh-110px)]">
       <ReservoirClient initialTasks={initialTasks} />
     </div>
   );
