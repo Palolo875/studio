@@ -59,10 +59,8 @@ export function DashboardClient() {
 
       {/* Section 4: Task List */}
       <div>
-        <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Tasks</h2>
-             <Button variant="link" className="text-primary">View all</Button>
-        </div>
+        <h3 className="text-lg font-medium mb-4">Votre playlist du jour</h3>
+        <p className="text-lg font-medium text-foreground mt-4 mb-6">Voici votre journée, claire et faisable :</p>
         <TaskList
             tasks={filteredTasks}
             onToggleCompletion={toggleTaskCompletion}
