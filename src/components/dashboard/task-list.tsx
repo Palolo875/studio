@@ -1,9 +1,11 @@
+
 "use client";
 
 import type { Task } from "@/lib/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
+import { Badge } from "../ui/badge";
 
 interface TaskListProps {
   tasks: Task[];
@@ -33,7 +35,7 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
-            className="flex items-center space-x-4 p-4 rounded-2xl bg-card h-[68px]"
+            className="flex items-start space-x-4 p-4 rounded-2xl bg-card"
           >
             <Checkbox
               id={task.id}
@@ -42,20 +44,31 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
               aria-label={`Mark task ${task.name} as ${
                 task.completed ? "incomplete" : "complete"
               }`}
-              className="h-6 w-6 rounded-md"
+              className="h-6 w-6 rounded-md mt-1"
             />
-            <label
-              htmlFor={task.id}
-              className={`flex-1 text-sm font-medium leading-none cursor-pointer ${
-                task.completed ? "line-through text-muted-foreground" : ""
-              }`}
-            >
-              <p className="font-semibold">{task.name}</p>
-              {task.subtasks > 0 && (
-                 <p className="text-xs text-muted-foreground">{task.subtasks} subtasks</p>
-              )}
-            </label>
-            <ArrowRight className="h-5 w-5 text-muted-foreground" />
+            <div className="flex-1 space-y-2">
+              <label
+                htmlFor={task.id}
+                className={`text-base font-medium leading-none cursor-pointer ${
+                  task.completed ? "line-through text-muted-foreground" : ""
+                }`}
+              >
+                {task.name}
+              </label>
+              <div className="flex items-center gap-2 flex-wrap">
+                {task.priority && (
+                   <Badge variant="secondary" className="capitalize text-xs">{task.priority}</Badge>
+                )}
+                {task.tags && task.tags[0] && (
+                  <Badge variant="outline" className="text-xs">{task.tags[0]}</Badge>
+                )}
+                {task.subtasks > 0 && (
+                   <p className="text-xs text-muted-foreground">{task.subtasks} subtasks</p>
+                )}
+              </div>
+            </div>
+            
+            <ArrowRight className="h-5 w-5 text-muted-foreground mt-1" />
           </motion.div>
         ))}
       </AnimatePresence>
