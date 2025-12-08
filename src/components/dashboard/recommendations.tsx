@@ -22,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { BrainCircuit, Rocket, Sparkles, Target, Zap, ArrowRight } from "lucide-react";
+import { BrainCircuit, Rocket, Sparkles, Target, Zap, ArrowRight, Lightbulb } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
 
@@ -78,7 +78,7 @@ export function Recommendations({ tasks }: RecommendationsProps) {
   }).filter(Boolean);
 
   const CategoryCard = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
-    <Card className="rounded-3xl shadow-sm w-[150px] h-[150px] flex flex-col justify-between p-4 bg-card">
+    <Card className="rounded-3xl shadow-sm w-full sm:w-[150px] h-[150px] flex flex-col justify-between p-4 bg-card">
         <div>{icon}</div>
         <div>
             <p className="font-bold text-sm">{title}</p>
@@ -95,12 +95,12 @@ export function Recommendations({ tasks }: RecommendationsProps) {
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4">
         <CategoryCard 
-            icon={<span className="text-2xl">🚀</span>}
+            icon={<div className="p-2 bg-secondary rounded-full w-fit"><Rocket className="h-5 w-5 text-secondary-foreground" /></div>}
             title="Boost d’énergie"
             description="Concentre-toi sur 1 tâche importante ce matin."
         />
         <CategoryCard 
-            icon={<span className="text-2xl">🎨</span>}
+            icon={<div className="p-2 bg-secondary rounded-full w-fit"><Lightbulb className="h-5 w-5 text-secondary-foreground" /></div>}
             title="Créativité"
             description="Idée à explorer aujourd’hui."
         />
