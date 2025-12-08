@@ -193,9 +193,9 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
                 : "Modifiez les informations de votre tâche ci-dessous."}
             </SheetDescription>
           </SheetHeader>
-          <form onSubmit={handleSaveTask} className="flex-1 flex flex-col justify-between space-y-4">
-            <ScrollArea className="flex-1 px-6">
-              <div className="space-y-6 py-6">
+          <form onSubmit={handleSaveTask} className="flex-1 flex flex-col justify-between overflow-hidden">
+            <ScrollArea className="flex-1">
+              <div className="space-y-6 py-6 px-6">
                 <div className="space-y-2">
                   <Label htmlFor="name" className="font-semibold">Titre de la tâche</Label>
                   <Input
@@ -301,7 +301,7 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
               </div>
             </ScrollArea>
 
-            <SheetFooter className="bg-card p-4 flex-row justify-between sm:justify-between">
+            <SheetFooter className="bg-card p-4 flex-row justify-between sm:justify-between border-t">
                 <div>
                 {!isCreatingNewTask && selectedTask && (
                     <Button
