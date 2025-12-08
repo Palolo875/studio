@@ -4,9 +4,10 @@
 import type { Task } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Check, MoreHorizontal } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { Avatar, AvatarFallback } from '../ui/avatar';
 import { cn } from '@/lib/utils';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import Image from "next/image";
 
 interface TimelineViewProps {
   tasks: Task[];
@@ -51,7 +52,7 @@ export function TimelineView({ tasks }: TimelineViewProps) {
                                 <div className="flex justify-between items-center">
                                     <div className="flex -space-x-2">
                                         <Avatar className="h-8 w-8 border-2 border-primary">
-                                            {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt="User Avatar" />}
+                                            {userAvatar && <Image src={userAvatar.imageUrl} alt="User Avatar" width={32} height={32} className="rounded-full" />}
                                             <AvatarFallback>U1</AvatarFallback>
                                         </Avatar>
                                          <Avatar className="h-8 w-8 border-2 border-primary">

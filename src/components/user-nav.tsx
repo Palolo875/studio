@@ -1,7 +1,8 @@
+
 "use client"
 
 import { PlaceHolderImages } from "@/lib/placeholder-images"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -29,7 +30,6 @@ export function UserNav() {
               width={36}
               height={36}
               className="rounded-full"
-              data-ai-hint={userAvatar.imageHint}
             />}
             <AvatarFallback>KF</AvatarFallback>
           </Avatar>
