@@ -96,7 +96,7 @@ export function Recommendations({ tasks }: RecommendationsProps) {
         />
         <CategoryCard 
             icon={<div className="p-2 bg-secondary rounded-full w-fit"><Lightbulb className="h-5 w-5 text-secondary-foreground" /></div>}
-            title="Créativité"
+            title="Générer ma playlist"
             description="Explorer"
             onClick={() => setIsGeneratorOpen(true)}
         />

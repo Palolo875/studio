@@ -24,8 +24,8 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} className="w-full">
-      {pending ? "Generating..." : <>
-        <Music className="mr-2 h-4 w-4" /> Generate Playlist
+      {pending ? "Génération en cours..." : <>
+        <Music className="mr-2 h-4 w-4" /> Générer ma playlist
       </>
       }
     </Button>
