@@ -87,38 +87,42 @@ export function DashboardClient() {
   };
 
   const handleTaskCompletion = (taskId: string) => {
-    const newTasks = tasks.map((task) =>
-      task.id === taskId 
-        ? { 
+    let completedTask: Task | undefined;
+    const newTasks = tasks.map((task) => {
+      if (task.id === taskId) {
+        completedTask = { 
             ...task, 
             completed: !task.completed,
             completedAt: !task.completed ? new Date().toISOString() : undefined 
-          } 
-        : task
-    );
+        };
+        return completedTask;
+      }
+      return task;
+    });
+
     setTasks(newTasks);
 
-    const task = tasks.find(t => t.id === taskId);
-    let newCompletedCount = dailyRituals.completedTaskCount;
-    if (task && !task.completed) {
-        newCompletedCount++;
-    } else if (task && task.completed) {
-        newCompletedCount = Math.max(0, newCompletedCount - 1);
-    }
-    
-    setDailyRituals(prev => ({ ...prev, completedTaskCount: newCompletedCount }));
-
-    // Disappear animation
-    setTimeout(() => {
-        const updatedTasks = tasks.filter(t => t.id !== taskId || !t.completed);
-        setTasks(updatedTasks);
-        
-        // Check for completion
-        const remainingTasks = updatedTasks.filter(t => !t.completed);
-        if (remainingTasks.length === 0) {
-          handleAllTasksCompleted();
+    if (completedTask) {
+        let newCompletedCount = dailyRituals.completedTaskCount;
+        if (completedTask.completed) {
+            newCompletedCount++;
+        } else {
+            newCompletedCount = Math.max(0, newCompletedCount - 1);
         }
-    }, 800);
+        setDailyRituals(prev => ({ ...prev, completedTaskCount: newCompletedCount }));
+        
+        if (completedTask.completed) {
+            setTimeout(() => {
+                const updatedTasks = newTasks.filter(t => t.id !== taskId);
+                setTasks(updatedTasks);
+                
+                const remainingTasks = updatedTasks.filter(t => !t.completed);
+                if (remainingTasks.length === 0) {
+                  setTimeout(() => handleAllTasksCompleted(), 2000);
+                }
+            }, 800);
+        }
+    }
   };
   
   const handleAllTasksCompleted = () => {
