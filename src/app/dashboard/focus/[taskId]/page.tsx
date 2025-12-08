@@ -11,9 +11,6 @@ export default function FocusPage() {
   // In a real app, you would fetch the task details using the taskId
   const taskName = taskId 
     ? decodeURIComponent(taskId as string)
-        .split('-')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ')
     : 'your task';
 
 
