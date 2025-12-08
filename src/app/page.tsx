@@ -1,5 +1,5 @@
-import GoToDashboard from './go-to-dashboard';
+import { redirect } from 'next/navigation';
 
 export default function Home() {
-  return <GoToDashboard />;
+  redirect('/onboarding');
 }
