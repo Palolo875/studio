@@ -38,7 +38,7 @@ export function PlaylistGenerator({ onPlaylistGenerated, dailyRituals = { playli
   const { toast } = useToast();
 
   useEffect(() => {
-    if (state.message && !state.errors) {
+    if (state.message && !state.errors && state.tasks.length > 0) {
       onPlaylistGenerated(state.tasks);
       toast({
         title: "Succès",
@@ -55,7 +55,7 @@ export function PlaylistGenerator({ onPlaylistGenerated, dailyRituals = { playli
   }, [state, onPlaylistGenerated, toast]);
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} className="space-y-4 pt-4">
        <input type="hidden" name="dailyRituals" value={JSON.stringify(dailyRituals)} />
       <div className="space-y-2">
         <Label htmlFor="goals">Objectifs du jour</Label>

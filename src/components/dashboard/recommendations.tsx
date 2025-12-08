@@ -13,6 +13,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ArrowRight, Lightbulb, Rocket } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card } from '../ui/card';
@@ -153,20 +160,20 @@ export function Recommendations({ tasks }: RecommendationsProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={isGeneratorOpen} onOpenChange={setIsGeneratorOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Générer une playlist</AlertDialogTitle>
-            <AlertDialogDescription>
+      <Dialog open={isGeneratorOpen} onOpenChange={setIsGeneratorOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Générer une playlist</DialogTitle>
+            <DialogDescription>
               Aucune tâche ne correspond à votre énergie. Générez une nouvelle
               playlist de tâches pour aujourd'hui.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+            </DialogDescription>
+          </DialogHeader>
           <PlaylistGenerator
             onPlaylistGenerated={() => setIsGeneratorOpen(false)}
           />
-        </AlertDialogContent>
-      </AlertDialog>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
