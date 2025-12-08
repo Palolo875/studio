@@ -8,9 +8,9 @@ import { TaskList } from "./task-list";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import { UserNav } from "../user-nav";
 import { PlaylistGenerator } from "./playlist-generator";
 import { Button } from "../ui/button";
+import { DailyGreeting } from "./daily-greeting";
 
 export function DashboardClient() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
@@ -34,25 +34,8 @@ export function DashboardClient() {
 
   return (
     <div className="space-y-8">
-      {/* Section 1: Premium Header */}
-      <div 
-        className="relative rounded-3xl bg-[#1A1A1A] p-8 text-white overflow-hidden"
-        style={{minHeight: '160px'}}
-      >
-        <div className="relative z-10 flex justify-between items-start">
-            <div>
-                <p className="text-xl font-bold">Hey Junior !</p>
-                <h1 className="text-2xl font-bold mt-1">Prêt à commencer votre journée ?</h1>
-            </div>
-            <div className="hidden sm:block">
-              <UserNav />
-            </div>
-        </div>
-        {/* Abstract background pattern */}
-        <div className="absolute inset-0 z-0 opacity-10">
-            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="a" patternUnits="userSpaceOnUse" width="40" height="40" patternTransform="scale(1) rotate(0)"><rect x="0" y="0" width="100%" height="100%" fill="none"/><path d="M10-10l20 20m0-40l-20 20" strokeWidth="1" stroke="white" fill="none"/></pattern></defs><rect width="800%" height="800%" transform="translate(0,0)" fill="url(#a)"/></svg>
-        </div>
-      </div>
+      {/* Section 1: Daily Greeting */}
+      <DailyGreeting name="Junior" />
 
       {/* Section 2: Barre de recherche */}
       <div className="relative">
