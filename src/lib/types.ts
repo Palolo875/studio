@@ -4,7 +4,7 @@ export type Task = {
   completed: boolean;
   subtasks: number;
   lastAccessed: string; // ISO string
-  completionRate: number; // 0-1
+  completionRate: number; // 0-100
   description?: string;
   priority?: "low" | "medium" | "high";
   energyRequired?: "low" | "medium" | "high";

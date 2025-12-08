@@ -38,7 +38,7 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
       completed: false,
       subtasks: Math.floor(Math.random() * 5),
       lastAccessed: new Date().toISOString(),
-      completionRate: Math.random() * 0.5 + 0.5, // between 0.5 and 1.0
+      completionRate: Math.floor(Math.random() * 50) + 50, // between 50 and 100
     }));
 
     return {

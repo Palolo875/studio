@@ -77,6 +77,7 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
     const autoSelected = formData.get("autoSelected") === "on";
     const tagsString = formData.get("tags") as string;
     const tags = tagsString ? tagsString.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+    const completionRate = formData.get("completionRate") ? Number(formData.get("completionRate")) : 0;
 
 
     const taskData = {
@@ -88,16 +89,16 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
         objective,
         autoSelected,
         tags,
+        completionRate,
+        completed: completionRate === 100,
     };
 
     if (isCreatingNewTask) {
       const newTask: Task = {
         id: `task-${Date.now()}`,
         ...taskData,
-        completed: false,
         subtasks: 0,
         lastAccessed: new Date().toISOString(),
-        completionRate: 0,
       };
       setTasks([newTask, ...tasks]);
     } else if (selectedTask) {
@@ -170,13 +171,15 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
       </ScrollArea>
 
       {/* Task List */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTasks.map((task) => (
-          <div key={task.id} onClick={() => handleTaskClick(task)}>
-            <ReservoirTaskCard task={task} />
-          </div>
-        ))}
-      </div>
+      <ScrollArea className="h-[calc(100vh-20rem)]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pr-4">
+          {filteredTasks.map((task) => (
+            <div key={task.id} onClick={() => handleTaskClick(task)}>
+              <ReservoirTaskCard task={task} />
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
 
        {/* Task Detail/Edit Sheet */}
        <Sheet open={isSheetOpen} onOpenChange={handleSheetClose}>
@@ -264,6 +267,19 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
                             className="h-12 rounded-xl"
                         />
                     </div>
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="completionRate" className="font-semibold">Progression (%)</Label>
+                    <Input
+                        id="completionRate"
+                        name="completionRate"
+                        type="number"
+                        min="0"
+                        max="100"
+                        defaultValue={selectedTask?.completionRate || 0}
+                        placeholder="Ex: 50"
+                        className="h-12 rounded-xl"
+                    />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="tags" className="font-semibold">Tags</Label>

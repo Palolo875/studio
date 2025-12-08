@@ -120,8 +120,11 @@ export function ReservoirTaskCard({ task }: ReservoirTaskCardProps) {
                 <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
             ))}
           </div>
-          <p className="text-sm text-muted-foreground mb-2">Progression</p>
-          <Progress value={task.completionRate * 100} className="h-2" />
+          <div className="flex justify-between items-center mb-1">
+            <p className="text-sm text-muted-foreground">Progression</p>
+            <span className="text-sm font-semibold text-muted-foreground">{task.completionRate}%</span>
+          </div>
+          <Progress value={task.completionRate} className="h-2" />
         </div>
         <div className="relative z-10 flex justify-between items-center mt-4">
           <div className="flex -space-x-2">
