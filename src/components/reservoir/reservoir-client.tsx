@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { Task } from '@/lib/types';
 import { addDays, format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { ReservoirTaskCard } from './reservoir-task-card';
-import { Plus, SlidersHorizontal } from 'lucide-react';
+import { Plus, SlidersHorizontal, X } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
 import {
@@ -30,17 +30,29 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { energyLevels } from '@/lib/data';
+import { initialTasks } from '@/lib/data';
+import { Checkbox } from '../ui/checkbox';
+import { Badge } from '../ui/badge';
+import { Separator } from '../ui/separator';
 
-interface ReservoirClientProps {
-  initialTasks: Task[];
-}
+type Filters = {
+  status: 'all' | 'completed' | 'not_completed';
+  priorities: ('low' | 'medium' | 'high')[];
+  energy: ('low' | 'medium' | 'high')[];
+};
 
-export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
+export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: Task[] }) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isCreatingNewTask, setIsCreatingNewTask] = useState(false);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [filters, setFilters] = useState<Filters>({
+    status: 'not_completed',
+    priorities: [],
+    energy: [],
+  });
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
@@ -123,7 +135,50 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
     addDays(new Date(), i - 3)
   );
 
-  const filteredTasks = tasks;
+ const filteredTasks = useMemo(() => {
+    return tasks.filter(task => {
+      const statusMatch =
+        filters.status === 'all' ||
+        (filters.status === 'completed' && task.completed) ||
+        (filters.status === 'not_completed' && !task.completed);
+
+      const priorityMatch =
+        filters.priorities.length === 0 ||
+        (task.priority && filters.priorities.includes(task.priority));
+        
+      const energyMatch =
+        filters.energy.length === 0 ||
+        (task.energyRequired && filters.energy.includes(task.energyRequired));
+
+      return statusMatch && priorityMatch && energyMatch;
+    });
+  }, [tasks, filters]);
+
+  const handleFilterChange = <K extends keyof Filters>(key: K, value: Filters[K]) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleMultiSelectFilterChange = (key: 'priorities' | 'energy', value: 'low' | 'medium' | 'high') => {
+    setFilters(prev => {
+        const currentValues = prev[key];
+        if (currentValues.includes(value)) {
+            return { ...prev, [key]: currentValues.filter(v => v !== value) };
+        } else {
+            return { ...prev, [key]: [...currentValues, value] };
+        }
+    });
+  }
+
+  const resetFilters = () => {
+    setFilters({
+        status: 'not_completed',
+        priorities: [],
+        energy: [],
+    });
+  }
+  
+  const activeFilterCount = (filters.priorities.length > 0 ? 1 : 0) + (filters.energy.length > 0 ? 1 : 0) + (filters.status !== 'all' ? 1 : 0);
+
 
   return (
     <div className="space-y-8 h-full flex flex-col">
@@ -131,8 +186,11 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">L'Atelier</h1>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
-            <SlidersHorizontal className="h-5 w-5" />
+           <Button variant="ghost" size="icon" className="relative" onClick={() => setIsFilterSheetOpen(true)}>
+              <SlidersHorizontal className="h-5 w-5" />
+              {activeFilterCount > 0 && (
+                <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 text-xs">{activeFilterCount}</Badge>
+              )}
           </Button>
           <Button size="icon" onClick={handleAddNewClick}>
             <Plus className="h-5 w-5" />
@@ -181,13 +239,21 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
 
       {/* Task List */}
       <ScrollArea className="flex-1">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pr-4 pb-4">
-          {filteredTasks.map((task) => (
-            <div key={task.id} onClick={() => handleTaskClick(task)}>
-              <ReservoirTaskCard task={task} />
+         {filteredTasks.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pr-4 pb-4">
+            {filteredTasks.map((task) => (
+              <div key={task.id} onClick={() => handleTaskClick(task)}>
+                <ReservoirTaskCard task={task} />
+              </div>
+            ))}
+          </div>
+        ) : (
+            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
+                <p className="font-semibold">Aucune tâche ne correspond à vos filtres.</p>
+                <p className="text-sm mt-1">Essayez d'ajuster vos critères de recherche.</p>
+                <Button variant="outline" size="sm" className="mt-4" onClick={resetFilters}>Réinitialiser les filtres</Button>
             </div>
-          ))}
-        </div>
+        )}
       </ScrollArea>
 
       {/* Task Detail/Edit Sheet */}
@@ -398,6 +464,84 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
               </div>
             </SheetFooter>
           </form>
+        </SheetContent>
+      </Sheet>
+
+      {/* Filter Sheet */}
+      <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
+        <SheetContent side="right" className="flex flex-col w-full sm:max-w-md p-0">
+          <SheetHeader className="p-6 pb-4 border-b">
+            <SheetTitle>Filtrer les tâches</SheetTitle>
+            <SheetDescription>
+              Affinez votre vue pour vous concentrer sur ce qui compte.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto p-6 space-y-8">
+            {/* Status Filter */}
+            <div className="space-y-3">
+              <Label className="font-semibold">Statut</Label>
+              <RadioGroup
+                value={filters.status}
+                onValueChange={(value: 'all' | 'completed' | 'not_completed') => handleFilterChange('status', value)}
+                className="flex flex-col space-y-1"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="all" id="status-all" />
+                  <Label htmlFor="status-all">Toutes</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="not_completed" id="status-not-completed" />
+                  <Label htmlFor="status-not-completed">Non terminées</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="completed" id="status-completed" />
+                  <Label htmlFor="status-completed">Terminées</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <Separator />
+            
+            {/* Priority Filter */}
+            <div className="space-y-3">
+              <Label className="font-semibold">Priorité</Label>
+              <div className="space-y-2">
+                {(['high', 'medium', 'low'] as const).map(priority => (
+                  <div key={priority} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`priority-${priority}`}
+                      checked={filters.priorities.includes(priority)}
+                      onCheckedChange={() => handleMultiSelectFilterChange('priorities', priority)}
+                    />
+                    <Label htmlFor={`priority-${priority}`} className="capitalize font-normal">{priority}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Energy Filter */}
+            <div className="space-y-3">
+              <Label className="font-semibold">Énergie Requise</Label>
+              <div className="space-y-2">
+                {(['high', 'medium', 'low'] as const).map(energy => (
+                  <div key={energy} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`energy-${energy}`}
+                      checked={filters.energy.includes(energy)}
+                      onCheckedChange={() => handleMultiSelectFilterChange('energy', energy)}
+                    />
+                    <Label htmlFor={`energy-${energy}`} className="capitalize font-normal">{energy}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <SheetFooter className="p-4 flex-row justify-between sm:justify-between border-t bg-card">
+            <Button variant="outline" onClick={resetFilters}>Réinitialiser</Button>
+            <Button onClick={() => setIsFilterSheetOpen(false)}>Appliquer</Button>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
     </div>
