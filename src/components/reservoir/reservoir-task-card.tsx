@@ -13,15 +13,17 @@ interface ReservoirTaskCardProps {
 }
 
 const colorVariants = {
-  high: "bg-red-100 dark:bg-red-900/30 border-red-200 dark:border-red-800/50",
-  medium: "bg-yellow-100 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800/50",
-  low: "bg-green-100 dark:bg-green-900/30 border-green-200 dark:border-green-800/50",
+  high: "bg-red-500/10 dark:bg-red-900/30 border-red-500/20 dark:border-red-800/50",
+  medium: "bg-yellow-500/10 dark:bg-yellow-900/30 border-yellow-500/20 dark:border-yellow-800/50",
+  low: "bg-green-500/10 dark:bg-green-900/30 border-green-500/20 dark:border-green-800/50",
 };
 
 const priorityMap: { [key: number]: "low" | "medium" | "high" } = {
   1: "low",
-  2: "medium",
-  3: "high"
+  2: "low",
+  3: "medium",
+  4: "high",
+  5: "high"
 }
 
 export function ReservoirTaskCard({ task }: ReservoirTaskCardProps) {
@@ -36,13 +38,13 @@ export function ReservoirTaskCard({ task }: ReservoirTaskCardProps) {
         exit={{ opacity: 0, scale: 0.9 }}
         transition={{ duration: 0.3 }}
     >
-        <Card className={`rounded-3xl p-6 flex flex-col justify-between h-full shadow-lg ${cardColor}`}>
+        <Card className={`rounded-3xl p-6 flex flex-col justify-between h-full shadow-lg border ${cardColor}`}>
             <div>
                 <div className="flex justify-between items-start">
                     <span className="text-sm font-medium text-muted-foreground">
                         {format(new Date(task.lastAccessed), 'dd MMM')}
                     </span>
-                    <Badge variant="outline" className="capitalize bg-background/50">
+                    <Badge variant="outline" className="capitalize bg-background/50 border">
                         {priority}
                     </Badge>
                 </div>
@@ -52,10 +54,10 @@ export function ReservoirTaskCard({ task }: ReservoirTaskCardProps) {
             </div>
             <div className="flex justify-between items-center">
                 <div className="flex -space-x-2">
-                    <Avatar className="h-6 w-6 border-2 border-background">
+                    <Avatar className="h-8 w-8 border-2 border-background">
                         <AvatarFallback>J</AvatarFallback>
                     </Avatar>
-                    <Avatar className="h-6 w-6 border-2 border-background">
+                    <Avatar className="h-8 w-8 border-2 border-background">
                         <AvatarFallback>D</AvatarFallback>
                     </Avatar>
                 </div>

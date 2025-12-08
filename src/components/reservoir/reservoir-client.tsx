@@ -43,20 +43,20 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
             const isToday = format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
 
             return (
-              <motion.div key={index} whileTap={{ scale: 0.95 }}>
+              <motion.div key={index} whileTap={{ scale: 0.95 }} className="relative">
                 <Button
                   variant={isSelected ? "default" : "outline"}
-                  className={`flex flex-col h-auto p-3 rounded-2xl ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-card'}`}
+                  className={`flex flex-col h-auto p-3 rounded-2xl ${isSelected ? 'bg-primary text-primary-foreground shadow-lg' : 'bg-card'}`}
                   onClick={() => setSelectedDate(date)}
                 >
-                  <span className="text-xs capitalize">
-                    {format(date, "MMM", { locale: fr })}
+                  <span className="text-xs capitalize font-medium text-muted-foreground">
+                    {format(date, "EEE", { locale: fr })}
                   </span>
-                  <span className="text-lg font-bold">
+                  <span className="text-xl font-bold mt-1">
                     {format(date, "dd")}
                   </span>
-                  {isToday && (
-                    <span className="absolute -bottom-1.5 w-1.5 h-1.5 bg-primary rounded-full"></span>
+                  {isToday && !isSelected && (
+                    <span className="absolute -bottom-1 w-1.5 h-1.5 bg-primary rounded-full"></span>
                   )}
                 </Button>
               </motion.div>
