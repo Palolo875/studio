@@ -9,7 +9,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const intensityColors = {
-  0: "bg-[#1A1A1A]", // repos
+  0: "bg-muted/50", // repos
   1: "bg-yellow-900/50", // légère
   2: "bg-green-900/50", // correcte
   3: "bg-yellow-400/80", // très productive
@@ -19,7 +19,7 @@ const legend = [
   { label: "Journée intense", color: "bg-yellow-400/80" },
   { label: "Journée productive", color: "bg-green-900/50" },
   { label: "Journée légère", color: "bg-yellow-900/50" },
-  { label: "Repos", color: "bg-[#2A2A2A]" },
+  { label: "Repos", color: "bg-muted" },
 ]
 
 // Generate random data for the heatmap
@@ -51,7 +51,7 @@ export function AccomplishmentCalendar() {
   const daysInMonth = getDaysInMonth(currentDate)
 
   return (
-    <Card className="bg-[#1A1A1A] border-[#2A2A2A] rounded-3xl">
+    <Card className="bg-card border-border rounded-3xl">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Calendrier de Productivité</CardTitle>
         <div className="flex items-center gap-2">
@@ -67,7 +67,7 @@ export function AccomplishmentCalendar() {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-7 gap-2 sm:gap-3 text-center text-xs text-gray-400">
+        <div className="grid grid-cols-7 gap-2 sm:gap-3 text-center text-xs text-muted-foreground">
             {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map(day => <div key={day}>{day}</div>)}
         </div>
         <div className="grid grid-cols-7 gap-2 sm:gap-3">
@@ -89,7 +89,7 @@ export function AccomplishmentCalendar() {
                   boxShadow: intensity === 3 ? '0 0 12px rgba(250, 204, 21, 0.5)' : 'none'
                 }}
               >
-                <span className="text-white text-sm">{day}</span>
+                <span className="text-foreground text-sm">{day}</span>
               </div>
             )
           })}
@@ -98,7 +98,7 @@ export function AccomplishmentCalendar() {
             {legend.map(item => (
                 <div key={item.label} className="flex items-center gap-2">
                     <div className={cn("h-3 w-3 rounded-full", item.color)} />
-                    <span className="text-sm text-gray-400">{item.label}</span>
+                    <span className="text-sm text-muted-foreground">{item.label}</span>
                 </div>
             ))}
         </div>

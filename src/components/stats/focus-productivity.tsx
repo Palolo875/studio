@@ -10,15 +10,14 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import {
-  Bar,
-  CartesianGrid,
-  XAxis,
-  YAxis,
   LineChart,
   Line,
   ResponsiveContainer,
   RadialBarChart,
   RadialBar,
+  XAxis,
+  YAxis,
+  CartesianGrid
 } from "recharts"
 
 const focusData = [
@@ -54,16 +53,16 @@ const taskCategories = [
 export function FocusProductivity() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <Card className="lg:col-span-2 bg-[#1A1A1A] border-[#2A2A2A] rounded-3xl">
+      <Card className="lg:col-span-2 bg-card border-border rounded-3xl">
         <CardHeader>
           <CardTitle>Focus sur 7 jours</CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[300px] w-full">
             <LineChart data={focusData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
-              <XAxis dataKey="day" stroke="rgba(255, 255, 255, 0.5)" />
-              <YAxis stroke="rgba(255, 255, 255, 0.5)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" />
+              <YAxis stroke="hsl(var(--muted-foreground))" />
               <ChartTooltip
                 cursor={{ stroke: "hsl(var(--chart-2))", strokeWidth: 2 }}
                 content={<ChartTooltipContent indicator="dot" />}
@@ -75,7 +74,7 @@ export function FocusProductivity() {
       </Card>
 
       <div className="space-y-8">
-        <Card className="bg-[#1A1A1A] border-[#2A2A2A] rounded-3xl flex flex-col items-center justify-center p-6 h-[250px]">
+        <Card className="bg-card border-border rounded-3xl flex flex-col items-center justify-center p-6 h-[250px]">
             <ChartContainer config={{}} className="h-[150px] w-[150px]">
                 <RadialBarChart 
                     innerRadius="80%" 
@@ -94,7 +93,7 @@ export function FocusProductivity() {
                         y="50%"
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        className="fill-white text-4xl font-bold"
+                        className="fill-foreground text-4xl font-bold"
                     >
                         {flowScore}%
                     </text>
@@ -103,14 +102,14 @@ export function FocusProductivity() {
                         y="65%"
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        className="fill-gray-400 text-sm"
+                        className="fill-muted-foreground text-sm"
                     >
                         Score de Flow
                     </text>
                 </RadialBarChart>
             </ChartContainer>
         </Card>
-        <Card className="bg-[#1A1A1A] border-[#2A2A2A] rounded-3xl">
+        <Card className="bg-card border-border rounded-3xl">
           <CardHeader>
             <CardTitle>Catégories de tâches</CardTitle>
           </CardHeader>

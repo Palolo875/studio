@@ -16,10 +16,10 @@ export function StatsClient() {
       </header>
 
       <Tabs defaultValue="focus" onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-[#1A1A1A] h-12 rounded-2xl p-1">
-          <TabsTrigger value="focus" className="rounded-xl h-full data-[state=active]:bg-[#333] data-[state=active]:text-white">Focus & Productivité</TabsTrigger>
-          <TabsTrigger value="energy" className="rounded-xl h-full data-[state=active]:bg-[#333] data-[state=active]:text-white">Profil Énergétique</TabsTrigger>
-          <TabsTrigger value="calendar" className="rounded-xl h-full data-[state=active]:bg-[#333] data-[state=active]:text-white">Calendrier</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 bg-card h-12 rounded-2xl p-1">
+          <TabsTrigger value="focus" className="rounded-xl h-full data-[state=active]:bg-muted data-[state=active]:text-foreground">Focus & Productivité</TabsTrigger>
+          <TabsTrigger value="energy" className="rounded-xl h-full data-[state=active]:bg-muted data-[state=active]:text-foreground">Profil Énergétique</TabsTrigger>
+          <TabsTrigger value="calendar" className="rounded-xl h-full data-[state=active]:bg-muted data-[state=active]:text-foreground">Calendrier</TabsTrigger>
         </TabsList>
         <TabsContent value="focus" className="mt-8">
           <FocusProductivity />

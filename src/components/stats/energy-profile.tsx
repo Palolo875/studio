@@ -34,37 +34,39 @@ const successRates = [
 export function EnergyProfile() {
   return (
     <div className="space-y-8">
-      <Card className="bg-[#1A1A1A] border-[#2A2A2A] rounded-3xl">
+      <Card className="bg-card border-border rounded-3xl">
         <CardHeader>
           <CardTitle>Niveaux d'énergie par moment de la journée</CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[350px] w-full">
-            <BarChart data={energyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
-              <XAxis dataKey="time" stroke="rgba(255, 255, 255, 0.5)" />
-              <YAxis stroke="rgba(255, 255, 255, 0.5)" />
-              <ChartTooltip
-                cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }}
-                content={<ChartTooltipContent />}
-              />
-              <Bar dataKey="focus" fill="var(--color-focus)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="creative" fill="var(--color-creative)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="admin" fill="var(--color-admin)" radius={[4, 4, 0, 0]} />
-            </BarChart>
+            <ResponsiveContainer>
+                <BarChart data={energyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" />
+                  <YAxis stroke="hsl(var(--muted-foreground))" />
+                  <ChartTooltip
+                    cursor={{ fill: 'hsl(var(--accent))' }}
+                    content={<ChartTooltipContent />}
+                  />
+                  <Bar dataKey="focus" fill="var(--color-focus)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="creative" fill="var(--color-creative)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="admin" fill="var(--color-admin)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+            </ResponsiveContainer>
           </ChartContainer>
         </CardContent>
       </Card>
       
-      <Card className="bg-[#1A1A1A] border-[#2A2A2A] rounded-3xl">
+      <Card className="bg-card border-border rounded-3xl">
           <CardHeader>
               <CardTitle>Taux de réussite par catégorie</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex space-x-4 overflow-x-auto pb-4">
                 {successRates.map(item => (
-                    <div key={item.category} className="bg-[#2A2A2A] p-4 rounded-2xl flex-shrink-0 w-40">
-                        <p className="text-sm text-gray-400">{item.category}</p>
+                    <div key={item.category} className="bg-muted p-4 rounded-2xl flex-shrink-0 w-40">
+                        <p className="text-sm text-muted-foreground">{item.category}</p>
                         <p className={`text-3xl font-bold ${item.color}`}>{item.rate}</p>
                     </div>
                 ))}
