@@ -53,10 +53,10 @@ export function TimelineView({ tasks }: TimelineViewProps) {
                                     <div className="flex -space-x-2">
                                         <Avatar className="h-8 w-8 border-2 border-primary">
                                             {userAvatar && <Image src={userAvatar.imageUrl} alt="User Avatar" width={32} height={32} className="rounded-full" />}
-                                            <AvatarFallback>U1</AvatarFallback>
+                                            <AvatarFallback>J</AvatarFallback>
                                         </Avatar>
                                          <Avatar className="h-8 w-8 border-2 border-primary">
-                                            <AvatarFallback>U2</AvatarFallback>
+                                            <AvatarFallback>D</AvatarFallback>
                                         </Avatar>
                                     </div>
                                     <button className="h-8 w-8 rounded-full bg-primary-foreground/20 flex items-center justify-center">
