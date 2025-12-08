@@ -8,11 +8,11 @@ body {
 
 @layer base {
   :root {
-    --background: 240 0% 9.8%; /* Dark Gray */
+    --background: 240 6% 10%; /* Very Dark Grayish Blue */
     --foreground: 240 5.9% 90%;
-    --card: 240 0% 11.8%;
+    --card: 240 6% 12%; /* Slightly lighter than background */
     --card-foreground: 240 5.9% 90%;
-    --popover: 240 0% 9.8%;
+    --popover: 240 6% 10%;
     --popover-foreground: 240 5.9% 90%;
     --primary: 240 66.7% 95.3%; /* Soft Lavender */
     --primary-foreground: 259 47.1% 11.2%;
@@ -24,7 +24,7 @@ body {
     --accent-foreground: 240 5.9% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
+    --border: 240 3.7% 20%; /* Softened border */
     --input: 240 3.7% 15.9%;
     --ring: 240 4.9% 83.9%;
     --chart-1: 12 76% 61%;
@@ -33,22 +33,22 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.8rem;
-    --sidebar-background: 240 0% 9.8%;
+    --sidebar-background: 240 6% 10%;
     --sidebar-foreground: 240 5.9% 90%;
     --sidebar-primary: 240 66.7% 95.3%;
     --sidebar-primary-foreground: 259 47.1% 11.2%;
     --sidebar-accent: 240 25% 83.9%;
     --sidebar-accent-foreground: 240 5.9% 98%;
-    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-border: 240 3.7% 20%;
     --sidebar-ring: 240 4.9% 83.9%;
   }
 
   .dark {
-    --background: 240 0% 9.8%; /* Dark Gray */
+    --background: 240 6% 10%; /* Very Dark Grayish Blue */
     --foreground: 240 5.9% 90%;
-    --card: 240 0% 11.8%;
+    --card: 240 6% 12%; /* Slightly lighter than background */
     --card-foreground: 240 5.9% 90%;
-    --popover: 240 0% 9.8%;
+    --popover: 240 6% 10%;
     --popover-foreground: 240 5.9% 90%;
     --primary: 240 66.7% 95.3%; /* Soft Lavender */
     --primary-foreground: 259 47.1% 11.2%;
@@ -60,7 +60,7 @@ body {
     --accent-foreground: 240 5.9% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
+    --border: 240 3.7% 20%; /* Softened border */
     --input: 240 3.7% 15.9%;
     --ring: 240 4.9% 83.9%;
     --chart-1: 220 70% 50%;
@@ -68,13 +68,13 @@ body {
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    --sidebar-background: 240 0% 9.8%;
+    --sidebar-background: 240 6% 10%;
     --sidebar-foreground: 240 5.9% 90%;
     --sidebar-primary: 240 66.7% 95.3%;
     --sidebar-primary-foreground: 259 47.1% 11.2%;
     --sidebar-accent: 240 25% 83.9%;
     --sidebar-accent-foreground: 240 5.9% 98%;
-    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-border: 240 3.7% 20%;
     --sidebar-ring: 240 4.9% 83.9%;
   }
 }

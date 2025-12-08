@@ -6,7 +6,7 @@ import { addDays, format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { ReservoirTaskCard } from './reservoir-task-card';
-import { Plus, SlidersHorizontal, Zap } from 'lucide-react';
+import { Plus, SlidersHorizontal } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
 import {
@@ -30,7 +30,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { energyLevels } from '@/lib/data';
-import { Recommendations } from '../dashboard/recommendations';
 
 interface ReservoirClientProps {
   initialTasks: Task[];
@@ -190,13 +189,6 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
           ))}
         </div>
       </ScrollArea>
-
-      <div>
-        <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Le Labo</h2>
-        </div>
-        <Recommendations tasks={tasks} />
-      </div>
 
       {/* Task Detail/Edit Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={handleSheetClose}>

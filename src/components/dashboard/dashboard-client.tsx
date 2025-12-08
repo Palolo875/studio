@@ -216,9 +216,6 @@ export function DashboardClient() {
       <div>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Ton énergie du jour</h2>
-          <Button variant="link" className="text-primary">
-            View all
-          </Button>
         </div>
         <Recommendations tasks={tasks} />
       </div>

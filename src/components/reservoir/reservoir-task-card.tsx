@@ -7,7 +7,7 @@ import { MoreHorizontal } from "lucide-react";
 import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { Book, Code, PenTool, Tag } from "lucide-react";
+import { Book, Code, PenTool } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface ReservoirTaskCardProps {
