@@ -2,71 +2,121 @@
 
 import type { Task } from "@/lib/types";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MoreHorizontal, Share2 } from "lucide-react";
-import { format } from 'date-fns';
+import { MoreHorizontal } from "lucide-react";
 import { motion } from "framer-motion";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
+import { Book, Code, PenTool } from "lucide-react";
 
 interface ReservoirTaskCardProps {
   task: Task;
 }
 
-const colorVariants = {
-  high: "bg-red-500/10 dark:bg-red-900/30 border-red-500/20 dark:border-red-800/50",
-  medium: "bg-yellow-500/10 dark:bg-yellow-900/30 border-yellow-500/20 dark:border-yellow-800/50",
-  low: "bg-green-500/10 dark:bg-green-900/30 border-green-500/20 dark:border-green-800/50",
-};
-
-const priorityMap: { [key: number]: "low" | "medium" | "high" } = {
-  1: "low",
-  2: "low",
-  3: "medium",
-  4: "high",
-  5: "high"
-}
+const cardStyles = [
+  {
+    icon: Book,
+    bgColor: "bg-purple-100 dark:bg-purple-900/30",
+    pattern: (
+      <div className="absolute top-0 right-0 h-full w-full">
+        <svg
+          width="100%"
+          height="100%"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+        >
+          <path
+            d="M 50 0 C 75 0 100 25 100 50 L 100 100 L 0 100 L 0 50 C 0 25 25 0 50 0 Z"
+            fill="rgba(192, 132, 252, 0.2)"
+          />
+        </svg>
+      </div>
+    ),
+  },
+  {
+    icon: Code,
+    bgColor: "bg-blue-100 dark:bg-blue-900/30",
+    pattern: (
+      <div className="absolute top-0 right-0 h-full w-full">
+        <svg
+          width="100%"
+          height="100%"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+        >
+          <path
+            d="M 100 0 L 100 100 L 0 100 L 0 0 C 50 50 50 50 100 0 Z"
+            fill="rgba(96, 165, 250, 0.2)"
+          />
+        </svg>
+      </div>
+    ),
+  },
+  {
+    icon: PenTool,
+    bgColor: "bg-orange-100 dark:bg-orange-900/30",
+    pattern: (
+      <div className="absolute top-0 right-0 h-full w-full">
+        <svg
+          width="100%"
+          height="100%"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+        >
+          <path
+            d="M 100 0 L 100 100 L 0 100 L 0 50 C 25 75 75 25 100 0 Z"
+            fill="rgba(251, 146, 60, 0.2)"
+          />
+        </svg>
+      </div>
+    ),
+  },
+];
 
 export function ReservoirTaskCard({ task }: ReservoirTaskCardProps) {
-  const priority = priorityMap[task.subtasks] || "medium";
-  const cardColor = colorVariants[priority];
+  const style = cardStyles[parseInt(task.id, 10) % cardStyles.length];
+  const Icon = style.icon;
 
   return (
     <motion.div
-        layout
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        transition={{ duration: 0.3 }}
+      layout
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ duration: 0.3 }}
+      className="h-full"
     >
-        <Card className={`rounded-3xl p-6 flex flex-col justify-between h-full shadow-lg border ${cardColor}`}>
-            <div>
-                <div className="flex justify-between items-start">
-                    <span className="text-sm font-medium text-muted-foreground">
-                        {format(new Date(task.lastAccessed), 'dd MMM')}
-                    </span>
-                    <Badge variant="outline" className="capitalize bg-background/50 border">
-                        {priority}
-                    </Badge>
-                </div>
-                <h3 className="text-lg font-bold text-card-foreground mt-4 mb-8">
-                    {task.name}
-                </h3>
+      <Card
+        className={cn(
+          "rounded-3xl p-6 flex flex-col justify-between h-full shadow-lg relative overflow-hidden",
+          style.bgColor
+        )}
+      >
+        {style.pattern}
+        <div className="relative z-10">
+          <div className="flex justify-between items-start mb-4">
+            <div className="bg-background/50 rounded-full p-2">
+              <Icon className="h-5 w-5" />
             </div>
-            <div className="flex justify-between items-center">
-                <div className="flex -space-x-2">
-                    <Avatar className="h-8 w-8 border-2 border-background">
-                        <AvatarFallback>J</AvatarFallback>
-                    </Avatar>
-                    <Avatar className="h-8 w-8 border-2 border-background">
-                        <AvatarFallback>D</AvatarFallback>
-                    </Avatar>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <Share2 className="h-4 w-4 text-muted-foreground" />
-                    <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                </div>
-            </div>
-        </Card>
+            <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <h3 className="text-md font-bold text-card-foreground mb-1">
+            {task.name}
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">Progression</p>
+          <Progress value={task.completionRate * 100} className="h-2" />
+        </div>
+        <div className="relative z-10 flex justify-between items-center mt-4">
+          <div className="flex -space-x-2">
+            <Avatar className="h-8 w-8 border-2 border-background">
+              <AvatarFallback>J</AvatarFallback>
+            </Avatar>
+            <Avatar className="h-8 w-8 border-2 border-background">
+              <AvatarFallback>D</AvatarFallback>
+            </Avatar>
+          </div>
+        </div>
+      </Card>
     </motion.div>
   );
 }
