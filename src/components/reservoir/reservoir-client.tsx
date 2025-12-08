@@ -6,7 +6,7 @@ import { addDays, format, isSameDay, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { ReservoirTaskCard } from './reservoir-task-card';
-import { Calendar as CalendarIcon, Plus, SlidersHorizontal } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, SlidersHorizontal, Zap } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
 import {
