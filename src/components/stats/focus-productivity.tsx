@@ -36,6 +36,10 @@ const chartConfig = {
     label: "Focus Score",
     color: "hsl(var(--chart-2))",
   },
+  value: {
+    label: "Focus Score",
+    color: "hsl(var(--chart-2))",
+  }
 } satisfies ChartConfig
 
 const flowScore = 85
@@ -55,60 +59,56 @@ export function FocusProductivity() {
           <CardTitle>Focus sur 7 jours</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={focusData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
-                <XAxis dataKey="day" stroke="rgba(255, 255, 255, 0.5)" />
-                <YAxis stroke="rgba(255, 255, 255, 0.5)" />
-                <ChartTooltip
-                  cursor={{ stroke: "hsl(var(--chart-2))", strokeWidth: 2 }}
-                  content={<ChartTooltipContent indicator="dot" />}
-                />
-                <Line type="monotone" dataKey="value" stroke="hsl(var(--chart-2))" strokeWidth={3} dot={{ r: 5 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          <ChartContainer config={chartConfig} className="h-[300px] w-full">
+            <LineChart data={focusData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+              <XAxis dataKey="day" stroke="rgba(255, 255, 255, 0.5)" />
+              <YAxis stroke="rgba(255, 255, 255, 0.5)" />
+              <ChartTooltip
+                cursor={{ stroke: "hsl(var(--chart-2))", strokeWidth: 2 }}
+                content={<ChartTooltipContent indicator="dot" />}
+              />
+              <Line type="monotone" dataKey="value" stroke="hsl(var(--chart-2))" strokeWidth={3} dot={{ r: 5 }} />
+            </LineChart>
+          </ChartContainer>
         </CardContent>
       </Card>
 
       <div className="space-y-8">
         <Card className="bg-[#1A1A1A] border-[#2A2A2A] rounded-3xl flex flex-col items-center justify-center p-6 h-[250px]">
-            <div className="h-[150px] w-[150px]">
-                <ResponsiveContainer width="100%" height="100%">
-                    <RadialBarChart 
-                        innerRadius="80%" 
-                        outerRadius="100%" 
-                        data={[{ value: flowScore, fill: 'hsl(var(--chart-1))' }]} 
-                        startAngle={90} 
-                        endAngle={-270}
+            <ChartContainer config={{}} className="h-[150px] w-[150px]">
+                <RadialBarChart 
+                    innerRadius="80%" 
+                    outerRadius="100%" 
+                    data={[{ value: flowScore, fill: 'hsl(var(--chart-1))' }]} 
+                    startAngle={90} 
+                    endAngle={-270}
+                >
+                    <RadialBar
+                        background
+                        dataKey="value"
+                        cornerRadius={10}
+                    />
+                    <text
+                        x="50%"
+                        y="50%"
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        className="fill-white text-4xl font-bold"
                     >
-                        <RadialBar
-                            background
-                            dataKey="value"
-                            cornerRadius={10}
-                        />
-                        <text
-                            x="50%"
-                            y="50%"
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                            className="fill-white text-4xl font-bold"
-                        >
-                            {flowScore}%
-                        </text>
-                        <text
-                            x="50%"
-                            y="65%"
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                            className="fill-gray-400 text-sm"
-                        >
-                            Score de Flow
-                        </text>
-                    </RadialBarChart>
-                </ResponsiveContainer>
-            </div>
+                        {flowScore}%
+                    </text>
+                    <text
+                        x="50%"
+                        y="65%"
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        className="fill-gray-400 text-sm"
+                    >
+                        Score de Flow
+                    </text>
+                </RadialBarChart>
+            </ChartContainer>
         </Card>
         <Card className="bg-[#1A1A1A] border-[#2A2A2A] rounded-3xl">
           <CardHeader>

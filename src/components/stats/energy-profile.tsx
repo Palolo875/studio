@@ -39,22 +39,20 @@ export function EnergyProfile() {
           <CardTitle>Niveaux d'énergie par moment de la journée</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[350px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={energyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
-                <XAxis dataKey="time" stroke="rgba(255, 255, 255, 0.5)" />
-                <YAxis stroke="rgba(255, 255, 255, 0.5)" />
-                <ChartTooltip
-                  cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }}
-                  content={<ChartTooltipContent />}
-                />
-                <Bar dataKey="focus" fill="var(--color-focus)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="creative" fill="var(--color-creative)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="admin" fill="var(--color-admin)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <ChartContainer config={chartConfig} className="h-[350px] w-full">
+            <BarChart data={energyData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+              <XAxis dataKey="time" stroke="rgba(255, 255, 255, 0.5)" />
+              <YAxis stroke="rgba(255, 255, 255, 0.5)" />
+              <ChartTooltip
+                cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }}
+                content={<ChartTooltipContent />}
+              />
+              <Bar dataKey="focus" fill="var(--color-focus)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="creative" fill="var(--color-creative)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="admin" fill="var(--color-admin)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ChartContainer>
         </CardContent>
       </Card>
       

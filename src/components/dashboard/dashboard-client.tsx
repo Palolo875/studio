@@ -50,7 +50,7 @@ export function DashboardClient() {
         </div>
         {/* Abstract background pattern */}
         <div className="absolute inset-0 z-0 opacity-10">
-            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="a" patternUnits="userSpaceOnUse" width="40" height="40" patternTransform="scale(1) rotate(0)"><rect x="0" y="0" width="100%" height="100%" fill="none"/><path d="M10-10l20 20m0-40l-20 20" stroke-width="1" stroke="white" fill="none"/></pattern></defs><rect width="800%" height="800%" transform="translate(0,0)" fill="url(#a)"/></svg>
+            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="a" patternUnits="userSpaceOnUse" width="40" height="40" patternTransform="scale(1) rotate(0)"><rect x="0" y="0" width="100%" height="100%" fill="none"/><path d="M10-10l20 20m0-40l-20 20" strokeWidth="1" stroke="white" fill="none"/></pattern></defs><rect width="800%" height="800%" transform="translate(0,0)" fill="url(#a)"/></svg>
         </div>
       </div>
 

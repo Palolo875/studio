@@ -1,11 +1,11 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState, useEffect } from "react";
+import { useFormStatus } from "react-dom";
 import { handleGeneratePlaylist } from "@/app/actions";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
 import type { Task } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Music } from "lucide-react";
@@ -33,7 +33,7 @@ function SubmitButton() {
 }
 
 export function PlaylistGenerator({ onPlaylistGenerated }: PlaylistGeneratorProps) {
-  const [state, formAction] = useFormState(handleGeneratePlaylist, initialState);
+  const [state, formAction] = useActionState(handleGeneratePlaylist, initialState);
   const { toast } = useToast();
 
   useEffect(() => {
