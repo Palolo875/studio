@@ -14,6 +14,7 @@ import { LayoutDashboard, Settings, BookCopy } from "lucide-react";
 import Link from "next/link";
 import { UserNav } from "@/components/user-nav";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function DashboardLayout({
   children,
