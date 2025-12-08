@@ -2,5 +2,9 @@ import { ReservoirClient } from "@/components/reservoir/reservoir-client";
 import { initialTasks } from "@/lib/data";
 
 export default function ReservoirPage() {
-  return <ReservoirClient initialTasks={initialTasks} />;
+  return (
+    <div className="h-full">
+      <ReservoirClient initialTasks={initialTasks} />
+    </div>
+  );
 }

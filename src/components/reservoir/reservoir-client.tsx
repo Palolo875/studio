@@ -117,7 +117,7 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
   const filteredTasks = tasks;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 h-full flex flex-col">
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Réservoir</h1>
@@ -171,8 +171,8 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
       </ScrollArea>
 
       {/* Task List */}
-      <ScrollArea className="h-[calc(100vh-20rem)]">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pr-4">
+      <ScrollArea className="flex-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pr-4 pb-4">
           {filteredTasks.map((task) => (
             <div key={task.id} onClick={() => handleTaskClick(task)}>
               <ReservoirTaskCard task={task} />

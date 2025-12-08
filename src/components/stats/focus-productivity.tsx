@@ -1,8 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Book, Brain, Briefcase, Lightbulb, TrendingUp, Zap } from "lucide-react"
+import { Book, Brain, Briefcase, Lightbulb } from "lucide-react"
 import {
   ChartContainer,
   ChartConfig,
@@ -12,15 +11,12 @@ import {
 import {
   LineChart,
   Line,
-  ResponsiveContainer,
   RadialBarChart,
   RadialBar,
-  PolarGrid,
   PolarAngleAxis,
   XAxis,
   YAxis,
   CartesianGrid,
-  Label
 } from "recharts"
 
 const focusData = [
@@ -44,7 +40,7 @@ const flowScore = 85;
 const radialChartConfig = {
     score: {
         label: "Score",
-        color: "hsl(var(--chart-1))",
+        color: "hsl(var(--primary))",
     },
 } satisfies ChartConfig;
 
@@ -74,15 +70,15 @@ export function FocusProductivity() {
                 cursor={{ stroke: "hsl(var(--chart-2))", strokeWidth: 1, strokeDasharray: "3 3" }}
                 content={<ChartTooltipContent indicator="dot" />}
               />
-              <Line type="monotone" dataKey="value" stroke="hsl(var(--chart-2))" strokeWidth={3} dot={{ r: 5, fill: 'hsl(var(--chart-2))' }} />
+              <Line type="monotone" dataKey="value" stroke="var(--color-value)" strokeWidth={3} dot={{ r: 5, fill: 'var(--color-value)' }} />
             </LineChart>
           </ChartContainer>
         </CardContent>
       </Card>
       
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        <Card className="lg:col-span-2 bg-card border-border rounded-3xl p-6 flex flex-col justify-center items-center">
-            <ChartContainer config={radialChartConfig} className="h-full w-full aspect-square">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
+        <Card className="md:col-span-2 bg-card border-border rounded-3xl p-6 flex flex-col justify-center items-center">
+            <ChartContainer config={radialChartConfig} className="h-full w-full max-w-[250px] aspect-square">
                 <RadialBarChart
                     data={[ { name: 'score', value: flowScore, fill: 'var(--color-score)' } ]}
                     startAngle={90}
@@ -118,7 +114,7 @@ export function FocusProductivity() {
                 </RadialBarChart>
             </ChartContainer>
         </Card>
-        <Card className="lg:col-span-3 bg-card border-border rounded-3xl p-6">
+        <Card className="md:col-span-3 bg-card border-border rounded-3xl p-6">
             <CardTitle className="mb-4">Répartition des Tâches</CardTitle>
             <div className="space-y-4">
                 {taskCategories.map(cat => (
