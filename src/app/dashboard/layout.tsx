@@ -43,9 +43,9 @@ export default function DashboardLayout({
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <Link href="/dashboard/reservoir">
+                  <Link href="/dashboard/l-atelier">
                     <BookCopy />
-                    Réservoir
+                    L'Atelier
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

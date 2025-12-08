@@ -1,0 +1,10 @@
+import { ReservoirClient } from "@/components/reservoir/reservoir-client";
+import { initialTasks } from "@/lib/data";
+
+export default function AtelierPage() {
+  return (
+    <div className="h-full">
+      <ReservoirClient initialTasks={initialTasks} />
+    </div>
+  );
+}

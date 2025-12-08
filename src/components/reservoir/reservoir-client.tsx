@@ -120,7 +120,7 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
     <div className="space-y-8 h-full flex flex-col">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Réservoir</h1>
+        <h1 className="text-3xl font-bold">L'Atelier</h1>
         <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon">
                 <SlidersHorizontal className="h-5 w-5" />
