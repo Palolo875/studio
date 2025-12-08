@@ -3,12 +3,13 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Lightbulb } from 'lucide-react';
 import useWindowSize from 'react-use/lib/useWindowSize';
 import Confetti from 'react-confetti';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { Textarea } from '@/components/ui/textarea';
 
 function EveningContent() {
   const searchParams = useSearchParams();
@@ -123,9 +124,39 @@ function EveningContent() {
           </div>
 
           <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8, duration: 0.5 }}
+            className="mt-12"
+          >
+            <Card className="bg-purple-100/50 dark:bg-purple-900/20 border-purple-200/50 p-6 rounded-2xl text-left">
+              <h4 className="font-semibold text-foreground flex items-center gap-2 mb-2"><Lightbulb className="h-5 w-5 text-purple-400"/> Votre pattern aujourd'hui</h4>
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">Journée créative exceptionnelle.</span> Vous avez complété toutes vos tâches créatives. C'est le signe que vous étiez dans un état de flow idéal pour l'exploration d'idées.
+              </p>
+              <Button variant="link" size="sm" className="p-0 h-auto mt-2 text-purple-600 dark:text-purple-400">Voir tous mes patterns →</Button>
+            </Card>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1, duration: 0.5 }}
+            className="mt-8"
+          >
+            <h4 className="text-lg font-medium text-muted-foreground">Une dernière pensée pour demain ?</h4>
+            <p className="text-sm text-muted-foreground/80 mt-1 mb-4">Videz votre esprit avant de vous déconnecter.</p>
+            <Textarea 
+              placeholder="Notez tout ce qui vous passe par la tête… Demain je dois… , j’ai pensé à… , je me sens…"
+              className="bg-muted/50 border-0"
+              rows={3}
+            />
+          </motion.div>
+
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 1, duration: 0.5 }}
+            transition={{ delay: 1.2, duration: 0.5 }}
             className="mt-12"
           >
             <p className="text-muted-foreground mb-6">
