@@ -1,7 +1,6 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import {
   ChartContainer,
   ChartConfig,
@@ -63,9 +62,9 @@ export function EnergyProfile() {
               <CardTitle>Taux de réussite par catégorie</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex space-x-4 overflow-x-auto pb-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {successRates.map(item => (
-                    <div key={item.category} className="bg-muted p-4 rounded-2xl flex-shrink-0 w-40">
+                    <div key={item.category} className="bg-muted p-4 rounded-2xl flex-shrink-0">
                         <p className="text-sm text-muted-foreground">{item.category}</p>
                         <p className={`text-3xl font-bold ${item.color}`}>{item.rate}</p>
                     </div>
