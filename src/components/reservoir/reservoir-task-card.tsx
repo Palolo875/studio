@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { Book, Code, PenTool } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface ReservoirTaskCardProps {
   task: Task;
@@ -73,6 +74,12 @@ const cardStyles = [
   },
 ];
 
+const priorityStyles = {
+  low: "bg-green-200/50 text-green-800 dark:bg-green-900/50 dark:text-green-200 border-green-300/50",
+  medium: "bg-yellow-200/50 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200 border-yellow-300/50",
+  high: "bg-red-200/50 text-red-800 dark:bg-red-900/50 dark:text-red-200 border-red-300/50",
+};
+
 export function ReservoirTaskCard({ task }: ReservoirTaskCardProps) {
   const style = cardStyles[parseInt(task.id.replace(/[^0-9]/g, "") || "0", 10) % cardStyles.length];
   const Icon = style.icon;
@@ -103,7 +110,14 @@ export function ReservoirTaskCard({ task }: ReservoirTaskCardProps) {
           <h3 className="text-md font-bold text-card-foreground mb-1">
             {task.name}
           </h3>
-          <p className="text-sm text-muted-foreground mb-4">Progression</p>
+          <div className="flex items-center gap-2 mb-4">
+            <p className="text-sm text-muted-foreground">Progression</p>
+            {task.priority && (
+                <Badge variant="outline" className={cn("capitalize", priorityStyles[task.priority])}>
+                  {task.priority}
+                </Badge>
+            )}
+          </div>
           <Progress value={task.completionRate * 100} className="h-2" />
         </div>
         <div className="relative z-10 flex justify-between items-center mt-4">

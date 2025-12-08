@@ -5,4 +5,6 @@ export type Task = {
   subtasks: number;
   lastAccessed: string; // ISO string
   completionRate: number; // 0-1
+  description?: string;
+  priority?: "low" | "medium" | "high";
 };

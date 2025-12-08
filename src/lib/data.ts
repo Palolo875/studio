@@ -8,6 +8,8 @@ export const initialTasks: Task[] = [
     subtasks: 3,
     lastAccessed: new Date(Date.now() - 86400000 * 2).toISOString(),
     completionRate: 0.8,
+    priority: "high",
+    description: "Create detailed wireframes for all sections of the new landing page, including mobile and desktop views."
   },
   {
     id: "2",
@@ -16,6 +18,8 @@ export const initialTasks: Task[] = [
     subtasks: 5,
     lastAccessed: new Date(Date.now() - 86400000 * 1).toISOString(),
     completionRate: 0.6,
+    priority: "high",
+    description: "Implement JWT-based authentication with email/password and Google OAuth providers."
   },
   {
     id: "3",
@@ -24,6 +28,8 @@ export const initialTasks: Task[] = [
     subtasks: 0,
     lastAccessed: new Date(Date.now() - 86400000 * 5).toISOString(),
     completionRate: 1.0,
+    priority: "medium",
+    description: "Document all API endpoints using Swagger/OpenAPI specification."
   },
   {
     id: "4",
@@ -32,6 +38,8 @@ export const initialTasks: Task[] = [
     subtasks: 0,
     lastAccessed: new Date(Date.now() - 86400000 * 3).toISOString(),
     completionRate: 0.9,
+    priority: "low",
+    description: "Generate and evaluate creative ideas for the upcoming Q3 marketing campaign."
   },
 ];
 

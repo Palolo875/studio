@@ -20,6 +20,7 @@ import {
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface ReservoirClientProps {
   initialTasks: Task[];
@@ -60,12 +61,14 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
     const formData = new FormData(e.currentTarget);
     const name = formData.get("name") as string;
     const description = formData.get("description") as string;
+    const priority = formData.get("priority") as "low" | "medium" | "high";
 
     if (isCreatingNewTask) {
       const newTask: Task = {
         id: `task-${Date.now()}`,
         name,
-        // description,
+        description,
+        priority,
         completed: false,
         subtasks: 0,
         lastAccessed: new Date().toISOString(),
@@ -74,7 +77,7 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
       setTasks([newTask, ...tasks]);
     } else if (selectedTask) {
       const updatedTasks = tasks.map((task) =>
-        task.id === selectedTask.id ? { ...task, name, description } : task
+        task.id === selectedTask.id ? { ...task, name, description, priority } : task
       );
       setTasks(updatedTasks);
     }
@@ -182,11 +185,32 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
                 <Textarea
                   id="description"
                   name="description"
-                  defaultValue={(selectedTask as any)?.description || ""}
+                  defaultValue={selectedTask?.description || ""}
                   placeholder="Ajouter plus de détails..."
                   rows={4}
                 />
               </div>
+              <div className="space-y-2">
+                  <Label>Priorité</Label>
+                  <RadioGroup
+                    name="priority"
+                    defaultValue={selectedTask?.priority || "medium"}
+                    className="flex space-x-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="low" id="p-low" />
+                      <Label htmlFor="p-low">Basse</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="medium" id="p-medium" />
+                      <Label htmlFor="p-medium">Moyenne</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="high" id="p-high" />
+                      <Label htmlFor="p-high">Haute</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
             </div>
             <SheetFooter className="mt-auto">
                 {!isCreatingNewTask && selectedTask && (
