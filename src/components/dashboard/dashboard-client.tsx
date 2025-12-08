@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useState, useTransition} from 'react';
+import {useState, useTransition} from 'react';
 import type {DailyRituals, Task} from '@/lib/types';
 import {initialTasks} from '@/lib/data';
 import {Recommendations} from './recommendations';
@@ -25,6 +25,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {useRouter} from 'next/navigation';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TimelineView } from './timeline-view';
 
 type EnergyState =
   | 'energized'
@@ -216,10 +218,13 @@ export function DashboardClient() {
         <Recommendations tasks={tasks} />
       </div>
 
-      <div>
+      <Tabs defaultValue="playlist" className="w-full">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium">Votre playlist du jour</h3>
-          <Button
+          <TabsList className="grid w-full grid-cols-2 bg-card h-12 rounded-2xl p-1 max-w-sm">
+            <TabsTrigger value="playlist" className="rounded-xl h-full data-[state=active]:bg-muted data-[state=active]:text-foreground">Ma playlist</TabsTrigger>
+            <TabsTrigger value="timeline" className="rounded-xl h-full data-[state=active]:bg-muted data-[state=active]:text-foreground">Timeline</TabsTrigger>
+          </TabsList>
+           <Button
             variant="ghost"
             size="sm"
             onClick={handleRegeneratePlaylist}
@@ -234,30 +239,36 @@ export function DashboardClient() {
           </Button>
         </div>
 
-        <p className="text-lg font-medium text-foreground mt-4 mb-6">
-          {playlistMessage}
-        </p>
+        <TabsContent value="playlist">
+           <p className="text-lg font-medium text-foreground mt-4 mb-6">
+            {playlistMessage}
+          </p>
 
-        <div className="overflow-hidden">
-          <AnimatePresence>
-            <motion.div
-              key={isGenerating ? 'generating' : 'stale'}
-              initial={{opacity: 1, y: 0}}
-              animate={{opacity: 1, y: 0}}
-              exit={{opacity: 0, y: -50}}
-              transition={{duration: 0.2}}
-            >
-              {!isGenerating && (
-                <TaskList
-                  key={tasks.map(t => t.id).join('-')}
-                  tasks={filteredTasks}
-                  onToggleCompletion={handleTaskCompletion}
-                />
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
+          <div className="overflow-hidden">
+            <AnimatePresence>
+              <motion.div
+                key={isGenerating ? 'generating' : 'stale'}
+                initial={{opacity: 1, y: 0}}
+                animate={{opacity: 1, y: 0}}
+                exit={{opacity: 0, y: -50}}
+                transition={{duration: 0.2}}
+              >
+                {!isGenerating && (
+                  <TaskList
+                    key={tasks.map(t => t.id).join('-')}
+                    tasks={filteredTasks}
+                    onToggleCompletion={handleTaskCompletion}
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </TabsContent>
+        <TabsContent value="timeline">
+            <TimelineView tasks={tasks} />
+        </TabsContent>
+      </Tabs>
+
 
       <AlertDialog open={showBonusCard} onOpenChange={setShowBonusCard}>
         <AlertDialogContent>
