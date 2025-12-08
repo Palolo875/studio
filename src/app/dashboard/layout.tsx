@@ -15,6 +15,7 @@ import Link from 'next/link';
 import {UserNav} from '@/components/user-nav';
 import {SidebarTrigger} from '@/components/ui/sidebar';
 import {ScrollArea} from '@/components/ui/scroll-area';
+import { SidebarCloseButton } from '@/components/ui/sidebar-close-button';
 
 export default function DashboardLayout({
   children,
@@ -26,9 +27,12 @@ export default function DashboardLayout({
       <div className="flex min-h-screen">
         <Sidebar>
           <SidebarHeader>
-            <div className="flex items-center gap-2">
-              <Logo />
-              <span className="text-lg font-semibold">KairuFlow</span>
+            <div className="flex items-center justify-between w-full">
+              <div className='flex items-center gap-2'>
+                <Logo />
+                <span className="text-lg font-semibold">KairuFlow</span>
+              </div>
+              <SidebarCloseButton />
             </div>
           </SidebarHeader>
           <SidebarContent>
