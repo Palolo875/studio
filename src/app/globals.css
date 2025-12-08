@@ -8,17 +8,17 @@ body {
 
 @layer base {
   :root {
-    --background: 40 31% 91%;
-    --foreground: 45 4% 18%;
-    --card: 40 31% 91%;
-    --card-foreground: 45 4% 18%;
-    --popover: 40 31% 91%;
-    --popover-foreground: 45 4% 18%;
-    --primary: 45 4% 18%;
-    --primary-foreground: 40 31% 98%;
+    --background: 40 33% 95%; /* Paper */
+    --foreground: 45 4% 18%; /* Asphalt */
+    --card: 40 33% 95%; /* Paper */
+    --card-foreground: 45 4% 18%; /* Asphalt */
+    --popover: 40 33% 95%; /* Paper */
+    --popover-foreground: 45 4% 18%; /* Asphalt */
+    --primary: 45 4% 18%; /* Asphalt */
+    --primary-foreground: 40 33% 98%; /* Lighter Paper for text on primary */
     --secondary: 40 10% 85%;
     --secondary-foreground: 45 4% 18%;
-    --muted: 40 10% 85%;
+    --muted: 40 10% 90%;
     --muted-foreground: 45 4% 40%;
     --accent: 40 10% 88%;
     --accent-foreground: 45 4% 18%;
@@ -44,17 +44,17 @@ body {
   }
 
   .dark {
-    --background: 45 4% 12%;
+    --background: 0 0% 5%; /* #0E0E0E */
     --foreground: 40 31% 98%;
-    --card: 45 4% 14%;
+    --card: 0 0% 8%;
     --card-foreground: 40 31% 98%;
-    --popover: 45 4% 12%;
+    --popover: 0 0% 5%;
     --popover-foreground: 40 31% 98%;
     --primary: 40 31% 80%;
-    --primary-foreground: 45 4% 12%;
+    --primary-foreground: 0 0% 8%;
     --secondary: 45 4% 25%;
     --secondary-foreground: 40 31% 98%;
-    --muted: 45 4% 20%;
+    --muted: 45 4% 15%;
     --muted-foreground: 40 31% 60%;
     --accent: 45 4% 25%;
     --accent-foreground: 40 31% 98%;
@@ -68,10 +68,10 @@ body {
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    --sidebar-background: 45 4% 12%;
+    --sidebar-background: 0 0% 8%;
     --sidebar-foreground: 40 31% 98%;
     --sidebar-primary: 40 31% 80%;
-    --sidebar-primary-foreground: 45 4% 12%;
+    --sidebar-primary-foreground: 0 0% 8%;
     --sidebar-accent: 45 4% 18%;
     --sidebar-accent-foreground: 40 31% 98%;
     --sidebar-border: 45 4% 18%;
