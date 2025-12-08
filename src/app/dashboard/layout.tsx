@@ -13,6 +13,7 @@ import { Logo } from "@/components/logo";
 import { LayoutDashboard, Settings } from "lucide-react";
 import Link from "next/link";
 import { UserNav } from "@/components/user-nav";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 export default function DashboardLayout({
   children,
@@ -51,7 +52,9 @@ export default function DashboardLayout({
           </SidebarContent>
         </Sidebar>
         <SidebarInset>
-            <header className="sticky top-0 z-10 flex h-16 items-center justify-end border-b bg-background/80 backdrop-blur-sm px-4">
+            <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
+                <SidebarTrigger className="md:hidden" />
+                <div className="flex-1" />
                 <UserNav />
             </header>
             <main className="flex-1 p-4 md:p-6 lg:p-8">
