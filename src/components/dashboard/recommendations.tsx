@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useState, useTransition } from "react";
-import type { Task } from "@/lib/types";
-import { handleGetRecommendations } from "@/app/actions";
-import { Button } from "@/components/ui/button";
+import { useState, useTransition } from 'react';
+import type { Task } from '@/lib/types';
+import { handleGetRecommendations } from '@/app/actions';
+import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,25 +12,25 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { ArrowRight, Lightbulb, Rocket } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Card } from "../ui/card";
-import { PlaylistGenerator } from "./playlist-generator";
+} from '@/components/ui/alert-dialog';
+import { ArrowRight, Lightbulb, Rocket } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Card } from '../ui/card';
+import { PlaylistGenerator } from './playlist-generator';
 
 interface RecommendationsProps {
   tasks: Task[];
 }
 
 type Recommendation = {
-    id: string;
-    reason: string;
-}
+  id: string;
+  reason: string;
+};
 
 export function Recommendations({ tasks }: RecommendationsProps) {
-  const [energyLevel] = useState("medium");
-  const [intention] = useState("focus");
-  const [focus] = useState("work");
+  const [energyLevel] = useState('medium');
+  const [intention] = useState('focus');
+  const [focus] = useState('work');
   const [isPending, startTransition] = useTransition();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
@@ -40,65 +40,88 @@ export function Recommendations({ tasks }: RecommendationsProps) {
   const getRecommendations = async () => {
     startTransition(async () => {
       const formData = new FormData();
-      formData.append("energyLevel", energyLevel);
-      formData.append("intention", intention);
-      formData.append("focus", focus);
-      formData.append("tasks", JSON.stringify(tasks.filter(t => !t.completed)));
+      formData.append('energyLevel', energyLevel);
+      formData.append('intention', intention);
+      formData.append('focus', focus);
+      formData.append(
+        'tasks',
+        JSON.stringify(tasks.filter((t) => !t.completed))
+      );
 
       const result = await handleGetRecommendations(formData);
 
       if (result.error) {
         toast({
-            variant: "destructive",
-            title: "Recommendation Error",
-            description: result.error,
-        })
+          variant: 'destructive',
+          title: 'Recommendation Error',
+          description: result.error,
+        });
       } else if (result.recommendations && result.recommendations.length > 0) {
         setRecommendations(result.recommendations);
         setIsAlertOpen(true);
       } else {
-         setIsGeneratorOpen(true);
+        setIsGeneratorOpen(true);
       }
     });
   };
 
-  const recommendedTaskDetails = recommendations.map(rec => {
-    const task = tasks.find(t => t.id === rec.id);
-    return task ? { ...task, reason: rec.reason } : null;
-  }).filter(Boolean);
+  const recommendedTaskDetails = recommendations
+    .map((rec) => {
+      const task = tasks.find((t) => t.id === rec.id);
+      return task ? { ...task, reason: rec.reason } : null;
+    })
+    .filter(Boolean);
 
-  const CategoryCard = ({ icon, title, description, onClick }: { icon: React.ReactNode, title: string, description: string, onClick?: () => void }) => (
-    <Card 
-        className="rounded-3xl shadow-sm w-full sm:w-[150px] h-[150px] flex flex-col justify-between p-4 bg-card hover:bg-accent transition-colors cursor-pointer"
-        onClick={onClick}
+  const CategoryCard = ({
+    icon,
+    title,
+    description,
+    onClick,
+  }: {
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+    onClick?: () => void;
+  }) => (
+    <Card
+      className="rounded-3xl shadow-sm w-full sm:w-[calc(50%-0.5rem)] flex-1 flex flex-col justify-between p-4 bg-card hover:bg-accent transition-colors cursor-pointer"
+      onClick={onClick}
     >
-        <div>{icon}</div>
-        <div>
-            <p className="font-bold text-sm">{title}</p>
-            <div className="flex justify-between items-center mt-2">
-                 <p className="text-xs text-muted-foreground">{description}</p>
-                <div className="bg-muted rounded-full p-1">
-                    <ArrowRight className="h-4 w-4 text-foreground" />
-                </div>
-            </div>
+      <div>{icon}</div>
+      <div>
+        <p className="font-bold text-sm">{title}</p>
+        <div className="flex justify-between items-center mt-2">
+          <p className="text-xs text-muted-foreground">{description}</p>
+          <div className="bg-muted rounded-full p-1">
+            <ArrowRight className="h-4 w-4 text-foreground" />
+          </div>
         </div>
+      </div>
     </Card>
   );
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4">
-        <CategoryCard 
-            icon={<div className="p-2 bg-secondary rounded-full w-fit"><Rocket className="h-5 w-5 text-secondary-foreground" /></div>}
-            title="Boost d’énergie"
-            description="1 tâche"
-            onClick={getRecommendations}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <CategoryCard
+          icon={
+            <div className="p-2 bg-secondary rounded-full w-fit">
+              <Rocket className="h-5 w-5 text-secondary-foreground" />
+            </div>
+          }
+          title="Boost d’énergie"
+          description="1 tâche"
+          onClick={getRecommendations}
         />
-        <CategoryCard 
-            icon={<div className="p-2 bg-secondary rounded-full w-fit"><Lightbulb className="h-5 w-5 text-secondary-foreground" /></div>}
-            title="Générer ma playlist"
-            description="Explorer"
-            onClick={() => setIsGeneratorOpen(true)}
+        <CategoryCard
+          icon={
+            <div className="p-2 bg-secondary rounded-full w-fit">
+              <Lightbulb className="h-5 w-5 text-secondary-foreground" />
+            </div>
+          }
+          title="Générer ma playlist"
+          description="Explorer"
+          onClick={() => setIsGeneratorOpen(true)}
         />
       </div>
 
@@ -107,16 +130,22 @@ export function Recommendations({ tasks }: RecommendationsProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Tâche recommandée</AlertDialogTitle>
             <AlertDialogDescription>
-              En fonction de votre énergie, voici une tâche que vous pourriez accomplir :
+              En fonction de votre énergie, voici une tâche que vous pourriez
+              accomplir :
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
-            {recommendedTaskDetails.map((task) => task && (
-              <div key={task.id} className="p-3 rounded-md bg-muted/50">
-                <p className="font-semibold">{task.name}</p>
-                <p className="text-sm text-muted-foreground">{task.reason}</p>
-              </div>
-            ))}
+            {recommendedTaskDetails.map(
+              (task) =>
+                task && (
+                  <div key={task.id} className="p-3 rounded-md bg-muted/50">
+                    <p className="font-semibold">{task.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {task.reason}
+                    </p>
+                  </div>
+                )
+            )}
           </div>
           <AlertDialogFooter>
             <AlertDialogAction>Parfait !</AlertDialogAction>
@@ -126,13 +155,16 @@ export function Recommendations({ tasks }: RecommendationsProps) {
 
       <AlertDialog open={isGeneratorOpen} onOpenChange={setIsGeneratorOpen}>
         <AlertDialogContent>
-           <AlertDialogHeader>
+          <AlertDialogHeader>
             <AlertDialogTitle>Générer une playlist</AlertDialogTitle>
             <AlertDialogDescription>
-              Aucune tâche ne correspond à votre énergie. Générez une nouvelle playlist de tâches pour aujourd'hui.
+              Aucune tâche ne correspond à votre énergie. Générez une nouvelle
+              playlist de tâches pour aujourd'hui.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <PlaylistGenerator onPlaylistGenerated={() => setIsGeneratorOpen(false)} />
+          <PlaylistGenerator
+            onPlaylistGenerated={() => setIsGeneratorOpen(false)}
+          />
         </AlertDialogContent>
       </AlertDialog>
     </div>
