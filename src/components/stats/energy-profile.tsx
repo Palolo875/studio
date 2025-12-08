@@ -1,6 +1,7 @@
+
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import {
   ChartContainer,
   ChartConfig,
@@ -23,11 +24,11 @@ const chartConfig = {
 } satisfies ChartConfig
 
 const successRates = [
-    { category: "Deep Work", rate: "82%", color: "text-purple-400" },
-    { category: "Créatif", rate: "75%", color: "text-blue-400" },
-    { category: "Admin", rate: "91%", color: "text-gray-400" },
-    { category: "Social", rate: "68%", color: "text-green-400" },
-    { category: "Tâches rapides", rate: "95%", color: "text-yellow-400" },
+    { category: "Deep Work", rate: "82%", color: "text-purple-400", insight: "Très efficace pour les tâches de fond." },
+    { category: "Créatif", rate: "75%", color: "text-blue-400", insight: "Bonne performance sur les idées nouvelles." },
+    { category: "Admin", rate: "91%", color: "text-gray-400", insight: "Excellente gestion des tâches répétitives." },
+    { category: "Social", rate: "68%", color: "text-green-400", insight: "Interactions modérément réussies." },
+    { category: "Tâches rapides", rate: "95%", color: "text-yellow-400", insight: "Vous excellez dans les petites tâches." },
 ]
 
 export function EnergyProfile() {
@@ -36,11 +37,12 @@ export function EnergyProfile() {
       <Card className="bg-card border-border rounded-3xl">
         <CardHeader>
           <CardTitle>Niveaux d'énergie par moment de la journée</CardTitle>
+          <CardDescription>Analyse de vos pics de productivité pour le focus, la créativité et les tâches administratives.</CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[350px] w-full">
             <ResponsiveContainer>
-                <BarChart data={energyData}>
+                <BarChart data={energyData} margin={{ left: -20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" />
                   <YAxis stroke="hsl(var(--muted-foreground))" />
@@ -48,9 +50,9 @@ export function EnergyProfile() {
                     cursor={{ fill: 'hsl(var(--accent))' }}
                     content={<ChartTooltipContent />}
                   />
-                  <Bar dataKey="focus" fill="var(--color-focus)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="creative" fill="var(--color-creative)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="admin" fill="var(--color-admin)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="focus" fill="var(--color-focus)" radius={[4, 4, 0, 0]} name="Focus" />
+                  <Bar dataKey="creative" fill="var(--color-creative)" radius={[4, 4, 0, 0]} name="Créatif" />
+                  <Bar dataKey="admin" fill="var(--color-admin)" radius={[4, 4, 0, 0]} name="Admin" />
                 </BarChart>
             </ResponsiveContainer>
           </ChartContainer>
@@ -60,13 +62,17 @@ export function EnergyProfile() {
       <Card className="bg-card border-border rounded-3xl">
           <CardHeader>
               <CardTitle>Taux de réussite par catégorie</CardTitle>
+              <CardDescription>Votre performance sur différents types de tâches.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {successRates.map(item => (
-                    <div key={item.category} className="bg-muted p-4 rounded-2xl flex-shrink-0">
-                        <p className="text-sm text-muted-foreground">{item.category}</p>
-                        <p className={`text-3xl font-bold ${item.color}`}>{item.rate}</p>
+                    <div key={item.category} className="bg-muted p-4 rounded-2xl flex flex-col justify-between flex-shrink-0 h-40">
+                        <div>
+                          <p className="text-sm text-muted-foreground">{item.category}</p>
+                          <p className={`text-4xl font-bold ${item.color}`}>{item.rate}</p>
+                        </div>
+                         <p className="text-xs text-muted-foreground/80">{item.insight}</p>
                     </div>
                 ))}
             </div>
