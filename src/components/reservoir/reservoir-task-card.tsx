@@ -74,7 +74,7 @@ const cardStyles = [
 ];
 
 export function ReservoirTaskCard({ task }: ReservoirTaskCardProps) {
-  const style = cardStyles[parseInt(task.id, 10) % cardStyles.length];
+  const style = cardStyles[parseInt(task.id.replace(/[^0-9]/g, "") || "0", 10) % cardStyles.length];
   const Icon = style.icon;
 
   return (
@@ -84,7 +84,7 @@ export function ReservoirTaskCard({ task }: ReservoirTaskCardProps) {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.3 }}
-      className="h-full"
+      className="h-full cursor-pointer"
     >
       <Card
         className={cn(
