@@ -176,100 +176,106 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
 
        {/* Task Detail/Edit Sheet */}
        <Sheet open={isSheetOpen} onOpenChange={handleSheetClose}>
-        <SheetContent className="flex flex-col">
-          <SheetHeader>
-            <SheetTitle>
+        <SheetContent className="flex flex-col w-full sm:w-3/4 md:w-1/2 lg:w-2/5 p-0">
+          <SheetHeader className="bg-card p-6 pb-4">
+            <SheetTitle className="text-2xl font-bold">
               {isCreatingNewTask
                 ? "Créer une nouvelle tâche"
                 : "Détails de la tâche"}
             </SheetTitle>
             <SheetDescription>
               {isCreatingNewTask
-                ? "Remplissez les détails ci-dessous."
-                : "Modifiez les informations de votre tâche."}
+                ? "Remplissez les détails ci-dessous pour ajouter une tâche à votre réservoir."
+                : "Modifiez les informations de votre tâche ci-dessous."}
             </SheetDescription>
           </SheetHeader>
-          <form onSubmit={handleSaveTask} className="flex-1 flex flex-col justify-between space-y-4 py-4">
-            <ScrollArea className="flex-1 pr-6 -mr-6">
-              <div className="space-y-4">
+          <form onSubmit={handleSaveTask} className="flex-1 flex flex-col justify-between space-y-4">
+            <ScrollArea className="flex-1 px-6">
+              <div className="space-y-6 py-6">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Titre de la tâche</Label>
+                  <Label htmlFor="name" className="font-semibold">Titre de la tâche</Label>
                   <Input
                     id="name"
                     name="name"
                     defaultValue={selectedTask?.name || ""}
-                    placeholder="Ex: Appeler le client"
+                    placeholder="Ex: Appeler le client pour le feedback"
                     required
+                    className="h-12 rounded-xl text-base"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description" className="font-semibold">Description</Label>
                   <Textarea
                     id="description"
                     name="description"
                     defaultValue={selectedTask?.description || ""}
-                    placeholder="Ajouter plus de détails..."
-                    rows={3}
+                    placeholder="Ajouter plus de détails, des notes ou des liens..."
+                    rows={4}
+                    className="rounded-xl"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Priorité</Label>
+                <div className="space-y-3">
+                  <Label className="font-semibold">Priorité</Label>
                   <RadioGroup
                     name="priority"
                     defaultValue={selectedTask?.priority || "medium"}
-                    className="flex space-x-4"
+                    className="grid grid-cols-3 gap-3"
                   >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="low" id="p-low" />
-                      <Label htmlFor="p-low">Basse</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="medium" id="p-medium" />
-                      <Label htmlFor="p-medium">Moyenne</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="high" id="p-high" />
-                      <Label htmlFor="p-high">Haute</Label>
-                    </div>
+                    <Label htmlFor="p-low" className="flex items-center justify-center gap-2 rounded-xl border p-3 cursor-pointer has-[:checked]:bg-green-100 has-[:checked]:border-green-400 dark:has-[:checked]:bg-green-900/50 dark:has-[:checked]:border-green-700 transition-all">
+                      <RadioGroupItem value="low" id="p-low" className="sr-only"/>
+                      Basse
+                    </Label>
+                    <Label htmlFor="p-medium" className="flex items-center justify-center gap-2 rounded-xl border p-3 cursor-pointer has-[:checked]:bg-yellow-100 has-[:checked]:border-yellow-400 dark:has-[:checked]:bg-yellow-900/50 dark:has-[:checked]:border-yellow-700 transition-all">
+                      <RadioGroupItem value="medium" id="p-medium" className="sr-only" />
+                      Moyenne
+                    </Label>
+                     <Label htmlFor="p-high" className="flex items-center justify-center gap-2 rounded-xl border p-3 cursor-pointer has-[:checked]:bg-red-100 has-[:checked]:border-red-400 dark:has-[:checked]:bg-red-900/50 dark:has-[:checked]:border-red-700 transition-all">
+                      <RadioGroupItem value="high" id="p-high" className="sr-only"/>
+                      Haute
+                    </Label>
                   </RadioGroup>
                 </div>
-                <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Zap size={16}/> Type d’énergie requise</Label>
-                    <Select name="energyRequired" defaultValue={selectedTask?.energyRequired}>
-                        <SelectTrigger><SelectValue placeholder="Sélectionner l'énergie" /></SelectTrigger>
-                        <SelectContent>
-                        {energyLevels.map((level) => (
-                            <SelectItem key={level.value} value={level.value}>
-                            {level.label}
-                            </SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label className="flex items-center gap-2 font-semibold"><Zap size={16}/> Énergie requise</Label>
+                        <Select name="energyRequired" defaultValue={selectedTask?.energyRequired}>
+                            <SelectTrigger className="h-12 rounded-xl"><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                            <SelectContent>
+                            {energyLevels.map((level) => (
+                                <SelectItem key={level.value} value={level.value}>
+                                {level.label}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="estimatedDuration" className="font-semibold">Durée (minutes)</Label>
+                        <Input
+                            id="estimatedDuration"
+                            name="estimatedDuration"
+                            type="number"
+                            defaultValue={selectedTask?.estimatedDuration || ""}
+                            placeholder="Ex: 30"
+                            className="h-12 rounded-xl"
+                        />
+                    </div>
                 </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="estimatedDuration">Durée estimée (minutes)</Label>
-                    <Input
-                        id="estimatedDuration"
-                        name="estimatedDuration"
-                        type="number"
-                        defaultValue={selectedTask?.estimatedDuration || ""}
-                        placeholder="Ex: 30"
-                    />
-                </div>
                 <div className="space-y-2">
-                    <Label htmlFor="objective">Objectif</Label>
+                    <Label htmlFor="objective" className="font-semibold">Objectif</Label>
                     <Textarea
                         id="objective"
                         name="objective"
                         defaultValue={selectedTask?.objective || ""}
-                        placeholder="Quel est le but de cette tâche ?"
+                        placeholder="Quel est le but final de cette tâche ?"
                         rows={2}
+                        className="rounded-xl"
                     />
                 </div>
-                <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                <div className="flex items-center justify-between rounded-xl border bg-card p-4 shadow-sm">
                     <div className="space-y-0.5">
-                        <Label>Sélection automatique</Label>
-                        <p className="text-xs text-muted-foreground">
+                        <Label className="font-semibold">Sélection automatique</Label>
+                        <p className="text-sm text-muted-foreground">
                             Autoriser l'IA à suggérer cette tâche.
                         </p>
                     </div>
@@ -281,21 +287,24 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
               </div>
             </ScrollArea>
 
-            <SheetFooter className="mt-auto pt-4">
+            <SheetFooter className="bg-card p-4 flex-row justify-between sm:justify-between">
+                <div>
                 {!isCreatingNewTask && selectedTask && (
                     <Button
                         type="button"
                         variant="destructive"
                         onClick={() => handleDeleteTask(selectedTask.id)}
-                        className="mr-auto"
                     >
                         Supprimer
                     </Button>
                 )}
-                <Button type="button" variant="outline" onClick={handleSheetClose}>
+                </div>
+                <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={handleSheetClose} className="h-12 rounded-full px-6">
                     Annuler
                 </Button>
-                <Button type="submit">Enregistrer</Button>
+                <Button type="submit" className="h-12 rounded-full px-8 bg-primary text-primary-foreground hover:bg-primary/90">Enregistrer</Button>
+                </div>
             </SheetFooter>
           </form>
         </SheetContent>
@@ -303,3 +312,5 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
     </div>
   );
 }
+
+    
