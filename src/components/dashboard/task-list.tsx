@@ -37,21 +37,17 @@ const listVariants = {
     visible: {
         opacity: 1,
         transition: {
-            staggerChildren: 0.1,
-            delayChildren: 0.3,
+            staggerChildren: 0.05,
         }
     }
 };
 
 const itemVariants = {
     hidden: { y: 20, opacity: 0 },
-    visible: { y: 0, opacity: 1, transition: { duration: 0.3 } },
+    visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } },
     exit: { 
         opacity: 0, 
-        scale: 0.95,
-        height: 0,
-        y: -20,
-        marginBottom: 0,
+        scale: 0.9,
         transition: { duration: 0.3 } 
     }
 };
@@ -76,6 +72,7 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
         variants={listVariants}
         initial="hidden"
         animate="visible"
+        exit="hidden"
     >
       <AnimatePresence>
         {tasks.map((task) => (
@@ -87,8 +84,6 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
           >
             <motion.div
               variants={itemVariants}
-              initial="hidden"
-              animate="visible"
               exit="exit"
               layout
               className={`flex flex-col p-4 rounded-2xl bg-card transition-opacity duration-300 ${task.completed ? 'opacity-50' : 'opacity-100'}`}

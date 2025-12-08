@@ -75,6 +75,9 @@ export function DashboardClient() {
   };
 
   const handleRegeneratePlaylist = () => {
+    // Optimistic UI: start generating animation immediately
+    setIsGenerating(true);
+    
     startTransition(async () => {
       const formData = new FormData();
       // These are dummy values, the real ones should come from a form/state
@@ -82,7 +85,6 @@ export function DashboardClient() {
       formData.append('priorities', 'My top priorities');
       formData.append('dailyRituals', JSON.stringify(dailyRituals));
 
-      // Create a temporary state to manage the action
       const response = await handleGeneratePlaylist(
         {tasks: tasks, errors: null, message: ''},
         formData
@@ -94,19 +96,20 @@ export function DashboardClient() {
           title: 'Erreur',
           description: response.message,
         });
+        // On error, stop the generating state
+        setIsGenerating(false);
       } else {
-        setIsGenerating(true);
-        setTimeout(() => {
-          setTasks(response.tasks);
-          setInitialTaskCount(response.tasks.length);
-          if (response.playlistShuffledCount) {
-            setDailyRituals(prev => ({
-              ...prev,
-              playlistShuffledCount: response.playlistShuffledCount!,
-            }));
-          }
-          setIsGenerating(false);
-        }, 500); // Animation duration
+        setTasks(response.tasks);
+        setInitialTaskCount(response.tasks.length);
+        if (response.playlistShuffledCount) {
+          setDailyRituals(prev => ({
+            ...prev,
+            playlistShuffledCount: response.playlistShuffledCount!,
+          }));
+        }
+        // The new tasks are set, so we can stop the generating state.
+        // The UI will animate in the new list.
+        setIsGenerating(false);
       }
     });
   };
@@ -246,23 +249,33 @@ export function DashboardClient() {
             {playlistMessage}
           </p>
 
-          <div className="overflow-hidden">
-            <AnimatePresence>
-              <motion.div
-                key={isGenerating ? 'generating' : 'stale'}
-                initial={{opacity: 1, y: 0}}
-                animate={{opacity: 1, y: 0}}
-                exit={{opacity: 0, y: -50}}
-                transition={{duration: 0.2}}
-              >
-                {!isGenerating && (
+          <div className="overflow-hidden relative min-h-[100px]">
+            <AnimatePresence mode="wait">
+              {isGenerating ? (
+                <motion.div
+                  key="generating"
+                  initial={{ opacity: 0, y: 50 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -50 }}
+                  transition={{ duration: 0.3 }}
+                  className="absolute inset-0 flex items-center justify-center"
+                >
+                  {/* You can place a spinner or a loading message here */}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="tasks"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
                   <TaskList
-                    key={tasks.map(t => t.id).join('-')}
                     tasks={filteredTasks}
                     onToggleCompletion={handleTaskCompletion}
                   />
-                )}
-              </motion.div>
+                </motion.div>
+              )}
             </AnimatePresence>
           </div>
         </TabsContent>
