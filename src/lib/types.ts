@@ -7,4 +7,8 @@ export type Task = {
   completionRate: number; // 0-1
   description?: string;
   priority?: "low" | "medium" | "high";
+  energyRequired?: "low" | "medium" | "high";
+  estimatedDuration?: number;
+  objective?: string;
+  autoSelected?: boolean;
 };

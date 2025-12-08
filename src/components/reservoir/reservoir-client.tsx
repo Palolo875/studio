@@ -6,7 +6,7 @@ import { addDays, format, isSameDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { ReservoirTaskCard } from "./reservoir-task-card";
-import { Plus, SlidersHorizontal } from "lucide-react";
+import { Plus, SlidersHorizontal, Zap } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
 import {
@@ -21,6 +21,15 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { energyLevels } from "@/lib/data";
 
 interface ReservoirClientProps {
   initialTasks: Task[];
@@ -62,13 +71,25 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
     const name = formData.get("name") as string;
     const description = formData.get("description") as string;
     const priority = formData.get("priority") as "low" | "medium" | "high";
+    const energyRequired = formData.get("energyRequired") as "low" | "medium" | "high" | undefined;
+    const estimatedDuration = formData.get("estimatedDuration") ? Number(formData.get("estimatedDuration")) : undefined;
+    const objective = formData.get("objective") as string | undefined;
+    const autoSelected = formData.get("autoSelected") === "on";
+
+    const taskData = {
+        name,
+        description,
+        priority,
+        energyRequired,
+        estimatedDuration,
+        objective,
+        autoSelected,
+    };
 
     if (isCreatingNewTask) {
       const newTask: Task = {
         id: `task-${Date.now()}`,
-        name,
-        description,
-        priority,
+        ...taskData,
         completed: false,
         subtasks: 0,
         lastAccessed: new Date().toISOString(),
@@ -77,7 +98,7 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
       setTasks([newTask, ...tasks]);
     } else if (selectedTask) {
       const updatedTasks = tasks.map((task) =>
-        task.id === selectedTask.id ? { ...task, name, description, priority } : task
+        task.id === selectedTask.id ? { ...task, ...taskData } : task
       );
       setTasks(updatedTasks);
     }
@@ -169,28 +190,29 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
             </SheetDescription>
           </SheetHeader>
           <form onSubmit={handleSaveTask} className="flex-1 flex flex-col justify-between space-y-4 py-4">
-            <div className="space-y-4">
-               <div className="space-y-2">
-                <Label htmlFor="name">Titre de la tâche</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  defaultValue={selectedTask?.name || ""}
-                  placeholder="Ex: Appeler le client"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  defaultValue={selectedTask?.description || ""}
-                  placeholder="Ajouter plus de détails..."
-                  rows={4}
-                />
-              </div>
-              <div className="space-y-2">
+            <ScrollArea className="flex-1 pr-6 -mr-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Titre de la tâche</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    defaultValue={selectedTask?.name || ""}
+                    placeholder="Ex: Appeler le client"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    defaultValue={selectedTask?.description || ""}
+                    placeholder="Ajouter plus de détails..."
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label>Priorité</Label>
                   <RadioGroup
                     name="priority"
@@ -211,8 +233,55 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
                     </div>
                   </RadioGroup>
                 </div>
-            </div>
-            <SheetFooter className="mt-auto">
+                <div className="space-y-2">
+                    <Label className="flex items-center gap-2"><Zap size={16}/> Type d’énergie requise</Label>
+                    <Select name="energyRequired" defaultValue={selectedTask?.energyRequired}>
+                        <SelectTrigger><SelectValue placeholder="Sélectionner l'énergie" /></SelectTrigger>
+                        <SelectContent>
+                        {energyLevels.map((level) => (
+                            <SelectItem key={level.value} value={level.value}>
+                            {level.label}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="estimatedDuration">Durée estimée (minutes)</Label>
+                    <Input
+                        id="estimatedDuration"
+                        name="estimatedDuration"
+                        type="number"
+                        defaultValue={selectedTask?.estimatedDuration || ""}
+                        placeholder="Ex: 30"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="objective">Objectif</Label>
+                    <Textarea
+                        id="objective"
+                        name="objective"
+                        defaultValue={selectedTask?.objective || ""}
+                        placeholder="Quel est le but de cette tâche ?"
+                        rows={2}
+                    />
+                </div>
+                <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                    <div className="space-y-0.5">
+                        <Label>Sélection automatique</Label>
+                        <p className="text-xs text-muted-foreground">
+                            Autoriser l'IA à suggérer cette tâche.
+                        </p>
+                    </div>
+                    <Switch
+                        name="autoSelected"
+                        defaultChecked={selectedTask?.autoSelected ?? true}
+                    />
+                </div>
+              </div>
+            </ScrollArea>
+
+            <SheetFooter className="mt-auto pt-4">
                 {!isCreatingNewTask && selectedTask && (
                     <Button
                         type="button"
