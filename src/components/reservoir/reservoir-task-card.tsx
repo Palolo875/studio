@@ -7,7 +7,7 @@ import { MoreHorizontal } from "lucide-react";
 import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { Book, Code, PenTool } from "lucide-react";
+import { Book, Code, PenTool, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface ReservoirTaskCardProps {
@@ -107,17 +107,20 @@ export function ReservoirTaskCard({ task }: ReservoirTaskCardProps) {
             </div>
             <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
           </div>
-          <h3 className="text-md font-bold text-card-foreground mb-1">
+          <h3 className="text-md font-bold text-card-foreground mb-2">
             {task.name}
           </h3>
-          <div className="flex items-center gap-2 mb-4">
-            <p className="text-sm text-muted-foreground">Progression</p>
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
             {task.priority && (
-                <Badge variant="outline" className={cn("capitalize", priorityStyles[task.priority])}>
+                <Badge variant="outline" className={cn("capitalize text-xs", priorityStyles[task.priority])}>
                   {task.priority}
                 </Badge>
             )}
+             {task.tags && task.tags.slice(0, 2).map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+            ))}
           </div>
+          <p className="text-sm text-muted-foreground mb-2">Progression</p>
           <Progress value={task.completionRate * 100} className="h-2" />
         </div>
         <div className="relative z-10 flex justify-between items-center mt-4">

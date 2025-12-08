@@ -75,6 +75,9 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
     const estimatedDuration = formData.get("estimatedDuration") ? Number(formData.get("estimatedDuration")) : undefined;
     const objective = formData.get("objective") as string | undefined;
     const autoSelected = formData.get("autoSelected") === "on";
+    const tagsString = formData.get("tags") as string;
+    const tags = tagsString ? tagsString.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+
 
     const taskData = {
         name,
@@ -84,6 +87,7 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
         estimatedDuration,
         objective,
         autoSelected,
+        tags,
     };
 
     if (isCreatingNewTask) {
@@ -166,7 +170,7 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
       </ScrollArea>
 
       {/* Task List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTasks.map((task) => (
           <div key={task.id} onClick={() => handleTaskClick(task)}>
             <ReservoirTaskCard task={task} />
@@ -176,7 +180,7 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
 
        {/* Task Detail/Edit Sheet */}
        <Sheet open={isSheetOpen} onOpenChange={handleSheetClose}>
-        <SheetContent className="flex flex-col w-full sm:w-3/4 md:w-1/2 lg:w-2/5 p-0">
+        <SheetContent className="flex flex-col w-full sm:max-w-lg p-0">
           <SheetHeader className="bg-card p-6 pb-4">
             <SheetTitle className="text-2xl font-bold">
               {isCreatingNewTask
@@ -235,7 +239,7 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
                     </Label>
                   </RadioGroup>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label className="flex items-center gap-2 font-semibold"><Zap size={16}/> Énergie requise</Label>
                         <Select name="energyRequired" defaultValue={selectedTask?.energyRequired}>
@@ -260,6 +264,16 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
                             className="h-12 rounded-xl"
                         />
                     </div>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="tags" className="font-semibold">Tags</Label>
+                    <Input
+                        id="tags"
+                        name="tags"
+                        defaultValue={selectedTask?.tags?.join(', ') || ""}
+                        placeholder="Ex: UI/UX, Dev, Marketing"
+                        className="h-12 rounded-xl"
+                    />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="objective" className="font-semibold">Objectif</Label>
@@ -312,5 +326,3 @@ export function ReservoirClient({ initialTasks }: ReservoirClientProps) {
     </div>
   );
 }
-
-    

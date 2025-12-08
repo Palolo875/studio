@@ -11,4 +11,5 @@ export type Task = {
   estimatedDuration?: number;
   objective?: string;
   autoSelected?: boolean;
+  tags?: string[];
 };
