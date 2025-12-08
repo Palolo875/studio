@@ -65,11 +65,10 @@ export default function FocusPage() {
         >
             <Card className="w-full max-w-md shadow-2xl rounded-3xl">
                 <CardHeader>
-                    <div className="flex justify-between items-center text-sm text-muted-foreground">
-                        <Button variant="ghost" size="sm" onClick={() => router.back()}>Close</Button>
-                        <span>{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}</span>
+                    <div className="flex justify-between items-center">
+                        <Button variant="ghost" size="sm" onClick={() => router.back()}>Fermer</Button>
                     </div>
-                    <CardTitle className="text-3xl font-bold pt-4">{taskName}</CardTitle>
+                    <CardTitle className="text-3xl font-light pt-4">{taskName}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-8 flex flex-col items-center">
                     

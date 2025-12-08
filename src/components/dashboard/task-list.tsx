@@ -103,7 +103,7 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
                   }`}
                   className="h-6 w-6 rounded-md mt-1"
                 />
-                <Link href={`/dashboard/focus/${encodeURIComponent(task.name)}`} className="flex-1 space-y-2 cursor-pointer">
+                <div className="flex-1 space-y-2 cursor-pointer">
                   <label
                     htmlFor={task.id}
                     className={`text-base font-medium leading-none cursor-pointer ${
@@ -123,6 +123,11 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
                       <p className="text-xs text-muted-foreground">{task.subtasks} subtasks</p>
                     )}
                   </div>
+                </div>
+                 <Link href={`/dashboard/focus/${encodeURIComponent(task.name)}`} className="flex-shrink-0">
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
                 </Link>
               </div>
 
