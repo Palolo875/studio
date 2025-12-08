@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import {useEffect, useState} from 'react';
 import Link from 'next/link';
-import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
-import { Moon } from 'lucide-react';
+import {SidebarMenuItem, SidebarMenuButton} from '@/components/ui/sidebar';
+import {Moon} from 'lucide-react';
 
 export function EveningButton() {
   const [showButton, setShowButton] = useState(false);

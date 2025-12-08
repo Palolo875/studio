@@ -1,8 +1,8 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Moon, Sparkles, Wind } from 'lucide-react';
+import {Button} from '@/components/ui/button';
+import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
+import {Moon, Sparkles, Wind} from 'lucide-react';
 import Link from 'next/link';
 
 export default function EveningPage() {
@@ -13,9 +13,7 @@ export default function EveningPage() {
           <div className="flex justify-center mb-4">
             <Sparkles className="h-12 w-12 text-yellow-400" />
           </div>
-          <CardTitle className="text-4xl font-bold">
-            Félicitations !
-          </CardTitle>
+          <CardTitle className="text-4xl font-bold">Félicitations !</CardTitle>
           <p className="text-muted-foreground pt-2">
             Votre journée est terminée.
           </p>
