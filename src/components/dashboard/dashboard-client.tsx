@@ -1,3 +1,4 @@
+
 'use client';
 
 import {useState, useTransition} from 'react';
@@ -196,6 +197,7 @@ export function DashboardClient() {
         name="Junior"
         onEnergyChange={setEnergyLevel}
         onIntentionChange={setIntention}
+        energyLevel={energyLevel}
       />
 
       <div className="relative">
