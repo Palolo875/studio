@@ -28,7 +28,7 @@ const dynamicMessages: Record<string, string> = {
 
 export function DashboardClient() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [dailyRituals, setDailyRituals] = useState<DailyRituals>({ playlistShuffledCount: 0 });
+  const [dailyRituals, setDailyRituals] = useState<DailyRituals>({ playlistShuffledCount: 0, completedTaskCount: 0 });
   const [searchTerm, setSearchTerm] = useState("");
   const [energyLevel, setEnergyLevel] = useState<EnergyState>(null);
   const [intention, setIntention] = useState("");
@@ -75,11 +75,33 @@ export function DashboardClient() {
   };
 
   const toggleTaskCompletion = (taskId: string) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === taskId ? { ...task, completed: !task.completed } : task
-      )
+    const newTasks = tasks.map((task) =>
+      task.id === taskId 
+        ? { 
+            ...task, 
+            completed: !task.completed,
+            completedAt: !task.completed ? new Date().toISOString() : undefined 
+          } 
+        : task
     );
+    setTasks(newTasks);
+
+    const task = tasks.find(t => t.id === taskId);
+    if (task && !task.completed) {
+        setDailyRituals(prev => ({
+            ...prev,
+            completedTaskCount: prev.completedTaskCount + 1
+        }));
+    } else if (task && task.completed) {
+        setDailyRituals(prev => ({
+            ...prev,
+            completedTaskCount: Math.max(0, prev.completedTaskCount - 1)
+        }));
+    }
+
+    setTimeout(() => {
+        setTasks(currentTasks => currentTasks.filter(t => t.id !== taskId || !t.completed));
+    }, 800);
   };
 
   const filteredTasks = tasks.filter((task) =>
@@ -130,7 +152,7 @@ export function DashboardClient() {
         <p className="text-lg font-medium text-foreground mt-4 mb-6">{playlistMessage}</p>
         
         <div className="overflow-hidden">
-            <AnimatePresence mode="wait">
+            <AnimatePresence>
                 <motion.div
                     key={isGenerating ? 'generating' : 'stale'}
                     initial={{ opacity: 1, y: 0 }}

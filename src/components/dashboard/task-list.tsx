@@ -9,6 +9,7 @@ import { ArrowRight, Lightbulb, BrainCircuit } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { useState } from "react";
+import Link from 'next/link';
 import {
   Collapsible,
   CollapsibleContent,
@@ -45,6 +46,14 @@ const listVariants = {
 const itemVariants = {
     hidden: { y: 20, opacity: 0 },
     visible: { y: 0, opacity: 1, transition: { duration: 0.3 } },
+    exit: { 
+        opacity: 0, 
+        scale: 0.95,
+        height: 0,
+        y: -20,
+        marginBottom: 0,
+        transition: { duration: 0.3 } 
+    }
 };
 
 export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
@@ -78,21 +87,27 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
           >
             <motion.div
               variants={itemVariants}
-              exit={{ opacity: 0, x: -20, height: 0, marginBottom: 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col p-4 rounded-2xl bg-card"
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              layout
+              className={`flex flex-col p-4 rounded-2xl bg-card transition-opacity duration-300 ${task.completed ? 'opacity-50' : 'opacity-100'}`}
             >
               <div className="flex items-start space-x-4">
                  <Checkbox
                   id={task.id}
                   checked={task.completed}
-                  onCheckedChange={() => onToggleCompletion(task.id)}
+                  onCheckedChange={(e) => {
+                    e.stopPropagation();
+                    onToggleCompletion(task.id)
+                  }}
+                  onClick={(e) => e.stopPropagation()}
                   aria-label={`Mark task ${task.name} as ${
                     task.completed ? "incomplete" : "complete"
                   }`}
                   className="h-6 w-6 rounded-md mt-1"
                 />
-                <div className="flex-1 space-y-2">
+                <Link href={`/dashboard/focus/${encodeURIComponent(task.name)}`} className="flex-1 space-y-2 cursor-pointer" onClick={(e) => e.stopPropagation()}>
                   <label
                     htmlFor={task.id}
                     className={`text-base font-medium leading-none cursor-pointer ${
@@ -112,7 +127,7 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
                       <p className="text-xs text-muted-foreground">{task.subtasks} subtasks</p>
                     )}
                   </div>
-                </div>
+                </Link>
               </div>
 
               <CollapsibleContent className="mt-4 space-y-4">
@@ -134,7 +149,7 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-border -m-4 p-4 mt-4">
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-muted-foreground">
+                  <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={(e) => e.stopPropagation()}>
                     <Lightbulb className="mr-2 h-4 w-4" />
                     Comment l'aborder ?
                   </Button>
@@ -142,8 +157,8 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground">
-                      Voir les étapes
+                    <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                      Pas maintenant
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </AlertDialogTrigger>

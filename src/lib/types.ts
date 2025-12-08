@@ -13,8 +13,10 @@ export type Task = {
   objective?: string;
   autoSelected?: boolean;
   tags?: string[];
+  completedAt?: string; // ISO string
 };
 
 export type DailyRituals = {
   playlistShuffledCount: number;
+  completedTaskCount: number;
 };
