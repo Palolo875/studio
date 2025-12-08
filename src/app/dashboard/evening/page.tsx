@@ -28,7 +28,7 @@ function EveningContent() {
   const completionPercentage = useMemo(() => {
     if (totalTasks === 0) return 0;
     return (completedTasks.length / totalTasks) * 100;
-  }, [completedTasks, totalTasks]);
+  }, [completedTasks.length, totalTasks]);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowConfetti(false), 2500);
