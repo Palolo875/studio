@@ -1,13 +1,16 @@
+
 "use server";
 
 import { generateDailyPlaylist } from "@/ai/flows/daily-playlist-generation";
 import { personalizedTaskRecommendations } from "@/ai/flows/personalized-task-recommendations";
-import type { Task } from "@/lib/types";
+import type { DailyRituals, Task } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
 const generatePlaylistSchema = z.object({
   goals: z.string().min(3, "Goals must be at least 3 characters long."),
   priorities: z.string().min(3, "Priorities must be at least 3 characters long."),
+  dailyRituals: z.string(),
 });
 
 export async function handleGeneratePlaylist(prevState: any, formData: FormData) {
@@ -15,6 +18,7 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
     const validatedFields = generatePlaylistSchema.safeParse({
       goals: formData.get("goals"),
       priorities: formData.get("priorities"),
+      dailyRituals: formData.get("dailyRituals"),
     });
 
     if (!validatedFields.success) {
@@ -24,8 +28,18 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
         tasks: [],
       };
     }
+    
+    const { goals, priorities, dailyRituals: dailyRitualsString } = validatedFields.data;
+    const dailyRituals: DailyRituals = JSON.parse(dailyRitualsString);
 
-    const { goals, priorities } = validatedFields.data;
+    if (dailyRituals.playlistShuffledCount >= 2) {
+      return {
+        message: "Vous avez atteint votre limite de 2 régénérations par jour.",
+        errors: { form: ["Limit reached"] },
+        tasks: prevState.tasks, // Return old tasks
+      };
+    }
+
     const result = await generateDailyPlaylist({ goals, priorities });
     const taskNames = result.playlist
       .split("\n")
@@ -36,15 +50,16 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
       id: `task-${Date.now()}-${index}`,
       name,
       completed: false,
-      subtasks: Math.floor(Math.random() * 5),
+      subtasks: Math.floor(Math.random() * 4), // Randomness factor
       lastAccessed: new Date().toISOString(),
-      completionRate: Math.floor(Math.random() * 50) + 50, // between 50 and 100
+      completionRate: Math.floor(Math.random() * 30) + 20, // Randomness factor (20-50)
     }));
 
     return {
       message: "Playlist generated successfully.",
       errors: null,
       tasks,
+      playlistShuffledCount: dailyRituals.playlistShuffledCount + 1,
     };
   } catch (error) {
     console.error(error);

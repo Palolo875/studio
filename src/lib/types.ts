@@ -1,3 +1,4 @@
+
 export type Task = {
   id: string;
   name: string;
@@ -12,4 +13,8 @@ export type Task = {
   objective?: string;
   autoSelected?: boolean;
   tags?: string[];
+};
+
+export type DailyRituals = {
+  playlistShuffledCount: number;
 };

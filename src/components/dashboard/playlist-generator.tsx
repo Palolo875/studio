@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useActionState, useEffect } from "react";
@@ -6,12 +7,13 @@ import { handleGeneratePlaylist } from "@/app/actions";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import type { Task } from "@/lib/types";
+import type { DailyRituals, Task } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Music } from "lucide-react";
 
 interface PlaylistGeneratorProps {
   onPlaylistGenerated: (tasks: Task[]) => void;
+  dailyRituals?: DailyRituals;
 }
 
 const initialState = {
@@ -32,7 +34,7 @@ function SubmitButton() {
   );
 }
 
-export function PlaylistGenerator({ onPlaylistGenerated }: PlaylistGeneratorProps) {
+export function PlaylistGenerator({ onPlaylistGenerated, dailyRituals = { playlistShuffledCount: 0 } }: PlaylistGeneratorProps) {
   const [state, formAction] = useActionState(handleGeneratePlaylist, initialState);
   const { toast } = useToast();
 
@@ -40,14 +42,14 @@ export function PlaylistGenerator({ onPlaylistGenerated }: PlaylistGeneratorProp
     if (state.message && !state.errors) {
       onPlaylistGenerated(state.tasks);
       toast({
-        title: "Success",
+        title: "Succès",
         description: state.message,
       });
     } else if (state.errors) {
        const errorMessages = Object.values(state.errors).flat().join('\n');
        toast({
         variant: "destructive",
-        title: "Error",
+        title: "Erreur",
         description: state.message + (errorMessages ? `\n${errorMessages}` : ''),
       });
     }
@@ -55,12 +57,13 @@ export function PlaylistGenerator({ onPlaylistGenerated }: PlaylistGeneratorProp
 
   return (
     <form action={formAction} className="space-y-4">
+       <input type="hidden" name="dailyRituals" value={JSON.stringify(dailyRituals)} />
       <div className="space-y-2">
-        <Label htmlFor="goals">Today's Goals</Label>
+        <Label htmlFor="goals">Objectifs du jour</Label>
         <Textarea
           id="goals"
           name="goals"
-          placeholder="e.g., Finalize project proposal, prepare for team meeting"
+          placeholder="Ex: Finaliser la proposition de projet, préparer la réunion d'équipe"
           required
         />
         {state.errors?.goals && (
@@ -68,11 +71,11 @@ export function PlaylistGenerator({ onPlaylistGenerated }: PlaylistGeneratorProp
         )}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="priorities">Top Priorities</Label>
+        <Label htmlFor="priorities">Priorités principales</Label>
         <Textarea
           id="priorities"
           name="priorities"
-          placeholder="e.g., Focus on client feedback, block time for deep work"
+          placeholder="Ex: Se concentrer sur les retours clients, bloquer du temps pour le travail de fond"
           required
         />
         {state.errors?.priorities && (

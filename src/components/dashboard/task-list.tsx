@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { Task } from "@/lib/types";
@@ -13,6 +14,23 @@ interface TaskListProps {
   onToggleCompletion: (taskId: string) => void;
 }
 
+const listVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1,
+            delayChildren: 0.3,
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { duration: 0.3 } },
+};
+
+
 export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
   if (tasks.length === 0) {
     return (
@@ -26,15 +44,18 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
   }
 
   return (
-    <div className="space-y-3">
+    <motion.div 
+        className="space-y-3"
+        variants={listVariants}
+        initial="hidden"
+        animate="visible"
+    >
       <AnimatePresence>
         {tasks.map((task) => (
           <motion.div
             key={task.id}
-            layout
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            variants={itemVariants}
+            exit={{ opacity: 0, x: -20, height: 0, marginBottom: 0 }}
             transition={{ duration: 0.2 }}
             className="flex flex-col space-y-4 p-4 rounded-2xl bg-card"
           >
@@ -85,6 +106,6 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
           </motion.div>
         ))}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
