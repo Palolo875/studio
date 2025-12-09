@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import type { Task } from '@/lib/types';
-import { addDays, format, isSameDay, startOfDay } from 'date-fns';
+import { addDays, format, isSameDay, startOfDay, subDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { ReservoirTaskCard, priorityStyles } from './reservoir-task-card';
@@ -17,6 +17,17 @@ import {
   SheetDescription,
   SheetFooter,
 } from '@/components/ui/sheet';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
@@ -272,6 +283,34 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
         energy: [],
     });
   }
+
+  const getObsoleteTasks = () => {
+    const thirtyDaysAgo = subDays(new Date(), 30);
+    return tasks.filter(task => {
+        return !task.scheduledDate &&
+               task.completionRate === 0 &&
+               new Date(task.lastAccessed) < thirtyDaysAgo;
+    });
+  };
+
+  const handleCleanTasks = () => {
+      const obsoleteTasks = getObsoleteTasks();
+      if (obsoleteTasks.length === 0) {
+          toast({
+              title: "Aucune tâche obsolète",
+              description: "Votre atelier est déjà bien rangé !",
+          });
+          return;
+      }
+      
+      const obsoleteTaskIds = new Set(obsoleteTasks.map(t => t.id));
+      setTasks(currentTasks => currentTasks.filter(t => !obsoleteTaskIds.has(t.id)));
+
+      toast({
+          title: "Nettoyage réussi !",
+          description: `${obsoleteTasks.length} tâche(s) obsolète(s) ont été archivée(s).`,
+      });
+  };
   
   const activeFilterCount = (filters.priorities.length > 0 ? 1 : 0) + (filters.energy.length > 0 ? 1 : 0) + (filters.status !== 'not_completed' ? 1 : 0);
   
@@ -721,7 +760,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2 font-semibold">
-                      Énergie requise
+                      <Zap size={16} /> Énergie requise
                     </Label>
                     <Select
                       name="energyRequired"
@@ -924,3 +963,5 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     </div>
   );
 }
+
+    
