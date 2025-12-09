@@ -1,20 +1,19 @@
-
 'use client';
 
-import {useState, useTransition} from 'react';
-import type {DailyRituals, Task} from '@/lib/types';
-import {initialTasks} from '@/lib/data';
-import {Recommendations} from './recommendations';
-import {TaskList} from './task-list';
-import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
-import {Input} from '@/components/ui/input';
-import {RefreshCw, Search} from 'lucide-react';
-import {PlaylistGenerator} from './playlist-generator';
-import {Button} from '../ui/button';
-import {DailyGreeting} from './daily-greeting';
-import {handleGeneratePlaylist} from '@/app/actions';
-import {useToast} from '@/hooks/use-toast';
-import {AnimatePresence, motion} from 'framer-motion';
+import React, { useState, useTransition } from 'react';
+import type { DailyRituals, Task } from '@/lib/types';
+import { initialTasks } from '@/lib/data';
+import { Recommendations } from './recommendations';
+import { TaskList } from './task-list';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { RefreshCw, Search } from 'lucide-react';
+import { PlaylistGenerator } from './playlist-generator';
+import { Button } from '../ui/button';
+import { DailyGreeting } from './daily-greeting';
+import { handleGeneratePlaylist } from '@/app/actions';
+import { useToast } from '@/hooks/use-toast';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {useRouter} from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TimelineView } from './timeline-view';
 
@@ -47,19 +46,19 @@ const dynamicMessages: Record<string, string> = {
 
 export function DashboardClient() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [initialTaskCount, setInitialTaskCount] = useState(initialTasks.length);
+  const [initialTaskCount, setInitialTaskCount] = useState<number>(initialTasks.length);
   const [dailyRituals, setDailyRituals] = useState<DailyRituals>({
     playlistShuffledCount: 0,
     completedTaskCount: 0,
     completedTasks: [],
   });
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const [energyLevel, setEnergyLevel] = useState<EnergyState>(null);
-  const [intention, setIntention] = useState('');
+  const [intention, setIntention] = useState<string>('');
   const [isPending, startTransition] = useTransition();
-  const {toast} = useToast();
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [showBonusCard, setShowBonusCard] = useState(false);
+  const { toast } = useToast();
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [showBonusCard, setShowBonusCard] = useState<boolean>(false);
   const router = useRouter();
 
   const handleSetTasks = (newTasks: Task[]) => {
@@ -67,7 +66,7 @@ export function DashboardClient() {
     setInitialTaskCount(newTasks.length);
     // Also increment shuffle count if it's a regeneration
     if (newTasks !== initialTasks) {
-      setDailyRituals(prev => ({
+      setDailyRituals((prev: DailyRituals) => ({
         ...prev,
         playlistShuffledCount: prev.playlistShuffledCount + 1,
       }));
@@ -84,6 +83,14 @@ export function DashboardClient() {
       formData.append('goals', 'My current goals');
       formData.append('priorities', 'My top priorities');
       formData.append('dailyRituals', JSON.stringify(dailyRituals));
+      
+      // Ajouter les paramètres d'énergie et d'intention
+      if (energyLevel) {
+        formData.append('energyLevel', energyLevel);
+      }
+      if (intention) {
+        formData.append('intention', intention);
+      }
 
       const response = await handleGeneratePlaylist(
         {tasks: tasks, errors: null, message: ''},
@@ -102,7 +109,7 @@ export function DashboardClient() {
         setTasks(response.tasks);
         setInitialTaskCount(response.tasks.length);
         if (response.playlistShuffledCount) {
-          setDailyRituals(prev => ({
+          setDailyRituals((prev: DailyRituals) => ({
             ...prev,
             playlistShuffledCount: response.playlistShuffledCount!,
           }));
@@ -116,7 +123,7 @@ export function DashboardClient() {
 
   const handleTaskCompletion = (taskId: string) => {
     let completedTask: Task | undefined;
-    const newTasks = tasks.map(task => {
+    const newTasks = tasks.map((task: Task) => {
       if (task.id === taskId) {
         completedTask = {
           ...task,
@@ -133,7 +140,7 @@ export function DashboardClient() {
     if (completedTask) {
       const updatedCompletedTasks = completedTask.completed
         ? [...dailyRituals.completedTasks, completedTask]
-        : dailyRituals.completedTasks.filter(t => t.id !== taskId);
+        : dailyRituals.completedTasks.filter((t: Task) => t.id !== taskId);
 
       const newDailyRituals = {
         ...dailyRituals,
@@ -144,10 +151,10 @@ export function DashboardClient() {
 
       if (completedTask.completed) {
         setTimeout(() => {
-          const updatedTasks = newTasks.filter(t => t.id !== taskId);
+          const updatedTasks = newTasks.filter((t: Task) => t.id !== taskId);
           setTasks(updatedTasks);
 
-          const remainingTasks = updatedTasks.filter(t => !t.completed);
+          const remainingTasks = updatedTasks.filter((t: Task) => !t.completed);
           if (remainingTasks.length === 0) {
             setTimeout(() => handleAllTasksCompleted(newDailyRituals), 2000);
           }
@@ -162,7 +169,7 @@ export function DashboardClient() {
       setShowBonusCard(true);
     } else {
       const completedTaskNames = currentRituals.completedTasks
-        .map(t => t.name)
+        .map((t: Task) => t.name)
         .join(',');
       router.push(
         `/dashboard/evening?completed=${encodeURIComponent(
@@ -182,11 +189,11 @@ export function DashboardClient() {
       completionRate: 0,
       priority: 'low',
     };
-    setTasks(prev => [...prev, bonusTask]);
+    setTasks((prev: Task[]) => [...prev, bonusTask]);
     setShowBonusCard(false);
   };
 
-  const filteredTasks = tasks.filter(task =>
+  const filteredTasks = tasks.filter((task: Task) =>
     task.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -280,7 +287,6 @@ export function DashboardClient() {
             <TimelineView tasks={tasks} />
         </TabsContent>
       </Tabs>
-
 
       <AlertDialog open={showBonusCard} onOpenChange={setShowBonusCard}>
         <AlertDialogContent>

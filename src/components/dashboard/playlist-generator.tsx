@@ -81,6 +81,31 @@ export function PlaylistGenerator({ onPlaylistGenerated, dailyRituals = { playli
           <p className="text-sm text-destructive">{state.errors.priorities[0]}</p>
         )}
       </div>
+      <div className="space-y-2">
+        <Label htmlFor="energyLevel">Niveau d'énergie</Label>
+        <select 
+          id="energyLevel" 
+          name="energyLevel" 
+          className="w-full p-2 rounded-md border bg-background"
+        >
+          <option value="high">Énergie élevée</option>
+          <option value="medium">Énergie moyenne</option>
+          <option value="low">Énergie faible</option>
+        </select>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="intention">Intention du jour</Label>
+        <select 
+          id="intention" 
+          name="intention" 
+          className="w-full p-2 rounded-md border bg-background"
+        >
+          <option value="focus">Concentration</option>
+          <option value="learning">Apprentissage</option>
+          <option value="creativity">Créativité</option>
+          <option value="planning">Planification</option>
+        </select>
+      </div>
       <SubmitButton />
     </form>
   );

@@ -1,11 +1,9 @@
-
-
 "use client";
 
 import type { Task } from "@/lib/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Lightbulb, BrainCircuit } from "lucide-react";
+import { ArrowRight, Lightbulb, BrainCircuit, Sparkles } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { useState } from "react";
@@ -26,6 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface TaskListProps {
   tasks: Task[];
@@ -54,6 +53,7 @@ const itemVariants = {
 
 export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
   const [openCollapsibleId, setOpenCollapsibleId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   if (tasks.length === 0) {
     return (
@@ -65,6 +65,17 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
       </div>
     );
   }
+
+  const handleTaskCompletion = (taskId: string, taskName: string) => {
+    onToggleCompletion(taskId);
+    
+    // Show immediate feedback toast
+    toast({
+      title: "Tâche accomplie !",
+      description: `"${taskName}" a été marquée comme terminée.`,
+      duration: 3000,
+    });
+  };
 
   return (
     <motion.div 
@@ -92,7 +103,7 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
                  <Checkbox
                   id={task.id}
                   checked={task.completed}
-                  onCheckedChange={() => onToggleCompletion(task.id)}
+                  onCheckedChange={() => handleTaskCompletion(task.id, task.name)}
                   aria-label={`Mark task ${task.name} as ${
                     task.completed ? "incomplete" : "complete"
                   }`}
