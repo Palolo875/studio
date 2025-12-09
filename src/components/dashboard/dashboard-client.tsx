@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
-import type { DailyRituals, Task } from '@/lib/types';
-import { initialTasks } from '@/lib/data';
-import { Recommendations } from './recommendations';
-import { TaskList } from './task-list';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { RefreshCw, Search } from 'lucide-react';
-import { PlaylistGenerator } from './playlist-generator';
-import { Button } from '../ui/button';
-import { DailyGreeting } from './daily-greeting';
-import { handleGeneratePlaylist } from '@/app/actions';
-import { useToast } from '@/hooks/use-toast';
-import { AnimatePresence, motion } from 'framer-motion';
+import {useState, useTransition} from 'react';
+import type {DailyRituals, Task} from '@/lib/types';
+import {initialTasks} from '@/lib/data';
+import {Recommendations} from './recommendations';
+import {TaskList} from './task-list';
+import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
+import {Input} from '@/components/ui/input';
+import {RefreshCw, Search} from 'lucide-react';
+import {PlaylistGenerator} from './playlist-generator';
+import {Button} from '../ui/button';
+import {DailyGreeting} from './daily-greeting';
+import {handleGeneratePlaylist} from '@/app/actions';
+import {useToast} from '@/hooks/use-toast';
+import {AnimatePresence, motion} from 'framer-motion';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,8 +23,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useRouter } from 'next/navigation';
+import {useRouter} from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TimelineView } from './timeline-view';
 
@@ -61,6 +62,10 @@ export function DashboardClient() {
   const [showBonusCard, setShowBonusCard] = useState<boolean>(false);
   const router = useRouter();
 
+  const [urgentTaskName, setUrgentTaskName] = useState('');
+  const [replaceTask, setReplaceTask] = useState(false);
+  const [isPanicModalOpen, setIsPanicModalOpen] = useState(false);
+
   const handleSetTasks = (newTasks: Task[]) => {
     setTasks(newTasks);
     setInitialTaskCount(newTasks.length);
@@ -76,7 +81,7 @@ export function DashboardClient() {
   const handleRegeneratePlaylist = () => {
     // Optimistic UI: start generating animation immediately
     setIsGenerating(true);
-    
+
     startTransition(async () => {
       const formData = new FormData();
       // These are dummy values, the real ones should come from a form/state
@@ -193,6 +198,40 @@ export function DashboardClient() {
     setShowBonusCard(false);
   };
 
+  const handleAddUrgentTask = () => {
+    if (!urgentTaskName) return;
+
+    const newTask: Task = {
+      id: `urgent-${Date.now()}`,
+      name: urgentTaskName,
+      completed: false,
+      priority: 'high',
+      tags: ['Urgent'],
+      subtasks: 0,
+      lastAccessed: new Date().toISOString(),
+      completionRate: 0,
+    };
+
+    if (replaceTask && tasks.length > 0) {
+        const remainingTasks = tasks.slice(1);
+        setTasks([newTask, ...remainingTasks]);
+        toast({
+            title: "Tâche urgente ajoutée",
+            description: `"${newTask.name}" a remplacé la tâche précédente.`,
+        });
+    } else {
+        setTasks([newTask, ...tasks]);
+        toast({
+            title: "Tâche urgente ajoutée",
+            description: `"${newTask.name}" est maintenant en haut de votre liste.`,
+        });
+    }
+
+    setUrgentTaskName('');
+    setReplaceTask(false);
+    setIsPanicModalOpen(false);
+  };
+
   const filteredTasks = tasks.filter((task: Task) =>
     task.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -230,10 +269,20 @@ export function DashboardClient() {
       <Tabs defaultValue="playlist" className="w-full">
         <div className="flex justify-between items-center mb-4">
           <TabsList className="grid w-full grid-cols-2 bg-card h-12 rounded-2xl p-1 max-w-sm">
-            <TabsTrigger value="playlist" className="rounded-xl h-full data-[state=active]:bg-muted data-[state=active]:text-foreground">Ma playlist</TabsTrigger>
-            <TabsTrigger value="timeline" className="rounded-xl h-full data-[state=active]:bg-muted data-[state=active]:text-foreground">Timeline</TabsTrigger>
+            <TabsTrigger
+              value="playlist"
+              className="rounded-xl h-full data-[state=active]:bg-muted data-[state=active]:text-foreground"
+            >
+              Ma playlist
+            </TabsTrigger>
+            <TabsTrigger
+              value="timeline"
+              className="rounded-xl h-full data-[state=active]:bg-muted data-[state=active]:text-foreground"
+            >
+              Timeline
+            </TabsTrigger>
           </TabsList>
-           <Button
+          <Button
             variant="ghost"
             size="sm"
             onClick={handleRegeneratePlaylist}
@@ -249,7 +298,7 @@ export function DashboardClient() {
         </div>
 
         <TabsContent value="playlist">
-           <p className="text-lg font-medium text-foreground mt-4 mb-6">
+          <p className="text-lg font-medium text-foreground mt-4 mb-6">
             {playlistMessage}
           </p>
 
@@ -258,10 +307,10 @@ export function DashboardClient() {
               {isGenerating ? (
                 <motion.div
                   key="generating"
-                  initial={{ opacity: 0, y: 50 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -50 }}
-                  transition={{ duration: 0.3 }}
+                  initial={{opacity: 0, y: 50}}
+                  animate={{opacity: 1, y: 0}}
+                  exit={{opacity: 0, y: -50}}
+                  transition={{duration: 0.3}}
                   className="absolute inset-0 flex items-center justify-center"
                 >
                   {/* You can place a spinner or a loading message here */}
@@ -269,10 +318,10 @@ export function DashboardClient() {
               ) : (
                 <motion.div
                   key="tasks"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
+                  initial={{opacity: 0}}
+                  animate={{opacity: 1}}
+                  exit={{opacity: 0}}
+                  transition={{duration: 0.3}}
                 >
                   <TaskList
                     tasks={filteredTasks}
@@ -284,7 +333,7 @@ export function DashboardClient() {
           </div>
         </TabsContent>
         <TabsContent value="timeline">
-            <TimelineView tasks={tasks} />
+          <TimelineView tasks={tasks} />
         </TabsContent>
       </Tabs>
 
@@ -312,6 +361,44 @@ export function DashboardClient() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={isPanicModalOpen} onOpenChange={setIsPanicModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Gérer un imprévu</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ajoutez une tâche urgente à votre playlist pour aujourd'hui.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+                <Label htmlFor="urgent-task">Nom de la tâche urgente</Label>
+                <Input
+                    id="urgent-task"
+                    value={urgentTaskName}
+                    onChange={(e) => setUrgentTaskName(e.target.value)}
+                    placeholder="Ex: Appeler le client X en urgence"
+                />
+            </div>
+            <div className="flex items-center space-x-2">
+                <Switch id="replace-task" checked={replaceTask} onCheckedChange={setReplaceTask} />
+                <Label htmlFor="replace-task">Remplacer la tâche actuelle</Label>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAddUrgentTask}>Ajouter en urgence</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Button 
+        onClick={() => setIsPanicModalOpen(true)}
+        className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-2xl z-20"
+        size="icon"
+      >
+        <Siren className="h-8 w-8" />
+      </Button>
 
       <Card className="hidden">
         <CardHeader>
