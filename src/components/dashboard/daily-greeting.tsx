@@ -19,11 +19,11 @@ interface DailyGreetingProps {
 }
 
 const energyInfo = {
-    energized: { icon: Zap, color: "text-yellow-400", message: "Vous êtes plein d'énergie aujourd'hui !" },
-    normal: { icon: Smile, color: "text-green-400", message: "Prêt pour une journée équilibrée." },
-    slow: { icon: Coffee, color: "text-amber-500", message: "On y va doucement mais sûrement." },
-    focused: { icon: BrainCircuit, color: "text-blue-400", message: "Mode concentration activé." },
-    creative: { icon: Paintbrush, color: "text-purple-400", message: "Laissez parler votre créativité." },
+    energized: { icon: Zap, color: "text-yellow-400", message: "Vous êtes en feu ! Voici vos défis :" },
+    normal: { icon: Smile, color: "text-green-400", message: "Voici votre journée, claire et faisable :" },
+    slow: { icon: Coffee, color: "text-amber-500", message: "On y va doucement. Voici 3 choses simples :" },
+    focused: { icon: BrainCircuit, color: "text-blue-400", message: "Mode concentration activé. Voici vos défis :" },
+    creative: { icon: Paintbrush, color: "text-purple-400", message: "L'inspiration est là ! Voici comment la canaliser :" },
 };
 
 const timeInfo = {

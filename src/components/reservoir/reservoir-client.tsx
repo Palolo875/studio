@@ -5,8 +5,8 @@ import type { Task } from '@/lib/types';
 import { addDays, format, isSameDay, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
-import { ReservoirTaskCard } from './reservoir-task-card';
-import { Calendar as CalendarIcon, Plus, SlidersHorizontal, Zap } from 'lucide-react';
+import { ReservoirTaskCard, priorityStyles } from './reservoir-task-card';
+import { Calendar as CalendarIcon, Plus, SlidersHorizontal, Zap, Search, Grid, List, Archive, Trash2, Star } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
 import {
@@ -37,7 +37,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { initialTasks } from '@/lib/data';
-
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { ChevronDown } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { MoreHorizontal } from 'lucide-react';
 
 type Filters = {
   status: 'all' | 'completed' | 'not_completed';
@@ -62,6 +65,19 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     priorities: [],
     energy: [],
   });
+  const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const dateRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
 
@@ -96,6 +112,25 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
   const handleDeleteTask = (taskId: string) => {
     setTasks(tasks.filter((task) => task.id !== taskId));
     handleSheetClose();
+  };
+
+  const handleBatchDelete = () => {
+    setTasks(tasks.filter((task) => !selectedTasks.includes(task.id)));
+    setSelectedTasks([]);
+  };
+
+  const handleBatchArchive = () => {
+    setTasks(tasks.map(task => 
+      selectedTasks.includes(task.id) ? { ...task, completed: true } : task
+    ));
+    setSelectedTasks([]);
+  };
+
+  const handleBatchPriorityChange = (priority: 'low' | 'medium' | 'high') => {
+    setTasks(tasks.map(task => 
+      selectedTasks.includes(task.id) ? { ...task, priority } : task
+    ));
+    setSelectedTasks([]);
   };
 
   const handleSaveTask = (e: React.FormEvent<HTMLFormElement>) => {
@@ -162,6 +197,13 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
 
   const { filteredAndGroupedTasks, sortedGroupKeys } = useMemo(() => {
     const filtered = tasks.filter(task => {
+      // Apply search filter
+      const searchMatch = debouncedSearchTerm === '' || 
+        task.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        (task.description && task.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) ||
+        (task.tags && task.tags.some(tag => tag.toLowerCase().includes(debouncedSearchTerm.toLowerCase()))) ||
+        (task.objective && task.objective.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
+
       const statusMatch =
         filters.status === 'all' ||
         (filters.status === 'completed' && task.completed) ||
@@ -175,7 +217,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
         filters.energy.length === 0 ||
         (task.energyRequired && filters.energy.includes(task.energyRequired));
 
-      return statusMatch && priorityMatch && energyMatch;
+      return searchMatch && statusMatch && priorityMatch && energyMatch;
     });
 
     const grouped = filtered.reduce((acc: GroupedTasks, task) => {
@@ -213,6 +255,16 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     });
   }
 
+  const toggleTaskSelection = (taskId: string) => {
+    setSelectedTasks(prev => {
+      if (prev.includes(taskId)) {
+        return prev.filter(id => id !== taskId);
+      } else {
+        return [...prev, taskId];
+      }
+    });
+  };
+
   const resetFilters = () => {
     setFilters({
         status: 'not_completed',
@@ -232,23 +284,151 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
   }, [selectedTask]);
 
 
+  // Batch action menu
+  const BatchActionMenu = () => (
+    <div className="flex items-center gap-2 bg-card p-2 rounded-lg border">
+      <span className="text-sm text-muted-foreground whitespace-nowrap">
+        {selectedTasks.length} tâche{selectedTasks.length > 1 ? 's' : ''} sélectionnée{selectedTasks.length > 1 ? 's' : ''}
+      </span>
+      <Separator orientation="vertical" className="h-6" />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm">
+            Actions
+            <ChevronDown className="ml-2 h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem onClick={handleBatchArchive}>
+            <Archive className="mr-2 h-4 w-4" />
+            Archiver
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleBatchPriorityChange('high')}>
+            <Star className="mr-2 h-4 w-4" />
+            Priorité haute
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleBatchPriorityChange('medium')}>
+            <Star className="mr-2 h-4 w-4" />
+            Priorité moyenne
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleBatchPriorityChange('low')}>
+            <Star className="mr-2 h-4 w-4" />
+            Priorité basse
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleBatchDelete} className="text-destructive">
+            <Trash2 className="mr-2 h-4 w-4" />
+            Supprimer
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        onClick={() => setSelectedTasks([])}
+      >
+        Annuler
+      </Button>
+    </div>
+  );
+
+  // Format deadline for display
+  const formatDeadline = (dateString?: string) => {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (isSameDay(date, today)) return "Aujourd'hui";
+    if (isSameDay(date, tomorrow)) return "Demain";
+    
+    const diffTime = date.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays <= 7) return `Dans ${diffDays}j`;
+    
+    return format(date, 'dd MMM', { locale: fr });
+  };
+
+  // Get effort display
+  const getEffortDisplay = (effort?: string) => {
+    if (!effort) return '';
+    const effortMap: Record<string, string> = {
+      'S': 'Simple',
+      'M': 'Moyen',
+      'L': 'Long'
+    };
+    return effortMap[effort] || effort;
+  };
+
+  // Get energy badge
+  const getEnergyBadge = (energy?: string) => {
+    if (!energy) return null;
+    
+    const energyMap: Record<string, {label: string, color: string}> = {
+      'low': { label: 'Faible', color: 'bg-green-100 text-green-800' },
+      'medium': { label: 'Moyenne', color: 'bg-yellow-100 text-yellow-800' },
+      'high': { label: 'Haute', color: 'bg-red-100 text-red-800' }
+    };
+    
+    const energyInfo = energyMap[energy];
+    if (!energyInfo) return null;
+    
+    return (
+      <Badge className={`${energyInfo.color} capitalize`}>
+        {energyInfo.label}
+      </Badge>
+    );
+  };
+
   return (
     <div className="space-y-8 h-full flex flex-col">
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">L'Atelier</h1>
         <div className="flex items-center gap-2">
-           <Button variant="ghost" size="icon" className="relative" onClick={() => setIsFilterSheetOpen(true)}>
-              <SlidersHorizontal className="h-5 w-5" />
-              {activeFilterCount > 0 && (
-                <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 text-xs">{activeFilterCount}</Badge>
-              )}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Rechercher une tâche..."
+              className="pl-10 pr-4 h-10 rounded-full bg-card"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Button 
+            variant={viewMode === 'grid' ? 'default' : 'outline'} 
+            size="icon" 
+            onClick={() => setViewMode('grid')}
+          >
+            <Grid className="h-5 w-5" />
+          </Button>
+          <Button 
+            variant={viewMode === 'list' ? 'default' : 'outline'} 
+            size="icon" 
+            onClick={() => setViewMode('list')}
+          >
+            <List className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="relative" onClick={() => setIsFilterSheetOpen(true)}>
+            <SlidersHorizontal className="h-5 w-5" />
+            {activeFilterCount > 0 && (
+              <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 text-xs">{activeFilterCount}</Badge>
+            )}
           </Button>
           <Button size="icon" onClick={handleAddNewClick}>
             <Plus className="h-5 w-5" />
           </Button>
         </div>
       </div>
+
+      {/* Batch Actions Bar */}
+      {selectedTasks.length > 0 && (
+        <BatchActionMenu />
+      )}
 
       {/* Timeline */}
       <ScrollArea className="w-full whitespace-nowrap -mx-8 px-8">
@@ -304,13 +484,114 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                 return (
                   <div key={dateKey} ref={(el) => { if (!isUnplanned) dateRefs.current[dateKey] = el; }}>
                     <h2 className="text-lg font-bold sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10">{title}</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {tasksForDay.map(task => (
-                        <div key={task.id} onClick={() => handleTaskClick(task)}>
-                          <ReservoirTaskCard task={task} />
-                        </div>
-                      ))}
-                    </div>
+                    {viewMode === 'grid' ? (
+                      // Grid View
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {tasksForDay.map(task => (
+                          <div 
+                            key={task.id} 
+                            onClick={() => {
+                              if (selectedTasks.length > 0) {
+                                toggleTaskSelection(task.id);
+                              } else {
+                                handleTaskClick(task);
+                              }
+                            }}
+                            onDoubleClick={() => {
+                              // Quick edit on double click
+                              handleTaskClick(task);
+                            }}
+                            className={`relative ${selectedTasks.includes(task.id) ? 'ring-2 ring-primary rounded-3xl' : ''}`}
+                          >
+                            <ReservoirTaskCard task={task} />
+                            {selectedTasks.length > 0 && (
+                              <div 
+                                className="absolute top-2 left-2 z-20"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleTaskSelection(task.id);
+                                }}
+                              >
+                                <Checkbox checked={selectedTasks.includes(task.id)} />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      // List View
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12">
+                              <Checkbox 
+                                checked={selectedTasks.length === tasksForDay.length && tasksForDay.length > 0}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedTasks([...selectedTasks, ...tasksForDay.map(t => t.id)]);
+                                  } else {
+                                    setSelectedTasks(selectedTasks.filter(id => !tasksForDay.some(t => t.id === id)));
+                                  }
+                                }}
+                              />
+                            </TableHead>
+                            <TableHead className="w-1/3">Contenu</TableHead>
+                            <TableHead>Deadline</TableHead>
+                            <TableHead>Priorité</TableHead>
+                            <TableHead>Effort</TableHead>
+                            <TableHead>Énergie</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {tasksForDay.map(task => (
+                            <TableRow 
+                              key={task.id}
+                              className={`cursor-pointer ${selectedTasks.includes(task.id) ? 'bg-muted' : ''}`}
+                              onClick={() => {
+                                if (selectedTasks.length > 0) {
+                                  toggleTaskSelection(task.id);
+                                }
+                              }}
+                              onDoubleClick={() => {
+                                // Quick edit on double click
+                                handleTaskClick(task);
+                              }}
+                            >
+                              <TableCell>
+                                <Checkbox 
+                                  checked={selectedTasks.includes(task.id)}
+                                  onCheckedChange={() => toggleTaskSelection(task.id)}
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">{task.name}</TableCell>
+                              <TableCell>{formatDeadline(task.scheduledDate)}</TableCell>
+                              <TableCell>
+                                {task.priority && (
+                                  <Badge variant="outline" className={cn("capitalize text-xs", priorityStyles[task.priority])}>
+                                    {task.priority}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>{getEffortDisplay(task.effort)}</TableCell>
+                              <TableCell>{getEnergyBadge(task.energyRequired)}</TableCell>
+                              <TableCell className="text-right">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleTaskClick(task);
+                                  }}
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
                   </div>
                 )
              })}

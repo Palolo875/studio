@@ -4,10 +4,15 @@ import type { Task } from "@/lib/types";
  * Algorithme de Playlist Magique (Instantanée)
  * 
  * Génère 3-5 tâches optimales basées sur :
- * - État énergétique du matin (40% de pondération)
- * - Deadlines et priorités
- * - Alignement avec l'intention du jour
- * - Patterns historiques de l'utilisateur
+ * - État énergétique du matin (40%)
+ * - Urgence des deadlines (30%)
+ * - Priorité manuelle (20%)
+ * - Patterns historiques (10%)
+ * 
+ * Ordre de présentation :
+ * Position 1 : Quick Win (tâche facile, boost de dopamine)
+ * Position 2 : Tâche urgente OU alignée avec l'énergie
+ * Position 3-5 : Reste par score décroissant
  */
 
 export type EnergyLevel = "high" | "medium" | "low";
@@ -25,10 +30,12 @@ export interface TaskScore {
   task: Task;
   score: number;
   reason: string;
+  reasonDetails?: string[]; // Détails pour les badges
 }
 
 /**
- * Calcule le score d'une tâche en fonction de ses attributs
+ * Calcule le score d'une tâche en fonction des facteurs spécifiés
+ * Et retourne également les raisons détaillées pour l'explication
  */
 function calculateTaskScore(
   task: Task,
@@ -38,53 +45,70 @@ function calculateTaskScore(
 ): TaskScore {
   let score = 0;
   const reasons: string[] = [];
+  const reasonDetails: string[] = []; // Pour les badges détaillés
 
-  // 1. Pondération de l'énergie (40%)
-  const energyMatchScore = calculateEnergyMatchScore(task, energyLevel);
-  score += energyMatchScore * 0.4;
-  if (energyMatchScore > 0) {
-    reasons.push(`Correspondance énergie (${Math.round(energyMatchScore * 100)}%)`);
+  // 1. État Énergétique (40%)
+  const energyScore = calculateEnergyScore(task, energyLevel);
+  score += energyScore * 0.4;
+  if (energyScore > 0) {
+    reasons.push(`Énergie (${Math.round(energyScore * 100)}%)`);
+    if (task.energyRequired === energyLevel) {
+      reasonDetails.push("Matche votre énergie");
+    }
   }
 
-  // 2. Priorité (20%)
+  // 2. Urgence des Deadlines (30%)
+  const deadlineScore = calculateDeadlineScore(task, currentTime);
+  score += deadlineScore * 0.3;
+  if (deadlineScore > 0) {
+    reasons.push(`Deadline (${Math.round(deadlineScore * 100)}%)`);
+    if (deadlineScore >= 15) { // Proche deadline
+      reasonDetails.push("Deadline proche");
+    }
+  }
+
+  // 3. Priorité Manuelle (20%)
   const priorityScore = calculatePriorityScore(task);
   score += priorityScore * 0.2;
   if (priorityScore > 0) {
-    reasons.push(`Priorité élevée (${Math.round(priorityScore * 100)}%)`);
+    reasons.push(`Priorité (${Math.round(priorityScore * 100)}%)`);
+    if (task.priority === "high") {
+      reasonDetails.push("Haute priorité");
+    }
   }
 
-  // 3. Deadline (15%)
-  const deadlineScore = calculateDeadlineScore(task, currentTime);
-  score += deadlineScore * 0.15;
-  if (deadlineScore > 0) {
-    reasons.push(`Deadline proche (${Math.round(deadlineScore * 100)}%)`);
-  }
-
-  // 4. Alignement avec l'intention (15%)
-  const intentionScore = calculateIntentionAlignmentScore(task, intention);
-  score += intentionScore * 0.15;
-  if (intentionScore > 0) {
-    reasons.push(`Alignement intention (${Math.round(intentionScore * 100)}%)`);
-  }
-
-  // 5. Historique (10%)
+  // 4. Patterns Historiques (10%)
   const historyScore = calculateHistoryScore(task);
   score += historyScore * 0.1;
-  if (historyScore > 0) {
-    reasons.push(`Bon historique (${Math.round(historyScore * 100)}%)`);
+  if (historyScore !== 0) {
+    const historyLabel = historyScore > 0 ? "Bonus historique" : "Pénalité historique";
+    reasons.push(`${historyLabel} (${Math.round(Math.abs(historyScore) * 100)}%)`);
+    if (historyScore > 0) {
+      reasonDetails.push("Bon historique");
+    }
+  }
+
+  // Alignement avec l'intention
+  const intentionScore = calculateIntentionAlignmentScore(task, intention);
+  if (intentionScore > 0.5) {
+    reasonDetails.push("Aligné avec votre intention");
   }
 
   return {
     task,
     score,
-    reason: reasons.join(", ")
+    reason: reasons.join(", "),
+    reasonDetails // Ajout des détails pour les badges
   };
 }
 
 /**
- * Calcule le score de correspondance énergétique (0-1)
+ * Calcule le score d'énergie (40%)
+ * High → Tâches complexes, créatives, exigeantes
+ * Medium → Tâches équilibrées
+ * Low → Tâches simples, rapides, de maintenance
  */
-function calculateEnergyMatchScore(task: Task, energyLevel: EnergyLevel): number {
+function calculateEnergyScore(task: Task, energyLevel: EnergyLevel): number {
   // Si la tâche n'a pas d'énergie requise spécifiée, on donne un score neutre
   if (!task.energyRequired) {
     return 0.5;
@@ -95,118 +119,139 @@ function calculateEnergyMatchScore(task: Task, energyLevel: EnergyLevel): number
     return 1.0;
   }
 
-  // Énergie adjacente
-  if (
-    (task.energyRequired === "high" && energyLevel === "medium") ||
-    (task.energyRequired === "medium" && energyLevel === "high") ||
-    (task.energyRequired === "medium" && energyLevel === "low") ||
-    (task.energyRequired === "low" && energyLevel === "medium")
-  ) {
-    return 0.7;
+  // Adaptation selon le niveau d'énergie
+  if (energyLevel === "high") {
+    // En haute énergie, on privilégie les tâches exigeantes
+    if (task.energyRequired === "high") return 1.0;
+    if (task.energyRequired === "medium") return 0.7;
+    return 0.3; // low energy task
+  } else if (energyLevel === "medium") {
+    // En énergie moyenne, on privilégie les tâches équilibrées
+    if (task.energyRequired === "medium") return 1.0;
+    if (task.energyRequired === "high" || task.energyRequired === "low") return 0.6;
+  } else {
+    // En basse énergie, on privilégie les tâches simples
+    if (task.energyRequired === "low") return 1.0;
+    if (task.energyRequired === "medium") return 0.6;
+    return 0.3; // high energy task
   }
 
-  // Énergie opposée
-  return 0.3;
+  return 0.5;
 }
 
 /**
- * Calcule le score de priorité (0-1)
+ * Calcule le score de deadline (30%)
+ * Deadline <24 h : Score +30
+ * Deadline < 3 jours : Score +15
+ * Deadline <7 jours : Score +5
+ * Pas de deadline : Score 0
+ */
+function calculateDeadlineScore(task: Task, currentTime: Date): number {
+  // Si la tâche n'a pas de date planifiée, pas de bonus
+  if (!task.scheduledDate) {
+    return 0;
+  }
+
+  const scheduledDate = new Date(task.scheduledDate);
+  const timeDiff = scheduledDate.getTime() - currentTime.getTime();
+  const hoursUntilDue = timeDiff / (1000 * 3600);
+  const daysUntilDue = hoursUntilDue / 24;
+
+  // Si la deadline est déjà passée, score maximal
+  if (daysUntilDue <= 0) return 30;
+
+  // Plus la deadline est proche, plus le score est élevé
+  if (daysUntilDue <= 1) return 30;
+  if (daysUntilDue <= 3) return 15;
+  if (daysUntilDue <= 7) return 5;
+  
+  // Deadline lointaine
+  return 0;
+}
+
+/**
+ * Calcule le score de priorité (20%)
+ * Haute : Score +20
+ * Moyenne : Score +10
+ * Basse : Score 0
  */
 function calculatePriorityScore(task: Task): number {
   switch (task.priority) {
-    case "high": return 1.0;
-    case "medium": return 0.7;
-    case "low": return 0.3;
-    default: return 0.5;
+    case "high": return 20;
+    case "medium": return 10;
+    case "low": return 0;
+    default: return 0;
   }
 }
 
 /**
- * Calcule le score de deadline (0-1)
+ * Calcule le score basé sur l'historique (10%)
+ * Tâches complétées régulièrement : Score +5
+ * Tâches souvent reportées : Score -10
+ * Tâches liées à intention du jour : Score +5
  */
-function calculateDeadlineScore(task: Task, currentTime: Date): number {
-  // Si la tâche n'a pas de date planifiée, on donne un score neutre
+function calculateHistoryScore(task: Task): number {
+  let score = 0;
+
+  // Tâches complétées régulièrement : Score +5
+  if (task.completionRate != null && task.completionRate >= 80) {
+    score += 5;
+  }
+
+  // Tâches souvent reportées : Score -10
+  if (task.completionRate != null && task.completionRate <= 20) {
+    score -= 10;
+  }
+
+  return score;
+}
+
+/**
+ * Détermine si une tâche est un "Quick Win"
+ * Tâche facile avec faible énergie requise et/ou faible priorité
+ */
+function isQuickWin(task: Task): boolean {
+  // Tâche avec faible énergie requise
+  if (task.energyRequired === "low") {
+    return true;
+  }
+  
+  // Tâche avec faible priorité
+  if (task.priority === "low") {
+    return true;
+  }
+  
+  // Tâche avec peu de sous-tâches
+  if (task.subtasks != null && task.subtasks <= 2) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Détermine si une tâche est urgente
+ * Basé sur la deadline
+ */
+function isUrgent(task: Task, currentTime: Date): boolean {
   if (!task.scheduledDate) {
-    return 0.5;
+    return false;
   }
 
   const scheduledDate = new Date(task.scheduledDate);
   const timeDiff = scheduledDate.getTime() - currentTime.getTime();
   const daysUntilDue = timeDiff / (1000 * 3600 * 24);
 
-  // Si la deadline est déjà passée, score maximal
-  if (daysUntilDue <= 0) return 1.0;
-  
-  // Plus la deadline est proche, plus le score est élevé
-  if (daysUntilDue <= 1) return 1.0;
-  if (daysUntilDue <= 3) return 0.8;
-  if (daysUntilDue <= 7) return 0.6;
-  if (daysUntilDue <= 14) return 0.4;
-  if (daysUntilDue <= 30) return 0.2;
-  
-  // Deadline lointaine
-  return 0.1;
-}
-
-/**
- * Calcule le score d'alignement avec l'intention (0-1)
- */
-function calculateIntentionAlignmentScore(task: Task, intention: Intention): number {
-  // Si la tâche n'a pas de tags, on donne un score neutre
-  if (!task.tags || task.tags.length === 0) {
-    return 0.5;
-  }
-
-  // Correspondance basée sur les tags
-  const intentionTags: Record<Intention, string[]> = {
-    focus: ["Development", "Backend", "Engineering", "Coding", "Programming", "Technical", "Implementation"],
-    learning: ["Learning", "Education", "Research", "Study", "Course", "Training", "Skill"],
-    creativity: ["Design", "Creative", "Art", "Brainstorming", "Ideation", "Innovation", "Concept"],
-    planning: ["Planning", "Organization", "Strategy", "Schedule", "Timeline", "Coordination", "Management"]
-  };
-
-  const matchingTags = task.tags.filter(tag => 
-    intentionTags[intention].some(intentTag => 
-      tag.toLowerCase().includes(intentTag.toLowerCase())
-    )
-  );
-
-  // Plus il y a de tags correspondants, meilleur est le score
-  const matchRatio = matchingTags.length / task.tags.length;
-  return Math.min(matchRatio * 2, 1); // On double le ratio mais on cap à 1
-}
-
-/**
- * Calcule le score basé sur l'historique (0-1)
- */
-function calculateHistoryScore(task: Task): number {
-  // Protection contre les valeurs invalides
-  if (task.completionRate == null || task.completionRate < 0 || task.completionRate > 100) {
-    return 0.5; // Score neutre si donnée invalide
-  }
-
-  // Taux de complétion (0-100 -> 0-1)
-  const completionScore = task.completionRate / 100;
-
-  // Récence (plus récent = meilleur score)
-  if (!task.lastAccessed) {
-    return completionScore * 0.6; // Seulement le score de complétion si pas de date
-  }
-
-  const lastAccessed = new Date(task.lastAccessed);
-  const now = new Date();
-  const daysSinceAccess = (now.getTime() - lastAccessed.getTime()) / (1000 * 3600 * 24);
-
-  // Plus c'est ancien, plus on veut le faire (inverse de la récence)
-  let recencyScore = 1 - (daysSinceAccess / 30); // Sur une échelle de 30 jours
-  recencyScore = Math.max(0, Math.min(1, recencyScore)); // Clamp entre 0 et 1
-
-  // Combinaison des deux scores (60% complétion, 40% récence)
-  return (completionScore * 0.6) + (recencyScore * 0.4);
+  // Urgent si deadline dans moins de 3 jours
+  return daysUntilDue <= 3;
 }
 
 /**
  * Génère la playlist magique avec 3-5 tâches optimales
+ * Ordre de présentation :
+ * Position 1 : Quick Win (tâche facile, boost de dopamine)
+ * Position 2 : Tâche urgente OU alignée avec l'énergie
+ * Position 3-5 : Reste par score décroissant
  */
 export function generateMagicalPlaylist(
   tasks: Task[],
@@ -230,45 +275,83 @@ export function generateMagicalPlaylist(
     calculateTaskScore(task, options.energyLevel, options.intention, options.currentTime)
   );
 
-  // Trier par score décroissant
-  scoredTasks.sort((a, b) => {
-    // Tri par score décroissant
-    if (b.score !== a.score) {
-      return b.score - a.score;
-    }
-    
-    // En cas d'égalité de score, trier par priorité
-    const priorityOrder = { "high": 3, "medium": 2, "low": 1 };
-    const priorityA = priorityOrder[a.task.priority || "medium"] || 2;
-    const priorityB = priorityOrder[b.task.priority || "medium"] || 2;
-    
-    if (priorityB !== priorityA) {
-      return priorityB - priorityA;
-    }
-    
-    // En cas d'égalité de priorité, trier par date d'accès (plus ancien en premier)
-    const dateA = a.task.lastAccessed ? new Date(a.task.lastAccessed).getTime() : 0;
-    const dateB = b.task.lastAccessed ? new Date(b.task.lastAccessed).getTime() : 0;
-    
-    return dateA - dateB;
-  });
+  // Trier par score décroissant pour faciliter la sélection
+  scoredTasks.sort((a, b) => b.score - a.score);
 
-  // Sélectionner 3-5 tâches
-  // La taille de la playlist dépend du nombre de tâches disponibles
-  let playlistSize: number;
-  
-  if (incompleteTasks.length <= 3) {
-    // Si peu de tâches, prendre toutes celles disponibles
-    playlistSize = incompleteTasks.length;
-  } else if (incompleteTasks.length <= 5) {
-    // Si entre 4 et 5 tâches, prendre toutes sauf une
-    playlistSize = incompleteTasks.length - 1;
-  } else {
-    // Sinon, sélectionner entre 3 et 5 tâches selon la moitié du nombre total (plafonné à 5)
-    playlistSize = Math.min(Math.max(3, Math.floor(incompleteTasks.length * 0.5)), 5);
+  // Sélectionner la tâche Quick Win (position 1)
+  let quickWinTask: TaskScore | null = null;
+  const quickWinCandidates = scoredTasks.filter(st => isQuickWin(st.task));
+  if (quickWinCandidates.length > 0) {
+    // Prendre la Quick Win avec le meilleur score
+    quickWinTask = quickWinCandidates[0];
+    // Ajouter le détail pour le badge
+    if (quickWinTask.reasonDetails) {
+      quickWinTask.reasonDetails.push("Quick Win");
+    } else {
+      quickWinTask.reasonDetails = ["Quick Win"];
+    }
+  } else if (scoredTasks.length > 0) {
+    // Si aucune Quick Win, prendre la tâche avec le plus faible score
+    quickWinTask = scoredTasks[scoredTasks.length - 1];
   }
 
-  const selectedTasks = scoredTasks.slice(0, playlistSize);
+  // Sélectionner la tâche urgente ou alignée avec l'énergie (position 2)
+  let priorityTask: TaskScore | null = null;
+  const urgentTasks = scoredTasks.filter(st => 
+    st.task.id !== quickWinTask?.task.id && isUrgent(st.task, options.currentTime)
+  );
+  
+  if (urgentTasks.length > 0) {
+    // Prendre la tâche la plus urgente
+    priorityTask = urgentTasks[0];
+    // Ajouter le détail pour le badge
+    if (priorityTask.reasonDetails && !priorityTask.reasonDetails.includes("Deadline proche")) {
+      priorityTask.reasonDetails.push("Deadline proche");
+    } else if (!priorityTask.reasonDetails) {
+      priorityTask.reasonDetails = ["Deadline proche"];
+    }
+  } else {
+    // Sinon, prendre une tâche alignée avec l'énergie
+    const energyAlignedTasks = scoredTasks.filter(st => 
+      st.task.id !== quickWinTask?.task.id && 
+      st.task.energyRequired === options.energyLevel
+    );
+    
+    if (energyAlignedTasks.length > 0) {
+      priorityTask = energyAlignedTasks[0];
+      // Ajouter le détail pour le badge
+      if (priorityTask.reasonDetails && !priorityTask.reasonDetails.includes("Matche votre énergie")) {
+        priorityTask.reasonDetails.push("Matche votre énergie");
+      } else if (!priorityTask.reasonDetails) {
+        priorityTask.reasonDetails = ["Matche votre énergie"];
+      }
+    } else if (scoredTasks.length > 1) {
+      // Prendre la tâche avec le deuxième meilleur score
+      priorityTask = scoredTasks.find(st => st.task.id !== quickWinTask?.task.id) || null;
+    }
+  }
 
-  return selectedTasks;
+  // Construire la playlist finale
+  const finalPlaylist: TaskScore[] = [];
+  
+  // Position 1 : Quick Win
+  if (quickWinTask) {
+    finalPlaylist.push(quickWinTask);
+  }
+  
+  // Position 2 : Tâche urgente OU alignée avec l'énergie
+  if (priorityTask) {
+    finalPlaylist.push(priorityTask);
+  }
+  
+  // Positions 3-5 : Reste par score décroissant (maximum 3 tâches supplémentaires)
+  const remainingTasks = scoredTasks.filter(st => 
+    st.task.id !== quickWinTask?.task.id && 
+    st.task.id !== priorityTask?.task.id
+  ).slice(0, 3);
+  
+  finalPlaylist.push(...remainingTasks);
+  
+  // Limiter à 5 tâches maximum
+  return finalPlaylist.slice(0, 5);
 }

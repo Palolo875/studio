@@ -14,10 +14,22 @@ export type Task = {
   tags?: string[];
   completedAt?: string; // ISO string
   scheduledDate?: string; // ISO string
+  // Champ pour stocker la raison de la sélection dans la playlist
+  selectionReason?: string;
+  // Champs pour les métadonnées
+  effort?: "S" | "M" | "L";
+  deadlineDisplay?: string;
 };
 
 export type DailyRituals = {
   playlistShuffledCount: number;
   completedTaskCount: number;
   completedTasks: Task[];
+};
+
+export type FocusSettings = {
+  workDuration: number; // en secondes
+  breakDuration: number; // en secondes
+  autoSaveNotes: boolean;
+  soundEnabled: boolean;
 };

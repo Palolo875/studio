@@ -71,7 +71,9 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
         priority: "high",
         energyRequired: "high",
         tags: ["Development", "UI/UX", "Frontend"],
-        scheduledDate: new Date(Date.now() + 86400000 * 3).toISOString() // Dans 3 jours
+        scheduledDate: new Date(Date.now() + 86400000 * 3).toISOString(), // Dans 3 jours
+        effort: "M", // 15 min - 2 heures
+        deadlineDisplay: "Dans 3 jours"
       },
       {
         id: "task-2",
@@ -83,7 +85,9 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
         priority: "high",
         energyRequired: "medium",
         tags: ["Presentation", "Communication", "Reporting"],
-        scheduledDate: new Date(Date.now() + 86400000 * 1).toISOString() // Demain
+        scheduledDate: new Date(Date.now() + 86400000 * 1).toISOString(), // Demain
+        effort: "L", // > 2 heures
+        deadlineDisplay: "Demain"
       },
       {
         id: "task-3",
@@ -95,7 +99,9 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
         priority: "medium",
         energyRequired: "low",
         tags: ["Learning", "Reading", "Innovation"],
-        scheduledDate: new Date(Date.now() + 86400000 * 7).toISOString() // Dans 1 semaine
+        scheduledDate: new Date(Date.now() + 86400000 * 7).toISOString(), // Dans 1 semaine
+        effort: "S", // < 15 minutes
+        deadlineDisplay: "Dans 1 semaine"
       },
       {
         id: "task-4",
@@ -107,7 +113,9 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
         priority: "low",
         energyRequired: "low",
         tags: ["Personal", "Planning", "Schedule"],
-        scheduledDate: new Date(Date.now() + 86400000 * 60).toISOString() // Dans 2 mois
+        scheduledDate: new Date(Date.now() + 86400000 * 60).toISOString(), // Dans 2 mois
+        effort: "S", // < 15 minutes
+        deadlineDisplay: "Dans 2 mois"
       },
       {
         id: "task-5",
@@ -119,7 +127,9 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
         priority: "medium",
         energyRequired: "high",
         tags: ["Creativity", "Ideation", "Product"],
-        scheduledDate: new Date(Date.now() + 86400000 * 2).toISOString() // Dans 2 jours
+        scheduledDate: new Date(Date.now() + 86400000 * 2).toISOString(), // Dans 2 jours
+        effort: "M", // 15 min - 2 heures
+        deadlineDisplay: "Dans 2 jours"
       },
       {
         id: "task-6",
@@ -131,7 +141,9 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
         priority: "medium",
         energyRequired: "medium",
         tags: ["Documentation", "Technical", "Writing"],
-        scheduledDate: new Date(Date.now() + 86400000 * 5).toISOString() // Dans 5 jours
+        scheduledDate: new Date(Date.now() + 86400000 * 5).toISOString(), // Dans 5 jours
+        effort: "M", // 15 min - 2 heures
+        deadlineDisplay: "Dans 5 jours"
       },
       {
         id: "task-7",
@@ -143,7 +155,9 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
         priority: "high",
         energyRequired: "low",
         tags: ["Communication", "Email", "Administration"],
-        scheduledDate: new Date(Date.now() + 86400000 * 1).toISOString() // Demain
+        scheduledDate: new Date(Date.now() + 86400000 * 1).toISOString(), // Demain
+        effort: "S", // < 15 minutes
+        deadlineDisplay: "Demain"
       }
     ];
 
@@ -154,10 +168,11 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
       currentTime: new Date()
     });
 
-    // Convertir les résultats en tâches
+    // Convertir les résultats en tâches avec les raisons
     const tasks: Task[] = magicalPlaylist.map((scoredTask: TaskScore, index: number) => ({
       ...scoredTask.task,
-      id: `magical-${scoredTask.task.id}-${Date.now()}-${index}`
+      id: `magical-${scoredTask.task.id}-${Date.now()}-${index}`,
+      selectionReason: scoredTask.reason
     }));
 
     return {

@@ -80,6 +80,8 @@ const priorityStyles = {
   high: "bg-red-200/50 text-red-800 dark:bg-red-900/50 dark:text-red-200 border-red-300/50",
 };
 
+export { priorityStyles };
+
 export function ReservoirTaskCard({ task }: ReservoirTaskCardProps) {
   const style = cardStyles[parseInt(task.id.replace(/[^0-9]/g, "") || "0", 10) % cardStyles.length];
   const Icon = style.icon;

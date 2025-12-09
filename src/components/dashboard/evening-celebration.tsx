@@ -1,7 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Lightbulb, TrendingUp, Target } from 'lucide-react';
 import { useWindowSize } from 'react-use';
@@ -10,10 +9,23 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Textarea } from '@/components/ui/textarea';
-import { calculateFocusScore, getFocusScoreMessage as getFocusScoreMessageInternal } from '@/lib/focus-score-calculator';
+import { calculateFocusScore, getFocusScoreMessage } from '@/lib/focus-score-calculator';
 
-function EveningContent() {
-  const searchParams = useSearchParams();
+interface EveningCelebrationProps {
+  completedTasks: string[];
+  totalTasks: number;
+  name?: string;
+  onCelebrationComplete?: () => void;
+  userEnergyLevel?: "high" | "medium" | "low" | null;
+}
+
+export function EveningCelebration({ 
+  completedTasks, 
+  totalTasks, 
+  name = 'Junior',
+  onCelebrationComplete,
+  userEnergyLevel = null
+}: EveningCelebrationProps) {
   const { width, height } = useWindowSize();
   const [showConfetti, setShowConfetti] = useState(true);
   const [brainDump, setBrainDump] = useState('');
@@ -21,31 +33,54 @@ function EveningContent() {
   const [actionsDetected, setActionsDetected] = useState(0);
   const [showActionBadge, setShowActionBadge] = useState(false);
 
-  const completedTasksParam = searchParams.get('completed');
-  const totalTasksParam = searchParams.get('total');
-  
-  const completedTasks = useMemo(() => completedTasksParam
-    ? decodeURIComponent(completedTasksParam).split(',').filter(t => t)
-    : [], [completedTasksParam]);
+  // Auto-save brain dump every 2 seconds
+  useEffect(() => {
+    if (!brainDump || brainDump === lastSavedBrainDump) return;
+    
+    const timer = setTimeout(() => {
+      // In a real app, this would save to a database
+      console.log("Brain dump auto-saved:", brainDump);
+      setLastSavedBrainDump(brainDump);
+      
+      // Simulate NLP analysis to detect actions
+      const detectedActions = brainDump.split(/[.!?]+/).filter(sentence => 
+        sentence.toLowerCase().includes('demain') || 
+        sentence.toLowerCase().includes('je dois') ||
+        sentence.toLowerCase().includes('il faut')
+      ).length;
+      
+      setActionsDetected(detectedActions);
+      if (detectedActions > 0) {
+        setShowActionBadge(true);
+      }
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, [brainDump, lastSavedBrainDump]);
 
-  const totalTasks = useMemo(() => totalTasksParam ? parseInt(totalTasksParam, 10) : 0, [totalTasksParam]);
+  // Hide action badge after 5 seconds of inactivity
+  useEffect(() => {
+    if (!showActionBadge) return;
+    
+    const timer = setTimeout(() => {
+      setShowActionBadge(false);
+    }, 5000);
+    
+    return () => clearTimeout(timer);
+  }, [showActionBadge]);
 
   // Calcul du Focus Score selon la nouvelle formule
-  const focusScore = useMemo(() => {
-    return calculateFocusScore(
+    const focusScore = calculateFocusScore(
       completedTasks.map(task => ({ name: task } as any)), 
       totalTasks, 
-      null // userEnergyLevel n'est pas disponible dans cette page
+      userEnergyLevel
     );
-  }, [completedTasks.length, totalTasks]);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowConfetti(false), 2500);
     return () => clearTimeout(timer);
   }, []);
 
-  const name = 'Junior';
-  
   const getTitle = () => {
     if (focusScore >= 100) {
       return `Bravo, ${name}. Mission accomplie.`;
@@ -56,9 +91,7 @@ function EveningContent() {
     return `Vous avez avancé, c'est l'essentiel.`;
   };
 
-  const getFocusScoreMessage = () => {
-    return getFocusScoreMessageInternal(focusScore);
-  };
+  
 
   // Pattern analysis based on completed tasks
   const getDailyPattern = () => {
@@ -179,42 +212,6 @@ function EveningContent() {
     );
   };
 
-  // Auto-save brain dump every 2 seconds
-  useEffect(() => {
-    if (!brainDump || brainDump === lastSavedBrainDump) return;
-    
-    const timer = setTimeout(() => {
-      // In a real app, this would save to a database
-      console.log("Brain dump auto-saved:", brainDump);
-      setLastSavedBrainDump(brainDump);
-      
-      // Simulate NLP analysis to detect actions
-      const detectedActions = brainDump.split(/[.!?]+/).filter(sentence => 
-        sentence.toLowerCase().includes('demain') || 
-        sentence.toLowerCase().includes('je dois') ||
-        sentence.toLowerCase().includes('il faut')
-      ).length;
-      
-      setActionsDetected(detectedActions);
-      if (detectedActions > 0) {
-        setShowActionBadge(true);
-      }
-    }, 2000);
-    
-    return () => clearTimeout(timer);
-  }, [brainDump, lastSavedBrainDump]);
-
-  // Hide action badge after 5 seconds of inactivity
-  useEffect(() => {
-    if (!showActionBadge) return;
-    
-    const timer = setTimeout(() => {
-      setShowActionBadge(false);
-    }, 5000);
-    
-    return () => clearTimeout(timer);
-  }, [showActionBadge]);
-
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen bg-background overflow-hidden p-4">
       {showConfetti && (
@@ -284,7 +281,7 @@ function EveningContent() {
               Focus Score du jour
             </h3>
             <FocusScoreGauge />
-            <p className="text-muted-foreground mt-4">{getFocusScoreMessage()}</p>
+            <p className="text-muted-foreground mt-4">{getFocusScoreMessage(focusScore)}</p>
           </div>
 
           {/* Daily Pattern Analysis */}
@@ -396,10 +393,10 @@ function EveningContent() {
                 // In a real app, this would play a subtle sound if enabled
                 console.log("Playing subtle closing sound");
                 
-                // Redirect to daily check-in after a delay
-                setTimeout(() => {
-                  window.location.href = '/dashboard';
-                }, 3000);
+                // Call the onComplete callback
+                if (onCelebrationComplete) {
+                  setTimeout(onCelebrationComplete, 3000);
+                }
               }}
             >
               Fermer la journée
@@ -412,12 +409,4 @@ function EveningContent() {
       </motion.div>
     </div>
   );
-}
-
-export default function EveningPage() {
-    return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <EveningContent />
-        </Suspense>
-    )
 }
