@@ -8,7 +8,7 @@ export type Task = {
   description?: string;
   priority?: "low" | "medium" | "high";
   energyRequired?: "low" | "medium" | "high";
-  estimatedDuration?: number;
+  estimatedDuration?: number; // in minutes
   objective?: string;
   autoSelected?: boolean;
   tags?: string[];

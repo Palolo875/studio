@@ -3,6 +3,15 @@
 import type { Task } from "@/lib/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight, Lightbulb, BrainCircuit, ChevronsUpDown } from "lucide-react";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { useState } from "react";
+import Link from 'next/link';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
 import { ArrowRight, Lightbulb, BrainCircuit, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +35,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 import { FocusButton } from './focus-button';
@@ -150,14 +160,12 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
           <Collapsible 
             key={task.id}
             asChild
-            open={openCollapsibleId === task.id}
-            onOpenChange={(isOpen) => setOpenCollapsibleId(isOpen ? task.id : null)}
           >
             <motion.div
               variants={itemVariants}
               exit="exit"
               layout
-              className={`flex flex-col p-4 rounded-2xl bg-card transition-opacity duration-300 ${task.completed ? 'opacity-50' : 'opacity-100'}`}
+              className={cn(`flex flex-col p-4 rounded-2xl bg-card transition-all duration-300`, task.completed && 'opacity-50', 'data-[state=open]:ring-2 data-[state=open]:ring-primary/50')}
             >
               <div className="flex items-center justify-between gap-2">
                 <Checkbox
@@ -169,6 +177,34 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
                   }`}
                   className="h-6 w-6 rounded-md mt-1"
                 />
+                <CollapsibleTrigger asChild className="w-full">
+                  <div className="flex-1 space-y-2 cursor-pointer group">
+                    <label
+                      htmlFor={task.id}
+                      className={`text-base font-medium leading-none cursor-pointer group-hover:text-primary ${
+                        task.completed ? "line-through text-muted-foreground" : ""
+                      }`}
+                    >
+                      {task.name}
+                    </label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {task.priority && (
+                        <Badge variant="secondary" className="capitalize text-xs">{task.priority}</Badge>
+                      )}
+                      {task.tags && task.tags[0] && (
+                        <Badge variant="outline" className="text-xs">{task.tags[0]}</Badge>
+                      )}
+                      {task.subtasks > 0 && (
+                        <p className="text-xs text-muted-foreground">{task.subtasks} sous-tâches</p>
+                      )}
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
+                 <Link href={`/dashboard/focus/${encodeURIComponent(task.name)}`} className="flex-shrink-0">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 p-0">
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
                 <div className="flex-1 space-y-2 cursor-pointer">
                   <label
                     htmlFor={task.id}
@@ -223,6 +259,50 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
                 </div>
               </div>
 
+              <CollapsibleContent className="mt-4 space-y-4 pt-4 border-t border-border">
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <BrainCircuit className="h-5 w-5 text-primary" />
+                    <h4 className="font-semibold text-primary">Technique: Time Blocking</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">Allouez un bloc de temps spécifique uniquement à cette tâche pour éliminer les distractions.</p>
+                  <ul className="list-disc list-inside text-sm space-y-1 text-muted-foreground">
+                    <li>Définir un objectif clair pour la session.</li>
+                    <li>Couper toutes les notifications.</li>
+                    <li>Utiliser un minuteur.</li>
+                    <li>Prévoir une courte pause après.</li>
+                  </ul>
+                  <a href="#" className="text-xs text-primary/80 hover:underline mt-3 block">En savoir plus sur le Time Blocking</a>
+                </div>
+                 <div className="flex items-center justify-end gap-2">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm" className="text-muted-foreground">
+                          Pas maintenant
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Reporter cette tâche ?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Pourquoi voulez-vous reporter cette tâche ? Votre réponse nous aide à mieux planifier.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="flex flex-col space-y-2">
+                            <Button variant="outline" className="justify-start">Pas l’énergie maintenant</Button>
+                            <Button variant="outline" className="justify-start">Bloqué (attente externe)</Button>
+                            <Button variant="outline" className="justify-start">Pas prioritaire finalement</Button>
+                            <Button variant="outline" className="justify-start">Mauvais moment de la journée</Button>
+                        </div>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Annuler</AlertDialogCancel>
+                          <AlertDialogAction>Confirmer le report</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+              </CollapsibleContent>
               <CollapsibleContent className="mt-4 space-y-4">
                 <ExpandableSection
                   title="Technique: Time Blocking"
