@@ -721,7 +721,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2 font-semibold">
-                      <Zap size={16} /> Énergie requise
+                      Énergie requise
                     </Label>
                     <Select
                       name="energyRequired"
