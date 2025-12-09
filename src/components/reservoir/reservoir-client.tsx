@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
@@ -49,8 +48,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { initialTasks } from '@/lib/data';
-import { useToast } from '@/hooks/use-toast';
-
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { ChevronDown } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { MoreHorizontal } from 'lucide-react';
 
 type Filters = {
   status: 'all' | 'completed' | 'not_completed';
@@ -522,13 +523,114 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                 return (
                   <div key={dateKey} ref={(el) => { if (!isUnplanned) dateRefs.current[dateKey] = el; }}>
                     <h2 className="text-lg font-bold sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10">{title}</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {tasksForDay.map(task => (
-                        <div key={task.id} onClick={() => handleTaskClick(task)}>
-                          <ReservoirTaskCard task={task} />
-                        </div>
-                      ))}
-                    </div>
+                    {viewMode === 'grid' ? (
+                      // Grid View
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {tasksForDay.map(task => (
+                          <div 
+                            key={task.id} 
+                            onClick={() => {
+                              if (selectedTasks.length > 0) {
+                                toggleTaskSelection(task.id);
+                              } else {
+                                handleTaskClick(task);
+                              }
+                            }}
+                            onDoubleClick={() => {
+                              // Quick edit on double click
+                              handleTaskClick(task);
+                            }}
+                            className={`relative ${selectedTasks.includes(task.id) ? 'ring-2 ring-primary rounded-3xl' : ''}`}
+                          >
+                            <ReservoirTaskCard task={task} />
+                            {selectedTasks.length > 0 && (
+                              <div 
+                                className="absolute top-2 left-2 z-20"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleTaskSelection(task.id);
+                                }}
+                              >
+                                <Checkbox checked={selectedTasks.includes(task.id)} />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      // List View
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12">
+                              <Checkbox 
+                                checked={selectedTasks.length === tasksForDay.length && tasksForDay.length > 0}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedTasks([...selectedTasks, ...tasksForDay.map(t => t.id)]);
+                                  } else {
+                                    setSelectedTasks(selectedTasks.filter(id => !tasksForDay.some(t => t.id === id)));
+                                  }
+                                }}
+                              />
+                            </TableHead>
+                            <TableHead className="w-1/3">Contenu</TableHead>
+                            <TableHead>Deadline</TableHead>
+                            <TableHead>Priorité</TableHead>
+                            <TableHead>Effort</TableHead>
+                            <TableHead>Énergie</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {tasksForDay.map(task => (
+                            <TableRow 
+                              key={task.id}
+                              className={`cursor-pointer ${selectedTasks.includes(task.id) ? 'bg-muted' : ''}`}
+                              onClick={() => {
+                                if (selectedTasks.length > 0) {
+                                  toggleTaskSelection(task.id);
+                                }
+                              }}
+                              onDoubleClick={() => {
+                                // Quick edit on double click
+                                handleTaskClick(task);
+                              }}
+                            >
+                              <TableCell>
+                                <Checkbox 
+                                  checked={selectedTasks.includes(task.id)}
+                                  onCheckedChange={() => toggleTaskSelection(task.id)}
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">{task.name}</TableCell>
+                              <TableCell>{formatDeadline(task.scheduledDate)}</TableCell>
+                              <TableCell>
+                                {task.priority && (
+                                  <Badge variant="outline" className={cn("capitalize text-xs", priorityStyles[task.priority])}>
+                                    {task.priority}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>{getEffortDisplay(task.effort)}</TableCell>
+                              <TableCell>{getEnergyBadge(task.energyRequired)}</TableCell>
+                              <TableCell className="text-right">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleTaskClick(task);
+                                  }}
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
                   </div>
                 )
              })}
