@@ -10,7 +10,7 @@ import {
   SidebarInset,
 } from '@/components/ui/sidebar';
 import {Logo} from '@/components/logo';
-import {LayoutDashboard, Settings, BookCopy, BarChart} from 'lucide-react';
+import {LayoutDashboard, Settings, BookCopy, BarChart, Feather} from 'lucide-react';
 import Link from 'next/link';
 import {UserNav} from '@/components/user-nav';
 import {SidebarTrigger} from '@/components/ui/sidebar';
@@ -50,6 +50,14 @@ export default function DashboardLayout({
                   <Link href="/dashboard/l-atelier">
                     <BookCopy />
                     L'Atelier
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/dashboard/capture">
+                    <Feather />
+                    Capture
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
