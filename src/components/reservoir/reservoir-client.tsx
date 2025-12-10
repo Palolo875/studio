@@ -462,11 +462,25 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
               <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 text-xs">{activeFilterCount}</Badge>
             )}
           </Button>
-           <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={handleCleanTasks}>
-                    <Trash2 className="h-5 w-5" />
-                </Button>
-            </AlertDialogTrigger>
+           <AlertDialog>
+              <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                      <Trash2 className="h-5 w-5" />
+                  </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                  <AlertDialogHeader>
+                      <AlertDialogTitle>Nettoyer l'atelier ?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                          Cela archivera {getObsoleteTasks().length} tâche(s) obsolète(s) (créées il y a plus de 30 jours, sans deadline et jamais commencées).
+                      </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                      <AlertDialogCancel>Annuler</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleCleanTasks}>Nettoyer</AlertDialogAction>
+                  </AlertDialogFooter>
+              </AlertDialogContent>
+          </AlertDialog>
           <Button size="icon" onClick={handleAddNewClick}>
             <Plus className="h-5 w-5" />
           </Button>
@@ -534,7 +548,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                     <h2 className="text-lg font-bold sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10">{title}</h2>
                     {viewMode === 'grid' ? (
                       // Grid View
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
                         {tasksForDay.map(task => (
                           <div 
                             key={task.id} 
@@ -984,3 +998,5 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     </div>
   );
 }
+
+    

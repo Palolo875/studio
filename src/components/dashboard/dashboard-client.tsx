@@ -7,7 +7,7 @@ import {Recommendations} from './recommendations';
 import {TaskList} from './task-list';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Input} from '@/components/ui/input';
-import {RefreshCw, Search, Siren} from 'lucide-react';
+import {RefreshCw, Search, Siren, CalendarClock} from 'lucide-react';
 import {PlaylistGenerator} from './playlist-generator';
 import {Button} from '../ui/button';
 import {DailyGreeting} from './daily-greeting';
@@ -264,8 +264,8 @@ export function DashboardClient() {
       </div>
 
       <Tabs defaultValue="playlist" className="w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-          <TabsList className="grid w-full max-w-sm grid-cols-2 bg-card h-12 rounded-2xl p-1">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <TabsList className="grid w-full grid-cols-2 bg-card h-12 rounded-2xl p-1 sm:max-w-sm">
             <TabsTrigger
               value="playlist"
               className="rounded-xl h-full data-[state=active]:bg-muted data-[state=active]:text-foreground"
@@ -274,8 +274,9 @@ export function DashboardClient() {
             </TabsTrigger>
             <TabsTrigger
               value="timeline"
-              className="rounded-xl h-full data-[state=active]:bg-muted data-[state=active]:text-foreground"
+              className="rounded-xl h-full data-[state=active]:bg-muted data-[state=active]:text-foreground flex items-center gap-2"
             >
+              <CalendarClock />
               Timeline
             </TabsTrigger>
           </TabsList>
@@ -411,3 +412,5 @@ export function DashboardClient() {
     </div>
   );
 }
+
+    

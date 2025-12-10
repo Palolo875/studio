@@ -87,3 +87,5 @@ export default function EnergyQuizPage() {
     </motion.div>
   );
 }
+
+    
