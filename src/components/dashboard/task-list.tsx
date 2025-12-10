@@ -1,29 +1,19 @@
 "use client";
 
-import type { Task } from "@/lib/types";
-import { Checkbox } from "@/components/ui/checkbox";
-import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Lightbulb, BrainCircuit, ChevronsUpDown } from "lucide-react";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
 import { useState } from "react";
+import type { Task } from "@/lib/types";
 import Link from 'next/link';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-import { ArrowRight, Lightbulb, BrainCircuit, Sparkles } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight, Lightbulb, BrainCircuit, ChevronsUpDown, Sparkles } from "lucide-react";
+
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { 
   Collapsible, 
   CollapsibleContent, 
   CollapsibleTrigger 
 } from "@/components/ui/collapsible";
-import { ExpandableSection } from "@/components/ui/expandable-section";
-import Link from 'next/link';
-import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,7 +27,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-
 import { FocusButton } from './focus-button';
 
 interface TaskListProps {
@@ -124,29 +113,6 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
     );
   }
 
-  const handleTaskCompletion = async (taskId: string, taskName: string) => {
-    // Marquer la tâche comme terminée
-    setTasks(prevTasks => 
-      prevTasks.map(task => 
-        task.id === taskId ? { ...task, completed: true, completedAt: new Date().toISOString() } : task
-      )
-    );
-    
-    // Afficher une notification
-    toast({
-      title: "Tâche terminée !",
-      description: `La tâche "${taskName}" a été marquée comme terminée.`,
-    });
-    
-    // Mettre à jour les rituels quotidiens
-    setDailyRituals(prev => ({
-      ...prev,
-      completedTaskCount: prev.completedTaskCount + 1,
-      completedTasks: [...prev.completedTasks, 
-        tasks.find(t => t.id === taskId) || { id: taskId, name: taskName, completed: true, subtasks: 0, lastAccessed: new Date().toISOString(), completionRate: 100 }]
-    }));
-  };
-
   return (
     <motion.div 
         className="space-y-3"
@@ -160,6 +126,8 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
           <Collapsible 
             key={task.id}
             asChild
+            open={openCollapsibleId === task.id}
+            onOpenChange={(isOpen) => setOpenCollapsibleId(isOpen ? task.id : null)}
           >
             <motion.div
               variants={itemVariants}
@@ -167,45 +135,18 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
               layout
               className={cn(`flex flex-col p-4 rounded-2xl bg-card transition-all duration-300`, task.completed && 'opacity-50', 'data-[state=open]:ring-2 data-[state=open]:ring-primary/50')}
             >
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-start justify-between gap-4">
                 <Checkbox
                   id={task.id}
                   checked={task.completed}
-                  onCheckedChange={() => handleTaskCompletion(task.id, task.name)}
+                  onCheckedChange={() => onToggleCompletion(task.id)}
                   aria-label={`Mark task ${task.name} as ${
                     task.completed ? "incomplete" : "complete"
                   }`}
                   className="h-6 w-6 rounded-md mt-1"
                 />
-                <CollapsibleTrigger asChild className="w-full">
-                  <div className="flex-1 space-y-2 cursor-pointer group">
-                    <label
-                      htmlFor={task.id}
-                      className={`text-base font-medium leading-none cursor-pointer group-hover:text-primary ${
-                        task.completed ? "line-through text-muted-foreground" : ""
-                      }`}
-                    >
-                      {task.name}
-                    </label>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {task.priority && (
-                        <Badge variant="secondary" className="capitalize text-xs">{task.priority}</Badge>
-                      )}
-                      {task.tags && task.tags[0] && (
-                        <Badge variant="outline" className="text-xs">{task.tags[0]}</Badge>
-                      )}
-                      {task.subtasks > 0 && (
-                        <p className="text-xs text-muted-foreground">{task.subtasks} sous-tâches</p>
-                      )}
-                    </div>
-                  </div>
-                </CollapsibleTrigger>
-                 <Link href={`/dashboard/focus/${encodeURIComponent(task.name)}`} className="flex-shrink-0">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 p-0">
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <div className="flex-1 space-y-2 cursor-pointer">
+
+                <div className="flex-1 space-y-2 cursor-pointer" onClick={() => setOpenCollapsibleId(openCollapsibleId === task.id ? null : task.id)}>
                   <label
                     htmlFor={task.id}
                     className={`text-base font-medium leading-none cursor-pointer ${
@@ -226,7 +167,7 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
                       </Badge>
                     ))}
                     {task.priority && (
-                      <Badge variant="secondary" className="capitalize text-xs">{task.priority}</Badge>
+                      <Badge variant="secondary" className={cn("capitalize text-xs")}>{task.priority}</Badge>
                     )}
                     {task.tags && task.tags.slice(0, 2).map((tag, idx) => (
                       <Badge key={idx} variant="outline" className="text-xs">{tag}</Badge>
@@ -257,6 +198,12 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
                     )}
                   </div>
                 </div>
+
+                <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 p-0 -mr-2">
+                        <ChevronsUpDown className="h-4 w-4" />
+                    </Button>
+                </CollapsibleTrigger>
               </div>
 
               <CollapsibleContent className="mt-4 space-y-4 pt-4 border-t border-border">
@@ -275,6 +222,10 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
                   <a href="#" className="text-xs text-primary/80 hover:underline mt-3 block">En savoir plus sur le Time Blocking</a>
                 </div>
                  <div className="flex items-center justify-end gap-2">
+                    <FocusButton 
+                      taskId={task.id} 
+                      taskName={task.name} 
+                    />
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="ghost" size="sm" className="text-muted-foreground">
@@ -303,62 +254,6 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
                     </AlertDialog>
                   </div>
               </CollapsibleContent>
-              <CollapsibleContent className="mt-4 space-y-4">
-                <ExpandableSection
-                  title="Technique: Time Blocking"
-                  strategy="Allouez un bloc de temps spécifique uniquement à cette tâche pour éliminer les distractions."
-                  techniques={[
-                    "Définir un objectif clair pour la session.",
-                    "Couper toutes les notifications.",
-                    "Utiliser un minuteur.",
-                    "Prévoir une courte pause après."
-                  ]}
-                  linkText="En savoir plus sur le Time Blocking"
-                  linkUrl="#"
-                />
-              </CollapsibleContent>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border -m-4 p-4 mt-4">
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-muted-foreground">
-                    <Lightbulb className="mr-2 h-4 w-4" />
-                    Comment l'aborder ?
-                  </Button>
-                </CollapsibleTrigger>
-
-                <FocusButton 
-                  taskId={task.id} 
-                  taskName={task.name} 
-                  onTaskComplete={handleTaskCompletion}
-                />
-
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground">
-                      Pas maintenant
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Reporter cette tâche ?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Pourquoi voulez-vous reporter cette tâche ? Votre réponse nous aide à mieux planifier.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <div className="flex flex-col space-y-2">
-                        <Button variant="outline" className="justify-start">Pas l’énergie maintenant</Button>
-                        <Button variant="outline" className="justify-start">Bloqué (attente externe)</Button>
-                        <Button variant="outline" className="justify-start">Pas prioritaire finalement</Button>
-                        <Button variant="outline" className="justify-start">Mauvais moment de la journée</Button>
-                    </div>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Annuler</AlertDialogCancel>
-                      <AlertDialogAction>Confirmer le report</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
             </motion.div>
           </Collapsible>
         ))}
@@ -366,3 +261,5 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
     </motion.div>
   );
 }
+
+    
