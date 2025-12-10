@@ -264,8 +264,8 @@ export function DashboardClient() {
       </div>
 
       <Tabs defaultValue="playlist" className="w-full">
-        <div className="flex justify-between items-center mb-4">
-          <TabsList className="grid w-full grid-cols-2 bg-card h-12 rounded-2xl p-1 max-w-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <TabsList className="grid w-full max-w-sm grid-cols-2 bg-card h-12 rounded-2xl p-1">
             <TabsTrigger
               value="playlist"
               className="rounded-xl h-full data-[state=active]:bg-muted data-[state=active]:text-foreground"

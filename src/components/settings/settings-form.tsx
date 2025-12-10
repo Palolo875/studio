@@ -319,7 +319,7 @@ export function SettingsForm() {
                     <RadioGroup
                       onValueChange={field.onChange}
                       defaultValue={field.value}
-                      className="grid grid-cols-3 gap-4"
+                      className="grid grid-cols-1 sm:grid-cols-3 gap-4"
                     >
                       <FormItem>
                         <RadioGroupItem value="light" id="light" className="sr-only" />
@@ -534,14 +534,14 @@ export function SettingsForm() {
                     <h3 className="text-lg font-medium">Sauvegardes existantes</h3>
                     <div className="space-y-2">
                         {[1, 2, 3].map((item) => (
-                            <div key={item} className="flex items-center justify-between p-4 border rounded-lg">
+                            <div key={item} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-4">
                                 <div>
                                     <p className="font-medium">Sauvegarde du {new Date(Date.now() - item * 86400000).toLocaleDateString('fr-FR')}</p>
                                     <p className="text-sm text-muted-foreground">2.3 MB</p>
                                 </div>
-                                <div className="flex gap-2">
-                                    <Button variant="outline" size="sm">Restaurer</Button>
-                                    <Button variant="outline" size="sm">Télécharger</Button>
+                                <div className="flex gap-2 w-full sm:w-auto">
+                                    <Button variant="outline" size="sm" className="flex-1">Restaurer</Button>
+                                    <Button variant="outline" size="sm" className="flex-1">Télécharger</Button>
                                 </div>
                             </div>
                         ))}
@@ -558,7 +558,7 @@ export function SettingsForm() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="flex flex-wrap gap-4">
+                <div className="flex flex-col sm:flex-row flex-wrap gap-4">
                     <Button variant="outline" onClick={() => {
                       // Export data logic
                       const dataStr = JSON.stringify(form.getValues(), null, 2);
@@ -612,13 +612,14 @@ export function SettingsForm() {
                         Ces actions sont irréversibles. Soyez certain de vouloir continuer.
                     </p>
                     <Card className="border-destructive/50 bg-destructive/5 p-4">
-                         <div className="flex flex-col sm:flex-row items-center justify-between">
+                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                            <div>
                                 <h4 className="font-semibold text-destructive">Réinitialiser l’application</h4>
                                 <p className="text-sm text-destructive/80">Ceci supprimera toutes vos données.</p>
                            </div>
                             <Button 
                               variant="destructive" 
+                              className="w-full sm:w-auto"
                               onClick={() => {
                                 // Confirmation dialog
                                 if (confirm("Êtes-vous sûr de vouloir réinitialiser l'application ? Cette action est irréversible et supprimera toutes vos données.")) {
@@ -720,13 +721,13 @@ export function SettingsForm() {
                         control={form.control}
                         name="focusAutoSave"
                         render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 flex-1">
                                 <div className="space-y-0.5">
                                     <FormLabel className="text-base">
-                                        Sauvegarde automatique des notes
+                                        Sauvegarde auto. des notes
                                     </FormLabel>
                                     <FormDescription>
-                                        Enregistre automatiquement vos notes toutes les 2 secondes
+                                        Enregistre vos notes toutes les 2s
                                     </FormDescription>
                                 </div>
                                 <FormControl>
@@ -743,13 +744,13 @@ export function SettingsForm() {
                         control={form.control}
                         name="focusSoundEnabled"
                         render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 flex-1">
                                 <div className="space-y-0.5">
                                     <FormLabel className="text-base">
                                         Sons de notification
                                     </FormLabel>
                                     <FormDescription>
-                                        Émet un son discret à la fin de chaque session
+                                        Émet un son à la fin de chaque session
                                     </FormDescription>
                                 </div>
                                 <FormControl>
@@ -863,5 +864,3 @@ export function SettingsForm() {
     </Form>
   );
 }
-
-    

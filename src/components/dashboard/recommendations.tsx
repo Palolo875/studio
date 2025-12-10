@@ -91,7 +91,7 @@ export function Recommendations({ tasks }: RecommendationsProps) {
     onClick?: () => void;
   }) => (
     <Card
-      className="rounded-3xl shadow-sm w-full sm:w-[calc(50%-0.5rem)] flex-1 flex flex-col justify-between p-4 bg-card hover:bg-accent transition-colors cursor-pointer"
+      className="rounded-3xl shadow-sm flex-1 flex flex-col justify-between p-4 bg-card hover:bg-accent transition-colors cursor-pointer"
       onClick={onClick}
     >
       <div>{icon}</div>

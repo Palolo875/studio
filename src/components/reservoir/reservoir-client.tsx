@@ -52,6 +52,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { ChevronDown } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { MoreHorizontal } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 type Filters = {
   status: 'all' | 'completed' | 'not_completed';
@@ -80,6 +81,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const { toast } = useToast();
 
   // Debounce search term
   useEffect(() => {
@@ -248,7 +250,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
 
     return { filteredAndGroupedTasks: grouped, sortedGroupKeys: sortedKeys };
 
-  }, [tasks, filters]);
+  }, [tasks, filters, debouncedSearchTerm]);
 
 
   const handleFilterChange = <K extends keyof Filters>(key: K, value: Filters[K]) => {
@@ -407,9 +409,9 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     if (!energy) return null;
     
     const energyMap: Record<string, {label: string, color: string}> = {
-      'low': { label: 'Faible', color: 'bg-green-100 text-green-800' },
-      'medium': { label: 'Moyenne', color: 'bg-yellow-100 text-yellow-800' },
-      'high': { label: 'Haute', color: 'bg-red-100 text-red-800' }
+      'low': { label: 'Faible', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200' },
+      'medium': { label: 'Moyenne', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200' },
+      'high': { label: 'Haute', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200' }
     };
     
     const energyInfo = energyMap[energy];
@@ -425,15 +427,15 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
   return (
     <div className="space-y-8 h-full flex flex-col">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h1 className="text-3xl font-bold">L'Atelier</h1>
-        <div className="flex items-center gap-2">
-          <div className="relative">
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Rechercher une tâche..."
-              className="pl-10 pr-4 h-10 rounded-full bg-card"
+              placeholder="Rechercher..."
+              className="pl-10 pr-4 h-10 rounded-full bg-card w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -442,6 +444,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
             variant={viewMode === 'grid' ? 'default' : 'outline'} 
             size="icon" 
             onClick={() => setViewMode('grid')}
+            className="hidden sm:inline-flex"
           >
             <Grid className="h-5 w-5" />
           </Button>
@@ -449,6 +452,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
             variant={viewMode === 'list' ? 'default' : 'outline'} 
             size="icon" 
             onClick={() => setViewMode('list')}
+            className="hidden sm:inline-flex"
           >
             <List className="h-5 w-5" />
           </Button>
@@ -458,6 +462,11 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
               <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 text-xs">{activeFilterCount}</Badge>
             )}
           </Button>
+           <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={handleCleanTasks}>
+                    <Trash2 className="h-5 w-5" />
+                </Button>
+            </AlertDialogTrigger>
           <Button size="icon" onClick={handleAddNewClick}>
             <Plus className="h-5 w-5" />
           </Button>
@@ -470,7 +479,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
       )}
 
       {/* Timeline */}
-      <ScrollArea className="w-full whitespace-nowrap -mx-8 px-8">
+      <ScrollArea className="w-full whitespace-nowrap -mx-4 sm:-mx-8 px-4 sm:px-8">
         <div className="flex space-x-2 pb-4">
           {dates.map((date, index) => {
             const isSelected = isSameDay(date, selectedDate);
@@ -509,7 +518,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
       </ScrollArea>
 
       {/* Task List */}
-      <ScrollArea className="flex-1 -mx-8 px-8">
+      <ScrollArea className="flex-1 -mx-4 sm:-mx-8 px-4 sm:px-8">
         {sortedGroupKeys.length > 0 ? (
           <div className="space-y-8 pr-4 pb-4">
              {sortedGroupKeys.map(dateKey => {
@@ -853,13 +862,25 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
             <SheetFooter className="bg-card p-4 flex-row justify-between sm:justify-between border-t">
               <div>
                 {!isCreatingNewTask && selectedTask && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={() => handleDeleteTask(selectedTask.id)}
-                  >
-                    Supprimer
-                  </Button>
+                   <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button type="button" variant="destructive">Supprimer</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Cette action ne peut pas être annulée. Cela supprimera définitivement cette tâche.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteTask(selectedTask.id)}>
+                                    Supprimer
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 )}
               </div>
               <div className="flex gap-2">
@@ -963,5 +984,3 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     </div>
   );
 }
-
-    
