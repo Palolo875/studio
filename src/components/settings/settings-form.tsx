@@ -59,6 +59,12 @@ const formSchema = z.object({
   
   // Avancé
   developerMode: z.boolean(),
+  
+  // Focus Mode
+  focusWorkDuration: z.coerce.number().int().min(1, "Doit être d'au moins 1 minute.").optional(),
+    focusBreakDuration: z.coerce.number().int().min(1, "Doit être d'au moins 1 minute.").optional(),
+    focusAutoSave: z.boolean().optional(),
+    focusSoundEnabled: z.boolean().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -138,36 +144,40 @@ export function SettingsForm() {
               )}
             />
             
-            <div className="space-y-4">
-              <FormLabel>Couleur d'accent</FormLabel>
-              <div className="flex flex-wrap gap-4">
-                {['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'].map((color) => (
-                  <FormField
-                    key={color}
-                    control={form.control}
-                    name="accentColor"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col items-center">
-                        <FormControl>
-                          <RadioGroupItem 
-                            value={color} 
-                            id={color} 
-                            className="peer sr-only" 
-                            checked={field.value === color}
-                            onCheckedChange={() => field.onChange(color)}
+            <FormField
+              control={form.control}
+              name="accentColor"
+              render={({ field }) => (
+                <FormItem className="space-y-4">
+                  <FormLabel>Couleur d'accent</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="flex flex-wrap gap-4"
+                    >
+                      {['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'].map((color) => (
+                        <FormItem key={color} className="flex flex-col items-center">
+                          <FormControl>
+                            <RadioGroupItem 
+                              value={color} 
+                              id={color} 
+                              className="peer sr-only"
+                            />
+                          </FormControl>
+                          <Label 
+                            htmlFor={color} 
+                            className="h-10 w-10 rounded-full cursor-pointer border-2 border-muted peer-data-[state=checked]:border-primary peer-data-[state=checked]:ring-2 peer-data-[state=checked]:ring-primary/30"
+                            style={{ backgroundColor: color }}
                           />
-                        </FormControl>
-                        <Label 
-                          htmlFor={color} 
-                          className="h-10 w-10 rounded-full cursor-pointer border-2 border-muted peer-data-[state=checked]:border-primary peer-data-[state=checked]:ring-2 peer-data-[state=checked]:ring-primary/30"
-                          style={{ backgroundColor: color }}
-                        />
-                      </FormItem>
-                    )}
-                  />
-                ))}
-              </div>
-            </div>
+                        </FormItem>
+                      ))}
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <FormField
               control={form.control}
@@ -502,7 +512,7 @@ export function SettingsForm() {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Limite de sauvegardes</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
+                                <Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={String(field.value)}>
                                     <FormControl>
                                         <SelectTrigger className="h-12 rounded-xl">
                                             <SelectValue placeholder="Choisir la limite" />
