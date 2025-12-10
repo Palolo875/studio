@@ -7,7 +7,7 @@ import {Recommendations} from './recommendations';
 import {TaskList} from './task-list';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Input} from '@/components/ui/input';
-import {RefreshCw, Search} from 'lucide-react';
+import {RefreshCw, Search, Siren} from 'lucide-react';
 import {PlaylistGenerator} from './playlist-generator';
 import {Button} from '../ui/button';
 import {DailyGreeting} from './daily-greeting';
@@ -28,6 +28,8 @@ import {
 import {useRouter} from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TimelineView } from './timeline-view';
+import { Label } from '../ui/label';
+import { Switch } from '../ui/switch';
 
 type EnergyState =
   | 'energized'
@@ -169,19 +171,14 @@ export function DashboardClient() {
   };
 
   const handleAllTasksCompleted = (currentRituals: DailyRituals) => {
-    const currentHour = new Date().getHours();
-    if (currentHour < 16) {
-      setShowBonusCard(true);
-    } else {
-      const completedTaskNames = currentRituals.completedTasks
-        .map((t: Task) => t.name)
+    const completedTaskNames = currentRituals.completedTasks
+        .map(t => t.name)
         .join(',');
-      router.push(
+    router.push(
         `/dashboard/evening?completed=${encodeURIComponent(
-          completedTaskNames
+            completedTaskNames
         )}&total=${initialTaskCount}`
-      );
-    }
+    );
   };
 
   const addBonusTask = () => {
