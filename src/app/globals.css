@@ -8,39 +8,39 @@ body {
 
 @layer base {
   :root {
-    --background: 240 10% 98%; /* Off-white */
-    --foreground: 240 6% 10%;
-    --card: 240 10% 100%;
+    --background: 40 12% 95%; /* Light Grayish */
+    --foreground: 240 6% 10%; /* Very Dark Blue */
+    --card: 40 12% 98%; /* Lighter than background */
     --card-foreground: 240 6% 10%;
-    --popover: 240 10% 100%;
+    --popover: 40 12% 98%;
     --popover-foreground: 240 6% 10%;
-    --primary: 240 58% 56%; /* Strong Blue */
+    --primary: 0 65% 55%; /* Soft Red */
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 92%;
+    --secondary: 40 8% 90%;
     --secondary-foreground: 240 6% 10%;
-    --muted: 240 5% 92%;
+    --muted: 40 8% 90%;
     --muted-foreground: 240 5% 45%;
-    --accent: 240 5% 92%;
+    --accent: 40 8% 90%;
     --accent-foreground: 240 6% 10%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 58% 56%;
+    --border: 40 10% 88%;
+    --input: 40 10% 88%;
+    --ring: 0 65% 55%;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.8rem;
-    --sidebar-background: 240 5% 96%;
+    --sidebar-background: 40 10% 92%;
     --sidebar-foreground: 240 6% 10%;
-    --sidebar-primary: 240 58% 56%;
+    --sidebar-primary: 0 65% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 5% 90%;
+    --sidebar-accent: 40 10% 88%;
     --sidebar-accent-foreground: 240 6% 10%;
-    --sidebar-border: 240 5.9% 88%;
-    --sidebar-ring: 240 58% 56%;
+    --sidebar-border: 40 10% 85%;
+    --sidebar-ring: 0 65% 55%;
   }
 
   .dark {
