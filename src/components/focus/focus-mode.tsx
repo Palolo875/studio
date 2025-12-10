@@ -71,7 +71,7 @@ export function FocusMode({
         transition={{ duration: 0.3, ease: 'easeOut' }}
         className="w-full max-w-2xl p-4"
       >
-        <Card className="w-full shadow-2xl rounded-3xl border-0 bg-gradient-to-br from-background to-muted">
+        <Card className="w-full shadow-2xl rounded-3xl border-0 bg-gradient-to-br from-background to-muted/50">
           <CardHeader className="pb-4">
             <div className="flex justify-between items-center">
               <Button 
@@ -83,13 +83,6 @@ export function FocusMode({
                 <ArrowLeft className="h-5 w-5" />
                 <span className="ml-2">Retour</span>
               </Button>
-              
-              <div className="text-center flex-1 px-4">
-                <h2 className="text-xl font-light truncate">{taskName}</h2>
-                <p className="text-sm text-muted-foreground">
-                  Sessions complétées: {sessionsCompleted}
-                </p>
-              </div>
               
               <Button 
                 variant="ghost" 
@@ -104,6 +97,10 @@ export function FocusMode({
           </CardHeader>
           
           <CardContent className="space-y-8">
+             <div className="text-center">
+                <h2 className="text-xl font-light truncate">{taskName}</h2>
+            </div>
+            
             {/* Timer Display */}
             <TimerDisplay 
               workDuration={settings.workDuration} 
@@ -111,19 +108,16 @@ export function FocusMode({
               onSessionComplete={handleSessionComplete}
             />
             
+            <p className="text-center text-sm text-muted-foreground">
+              Sessions complétées: {sessionsCompleted}
+            </p>
+            
             {/* Notes Section */}
             <NotesSection autoSaveDelay={settings.autoSaveNotes ? 2000 : 0} />
             
-            {/* Focus Tips */}
-            <div className="text-center text-sm text-muted-foreground">
-              <p className="mb-1">💡 Conseil: Restez concentré sur une seule tâche à la fois</p>
-              <p>🔄 Après chaque session, prenez une courte pause pour vous ressourcer</p>
-            </div>
           </CardContent>
         </Card>
       </motion.div>
     </div>
   );
 }
-
-    

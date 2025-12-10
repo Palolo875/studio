@@ -100,7 +100,8 @@ export function TimerDisplay({
   const minutes = Math.floor(timeRemaining / 60);
   const seconds = timeRemaining % 60;
 
-  const progress = (timeRemaining / (isBreakTime ? breakDuration : workDuration)) * 100;
+  const totalDuration = isBreakTime ? breakDuration : workDuration;
+  const progress = totalDuration > 0 ? (timeRemaining / totalDuration) * 100 : 0;
   const circumference = 2 * Math.PI * 90;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
@@ -116,7 +117,7 @@ export function TimerDisplay({
             r="90"
             fill="none"
             stroke="hsl(var(--muted))"
-            strokeWidth="12"
+            strokeWidth="14"
           />
           {/* Progress Circle */}
           <motion.circle
@@ -125,18 +126,20 @@ export function TimerDisplay({
             r="90"
             fill="none"
             stroke={isBreakTime ? "hsl(var(--secondary))" : "hsl(var(--primary))"}
-            strokeWidth="12"
+            strokeWidth="14"
             strokeLinecap="round"
             transform="rotate(-90 100 100)"
             style={{ strokeDasharray: circumference, strokeDashoffset }}
-            transition={{ duration: 1, ease: "easeInOut" }}
+            initial={false}
+            animate={{ strokeDashoffset }}
+            transition={{ duration: 1, ease: "circOut" }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-6xl font-bold font-mono text-foreground">
             {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
           </span>
-          <span className="text-muted-foreground text-sm mt-1">
+          <span className="text-muted-foreground text-sm mt-1 uppercase tracking-widest">
             {isBreakTime ? 'Pause' : 'Travail'}
           </span>
         </div>
@@ -162,12 +165,6 @@ export function TimerDisplay({
         </Button>
       </div>
       
-      {/* Session Counter */}
-      <div className="text-center">
-        <p className="text-sm text-muted-foreground">
-          Session {sessionCount}
-        </p>
-      </div>
     </div>
   );
 }
