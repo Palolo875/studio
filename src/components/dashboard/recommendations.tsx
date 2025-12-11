@@ -92,7 +92,7 @@ export function Recommendations({ tasks }: RecommendationsProps) {
     onClick?: () => void;
   }) => (
     <Card
-      className="rounded-2xl shadow-sm flex-shrink-0 w-48 flex flex-col justify-between p-4 bg-card hover:bg-accent transition-colors cursor-pointer"
+      className="rounded-2xl shadow-sm flex-shrink-0 w-40 flex flex-col justify-between p-4 bg-card hover:bg-accent transition-colors cursor-pointer"
       onClick={onClick}
     >
       <div>{icon}</div>
@@ -110,8 +110,8 @@ export function Recommendations({ tasks }: RecommendationsProps) {
 
   return (
     <div className="space-y-6">
-      <ScrollArea className="w-full whitespace-nowrap">
-        <div className="flex gap-4 pb-4">
+      <ScrollArea className="w-full whitespace-nowrap -mx-1 px-1">
+        <div className="flex gap-3 pb-4">
           <CategoryCard
             icon={
               <div className="p-2 bg-secondary rounded-full w-fit">

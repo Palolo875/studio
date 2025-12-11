@@ -30,8 +30,8 @@ import {
 import { useState } from 'react';
 import { Textarea } from '../ui/textarea';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExpandableSection } from '../ui/expandable-section';
 import { Badge } from '../ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
 interface TaskListProps {
   tasks: Task[];
@@ -45,16 +45,13 @@ const effortStyles: Record<string, string> = {
 };
 
 const energyStyles: Record<string, string> = {
-    'créatif': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-    'focus': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-    'admin': 'bg-gray-100 text-gray-800 dark:bg-gray-700/30 dark:text-gray-300',
+    'low': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    'medium': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+    'high': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
 };
 
 
 export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
-  const [openCollapsibleId, setOpenCollapsibleId] = useState<string | null>(
-    null
-  );
 
   if (tasks.length === 0) {
     return (
@@ -69,6 +66,49 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
       </div>
     );
   }
+  
+  const StrategyPopoverContent = () => (
+    <div className="p-4 space-y-4">
+        <div>
+            <h4 className="font-semibold text-sm mb-2">Stratégie</h4>
+            <p className="text-sm text-muted-foreground">Utiliser le Time Blocking pour dédier une fenêtre de temps ininterrompue à cette tâche.</p>
+        </div>
+        <div>
+            <h4 className="font-semibold text-sm mb-2">Techniques</h4>
+            <ul className="list-disc list-inside text-sm space-y-1 text-muted-foreground">
+                <li>Estimer le temps nécessaire.</li>
+                <li>Bloquer une plage horaire dans votre calendrier.</li>
+                <li>Couper toutes les notifications pendant ce bloc.</li>
+            </ul>
+        </div>
+        <div className="flex justify-end pt-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="link" size="sm">
+                  Pas maintenant
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Reporter cette tâche
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Une petite note pour plus tard ? Savoir pourquoi
+                    vous reportez peut vous aider à mieux planifier.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <Textarea placeholder="Ex: Pas la bonne énergie, besoin d'infos de X..." />
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction>Sauvegarder & Reporter</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+    </div>
+  );
+
 
   return (
     <motion.div
@@ -95,15 +135,7 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
             exit={{ opacity: 0, x: -50, height: 0 }}
             transition={{ duration: 0.5, ease: 'easeInOut' }}
           >
-            <Collapsible
-              open={openCollapsibleId === task.id}
-              onOpenChange={isOpen => {
-                if (isOpen) {
-                  setOpenCollapsibleId(task.id);
-                } else {
-                  setOpenCollapsibleId(null);
-                }
-              }}
+            <div
               className="group rounded-2xl border border-border/80 bg-card shadow-sm transition-all hover:border-primary/50"
             >
               <div className="flex items-start p-4">
@@ -131,70 +163,35 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
                   <div className="flex items-center gap-2 flex-wrap mt-2">
                     {task.effort && (
                         <Badge className={cn("capitalize", effortStyles[task.effort])}>
-                            {task.effort}
+                            Effort: {task.effort}
                         </Badge>
                     )}
                     {task.energyRequired && (
                         <Badge className={cn("capitalize", energyStyles[task.energyRequired as string] || 'bg-gray-100')}>
-                            {task.energyRequired}
+                            Énergie: {task.energyRequired}
                         </Badge>
                     )}
                     {task.deadlineDisplay && (
-                        <Badge variant="outline">{task.deadlineDisplay}</Badge>
+                        <Badge variant="outline">Pour: {task.deadlineDisplay}</Badge>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <FocusButton taskId={task.id} taskName={task.name} />
-                  <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <HelpCircle className="h-4 w-4 mr-2" />
-                      Comment l'aborder ?
-                      <ChevronDown className="h-4 w-4 ml-2 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                    </Button>
-                  </CollapsibleTrigger>
+                  <Popover>
+                      <PopoverTrigger asChild>
+                           <Button variant="ghost" size="sm">
+                                <HelpCircle className="h-4 w-4 mr-2" />
+                                Comment l'aborder ?
+                            </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80">
+                         <StrategyPopoverContent />
+                      </PopoverContent>
+                  </Popover>
                 </div>
               </div>
-              <CollapsibleContent>
-                <div className="border-t px-4 py-4 space-y-4">
-                  <ExpandableSection
-                    title="Technique Suggérée"
-                    strategy="Utiliser le Time Blocking pour dédier une fenêtre de temps ininterrompue à cette tâche."
-                    techniques={[
-                      'Estimer le temps nécessaire.',
-                      'Bloquer une plage horaire dans votre calendrier.',
-                      'Couper toutes les notifications pendant ce bloc.',
-                    ]}
-                  />
-
-                  <div className="flex justify-end pt-2">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="link" size="sm">
-                          Pas maintenant
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            Reporter cette tâche
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Une petite note pour plus tard ? Savoir pourquoi
-                            vous reportez peut vous aider à mieux planifier.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <Textarea placeholder="Ex: Pas la bonne énergie, besoin d'infos de X..." />
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Annuler</AlertDialogCancel>
-                          <AlertDialogAction>Sauvegarder & Reporter</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
+            </div>
           </motion.div>
         ))}
       </AnimatePresence>

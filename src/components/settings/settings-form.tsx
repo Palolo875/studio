@@ -69,6 +69,17 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+const SettingsSection = ({ title, description, children }: { title: string, description?: string, children: React.ReactNode }) => (
+    <div className="space-y-6">
+        <div>
+            <h2 className="text-xl font-bold tracking-tight">{title}</h2>
+            {description && <p className="text-muted-foreground mt-1">{description}</p>}
+        </div>
+        <div className="space-y-8">{children}</div>
+    </div>
+);
+
+
 export function SettingsForm() {
   const { toast } = useToast();
   const { setTheme, theme } = useTheme();
@@ -121,15 +132,9 @@ export function SettingsForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Profil</CardTitle>
-            <CardDescription>
-              Mettez à jour les informations de votre profil.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-12">
+        
+        <SettingsSection title="Profil" description="Mettez à jour les informations de votre profil.">
             <FormField
               control={form.control}
               name="firstName"
@@ -204,17 +209,11 @@ export function SettingsForm() {
                 </FormItem>
               )}
             />
-          </CardContent>
-        </Card>
+        </SettingsSection>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Notifications</CardTitle>
-            <CardDescription>
-              Gérez vos préférences de notification.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-8">
+        <Separator />
+
+        <SettingsSection title="Notifications" description="Gérez vos préférences de notification.">
             <FormField
               control={form.control}
               name="notificationsEnabled"
@@ -298,23 +297,16 @@ export function SettingsForm() {
                 </FormItem>
               )}
             />
-          </CardContent>
-        </Card>
+        </SettingsSection>
+        
+        <Separator />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Thème</CardTitle>
-            <CardDescription>
-              Personnalisez l'apparence de l'application.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <SettingsSection title="Thème" description="Personnalisez l'apparence de l'application.">
             <FormField
               control={form.control}
               name="theme"
               render={({ field }) => (
                 <FormItem className="space-y-3">
-                  <FormLabel>Thème</FormLabel>
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
@@ -325,7 +317,7 @@ export function SettingsForm() {
                         <RadioGroupItem value="light" id="light" className="sr-only" />
                         <Label
                           htmlFor="light"
-                          className="flex flex-col items-center justify-center rounded-2xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer aspect-square"
+                          className="flex flex-col items-center justify-center rounded-2xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer aspect-video"
                         >
                           <Sun className="mb-3 h-6 w-6" />
                           Clair
@@ -335,7 +327,7 @@ export function SettingsForm() {
                         <RadioGroupItem value="dark" id="dark" className="sr-only" />
                         <Label
                           htmlFor="dark"
-                           className="flex flex-col items-center justify-center rounded-2xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer aspect-square"
+                           className="flex flex-col items-center justify-center rounded-2xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer aspect-video"
                         >
                           <Moon className="mb-3 h-6 w-6" />
                           Sombre
@@ -349,7 +341,7 @@ export function SettingsForm() {
                         />
                         <Label
                           htmlFor="system"
-                           className="flex flex-col items-center justify-center rounded-2xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer aspect-square"
+                           className="flex flex-col items-center justify-center rounded-2xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer aspect-video"
                         >
                            <Monitor className="mb-3 h-6 w-6" />
                           Automatique
@@ -361,69 +353,60 @@ export function SettingsForm() {
                 </FormItem>
               )}
             />
-          </CardContent>
-        </Card>
+        </SettingsSection>
+        
+        <Separator />
+        
+        <SettingsSection title="Horaires de Travail" description="Définissez vos horaires de travail habituels.">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <FormField
+                control={form.control}
+                name="workStartTime"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Heure début</FormLabel>
+                    <FormControl>
+                        <Input type="time" {...field} className="h-12 rounded-xl" />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                
+                <FormField
+                control={form.control}
+                name="workEndTime"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Heure fin</FormLabel>
+                    <FormControl>
+                        <Input type="time" {...field} className="h-12 rounded-xl" />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                
+                <FormField
+                control={form.control}
+                name="workHoursPerDay"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Heures par jour</FormLabel>
+                    <FormControl>
+                        <Input type="number" {...field} className="h-12 rounded-xl" min="1" max="24" />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
+        </SettingsSection>
+        
+        <Separator />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Horaires de Travail</CardTitle>
-            <CardDescription>
-              Définissez vos horaires de travail habituels.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <FormField
-              control={form.control}
-              name="workStartTime"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Heure début</FormLabel>
-                  <FormControl>
-                    <Input type="time" {...field} className="h-12 rounded-xl" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="workEndTime"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Heure fin</FormLabel>
-                  <FormControl>
-                    <Input type="time" {...field} className="h-12 rounded-xl" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="workHoursPerDay"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Heures par jour</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} className="h-12 rounded-xl" min="1" max="24" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-            <CardHeader>
-                <CardTitle>Pomodoro</CardTitle>
-                <CardDescription>
-                    Configurez vos cycles de travail et de pause.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+        <SettingsSection title="Pomodoro" description="Configurez vos cycles de travail et de pause.">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                 <FormField
                     control={form.control}
                     name="pomodoroWork"
@@ -450,401 +433,56 @@ export function SettingsForm() {
                         </FormItem>
                     )}
                 />
-            </CardContent>
-        </Card>
+            </div>
+        </SettingsSection>
         
-        <Card>
-            <CardHeader>
-                <CardTitle>Sauvegardes Automatiques</CardTitle>
-                <CardDescription>
-                    Gérez la sauvegarde automatique de vos données.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8">
-               <FormField
-                  control={form.control}
-                  name="autoBackup"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                          Sauvegardes automatiques
-                        </FormLabel>
-                        <FormDescription>
-                           Activer pour sauvegarder vos données automatiquement.
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                    <FormField
-                        control={form.control}
-                        name="backupFrequency"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Fréquence</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger className="h-12 rounded-xl">
-                                            <SelectValue placeholder="Choisir la fréquence" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="daily">Quotidien</SelectItem>
-                                        <SelectItem value="weekly">Hebdomadaire</SelectItem>
-                                        <SelectItem value="monthly">Mensuel</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="backupLimit"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Limite de sauvegardes</FormLabel>
-                                <Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={String(field.value)}>
-                                    <FormControl>
-                                        <SelectTrigger className="h-12 rounded-xl">
-                                            <SelectValue placeholder="Choisir la limite" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="5">5 sauvegardes</SelectItem>
-                                        <SelectItem value="10">10 sauvegardes</SelectItem>
-                                        <SelectItem value="20">20 sauvegardes</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-                
-                <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Sauvegardes existantes</h3>
-                    <div className="space-y-2">
-                        {[1, 2, 3].map((item) => (
-                            <div key={item} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-4">
-                                <div>
-                                    <p className="font-medium">Sauvegarde du {new Date(Date.now() - item * 86400000).toLocaleDateString('fr-FR')}</p>
-                                    <p className="text-sm text-muted-foreground">2.3 MB</p>
-                                </div>
-                                <div className="flex gap-2 w-full sm:w-auto">
-                                    <Button variant="outline" size="sm" className="flex-1">Restaurer</Button>
-                                    <Button variant="outline" size="sm" className="flex-1">Télécharger</Button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
+        <Separator />
 
-        <Card>
-            <CardHeader>
-                <CardTitle>Données et Confidentialité</CardTitle>
-                 <CardDescription>
-                    Exportez, importez ou réinitialisez vos données d'application.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="flex flex-col sm:flex-row flex-wrap gap-4">
-                    <Button variant="outline" onClick={() => {
-                      // Export data logic
-                      const dataStr = JSON.stringify(form.getValues(), null, 2);
-                      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-                      const exportFileDefaultName = `kairuflow-data-${new Date().toISOString().slice(0,10)}.json`;
-                      
-                      const linkElement = document.createElement('a');
-                      linkElement.setAttribute('href', dataUri);
-                      linkElement.setAttribute('download', exportFileDefaultName);
-                      linkElement.click();
-                    }}>
-                      Exporter mes données
-                    </Button>
-                    <Button variant="outline" onClick={() => {
-                      // Import data logic
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = '.json';
-                      input.onchange = (event) => {
-                        const file = (event.target as HTMLInputElement).files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (e) => {
-                            try {
-                              const data = JSON.parse(e.target?.result as string);
-                              form.reset(data);
-                              toast({
-                                title: "Données importées",
-                                description: "Vos données ont été importées avec succès.",
-                              });
-                            } catch (error) {
-                              toast({
-                                title: "Erreur d'importation",
-                                description: "Impossible de lire le fichier. Veuillez vérifier le format.",
-                                variant: "destructive",
-                              });
-                            }
-                          };
-                          reader.readAsText(file);
-                        }
-                      };
-                      input.click();
-                    }}>
-                      Importer des données
-                    </Button>
-                </div>
-                <Separator />
-                 <div>
-                    <h3 className="text-base font-semibold text-destructive">Zone de danger</h3>
-                    <p className="text-sm text-muted-foreground mt-1 mb-4">
-                        Ces actions sont irréversibles. Soyez certain de vouloir continuer.
+        <SettingsSection title="Mode Focus Adaptatif" description="Configurez votre environnement de travail sans distraction.">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                    <Label htmlFor="work-duration">Durée de travail (minutes)</Label>
+                    <Input
+                        id="work-duration"
+                        type="number"
+                        min="1"
+                        max="60"
+                        defaultValue="25"
+                        {...form.register("focusWorkDuration", { valueAsNumber: true })}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                        Durée d'une session de travail pomodoro
                     </p>
-                    <Card className="border-destructive/50 bg-destructive/5 p-4">
-                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                           <div>
-                                <h4 className="font-semibold text-destructive">Réinitialiser l’application</h4>
-                                <p className="text-sm text-destructive/80">Ceci supprimera toutes vos données.</p>
-                           </div>
-                            <Button 
-                              variant="destructive" 
-                              className="w-full sm:w-auto"
-                              onClick={() => {
-                                // Confirmation dialog
-                                if (confirm("Êtes-vous sûr de vouloir réinitialiser l'application ? Cette action est irréversible et supprimera toutes vos données.")) {
-                                  // Reset logic
-                                  form.reset({
-                                    // Profil
-                                    firstName: "Junior",
-                                    accentColor: "#3b82f6",
-                                    energyProfile: "Hibou",
-                                    
-                                    // Notifications
-                                    notificationsEnabled: true,
-                                    morningCheckinTime: "08:00",
-                                    afternoonCheckinTime: "14:00",
-                                    eveningReminderTime: "20:00",
-                                    soundsEnabled: true,
-                                    
-                                    // Thème
-                                    theme: "system",
-                                    
-                                    // Horaires de travail
-                                    workStartTime: "08:00",
-                                    workEndTime: "18:00",
-                                    workHoursPerDay: 8,
-                                    
-                                    // Pomodoro
-                                    pomodoroWork: 25,
-                                    pomodoroBreak: 5,
-                                    
-                                    // Sauvegardes automatiques
-                                    autoBackup: true,
-                                    backupFrequency: "weekly",
-                                    backupLimit: 5,
-                                    
-                                    // Avancé
-                                    developerMode: false,
-                                  });
-                                  
-                                  toast({
-                                    title: "Application réinitialisée",
-                                    description: "Toutes vos données ont été supprimées.",
-                                  });
-                                }
-                              }}
-                            >
-                              Réinitialiser
-                            </Button>
-                        </div>
-                    </Card>
-                    <div className="mt-4 text-sm text-muted-foreground">
-                      Statistiques : Vous utilisez 2.3 MB sur 50 MB
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-
-        <Card>
-            <CardHeader>
-                <CardTitle>Mode Focus Adaptatif</CardTitle>
-                <CardDescription>
-                    Configurez votre environnement de travail sans distraction.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="work-duration">Durée de travail (minutes)</Label>
-                        <Input
-                            id="work-duration"
-                            type="number"
-                            min="1"
-                            max="60"
-                            defaultValue="25"
-                            {...form.register("focusWorkDuration", { valueAsNumber: true })}
-                        />
-                        <p className="text-sm text-muted-foreground">
-                            Durée d'une session de travail pomodoro
-                        </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                        <Label htmlFor="break-duration">Durée de pause (minutes)</Label>
-                        <Input
-                            id="break-duration"
-                            type="number"
-                            min="1"
-                            max="30"
-                            defaultValue="5"
-                            {...form.register("focusBreakDuration", { valueAsNumber: true })}
-                        />
-                        <p className="text-sm text-muted-foreground">
-                            Durée de la pause entre deux sessions
-                        </p>
-                    </div>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row gap-4 pt-2">
-                    <FormField
-                        control={form.control}
-                        name="focusAutoSave"
-                        render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 flex-1">
-                                <div className="space-y-0.5">
-                                    <FormLabel className="text-base">
-                                        Sauvegarde auto. des notes
-                                    </FormLabel>
-                                    <FormDescription>
-                                        Enregistre vos notes toutes les 2s
-                                    </FormDescription>
-                                </div>
-                                <FormControl>
-                                    <Switch
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                    />
-                                </FormControl>
-                            </FormItem>
-                        )}
+                <div className="space-y-2">
+                    <Label htmlFor="break-duration">Durée de pause (minutes)</Label>
+                    <Input
+                        id="break-duration"
+                        type="number"
+                        min="1"
+                        max="30"
+                        defaultValue="5"
+                        {...form.register("focusBreakDuration", { valueAsNumber: true })}
                     />
-                    
-                    <FormField
-                        control={form.control}
-                        name="focusSoundEnabled"
-                        render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 flex-1">
-                                <div className="space-y-0.5">
-                                    <FormLabel className="text-base">
-                                        Sons de notification
-                                    </FormLabel>
-                                    <FormDescription>
-                                        Émet un son à la fin de chaque session
-                                    </FormDescription>
-                                </div>
-                                <FormControl>
-                                    <Switch
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                    />
-                                </FormControl>
-                            </FormItem>
-                        )}
-                    />
+                    <p className="text-sm text-muted-foreground">
+                        Durée de la pause entre deux sessions
+                    </p>
                 </div>
-            </CardContent>
-        </Card>
-
-        <Card>
-            <CardHeader>
-                <CardTitle>Avancé</CardTitle>
-                <CardDescription>
-                    Options avancées pour les utilisateurs techniques.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="flex flex-col sm:flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                            Version de l'application
-                        </FormLabel>
-                        <p className="text-sm text-muted-foreground">v1.0.0</p>
-                    </div>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                            Vider le cache
-                        </FormLabel>
-                        <p className="text-sm text-muted-foreground">Libérer l'espace utilisé par le cache</p>
-                    </div>
-                    <Button 
-                        variant="outline" 
-                        onClick={() => {
-                            // Clear cache logic
-                            if ('caches' in window) {
-                                caches.keys().then(names => {
-                                    names.forEach(name => {
-                                        caches.delete(name);
-                                    });
-                                }).then(() => {
-                                    toast({
-                                        title: "Cache vidé",
-                                        description: "Le cache de l'application a été vidé avec succès.",
-                                    });
-                                });
-                            }
-                        }}
-                    >
-                        Vider
-                    </Button>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                            Voir les logs
-                        </FormLabel>
-                        <p className="text-sm text-muted-foreground">Afficher les journaux de l'application</p>
-                    </div>
-                    <Button 
-                        variant="outline" 
-                        onClick={() => {
-                            // View logs logic
-                            console.log("Affichage des logs...");
-                            toast({
-                                title: "Logs",
-                                description: "Les logs ont été affichés dans la console.",
-                            });
-                        }}
-                    >
-                        Voir
-                    </Button>
-                </div>
-                
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-4 pt-2">
                 <FormField
                     control={form.control}
-                    name="developerMode"
+                    name="focusAutoSave"
                     render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 flex-1">
                             <div className="space-y-0.5">
                                 <FormLabel className="text-base">
-                                    Mode développeur
+                                    Sauvegarde auto. des notes
                                 </FormLabel>
                                 <FormDescription>
-                                    Activer les fonctionnalités de développement
+                                    Enregistre vos notes toutes les 2s
                                 </FormDescription>
                             </div>
                             <FormControl>
@@ -856,8 +494,96 @@ export function SettingsForm() {
                         </FormItem>
                     )}
                 />
-            </CardContent>
-        </Card>
+                
+                <FormField
+                    control={form.control}
+                    name="focusSoundEnabled"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 flex-1">
+                            <div className="space-y-0.5">
+                                <FormLabel className="text-base">
+                                    Sons de notification
+                                </FormLabel>
+                                <FormDescription>
+                                    Émet un son à la fin de chaque session
+                                </FormDescription>
+                            </div>
+                            <FormControl>
+                                <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                        </FormItem>
+                    )}
+                />
+            </div>
+        </SettingsSection>
+
+        <Separator />
+
+        <SettingsSection title="Avancé" description="Options avancées pour les utilisateurs techniques.">
+            <div className="flex flex-col sm:flex-row items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                    <FormLabel className="text-base">
+                        Version de l'application
+                    </FormLabel>
+                    <p className="text-sm text-muted-foreground">v1.0.0</p>
+                </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                    <FormLabel className="text-base">
+                        Vider le cache
+                    </FormLabel>
+                    <p className="text-sm text-muted-foreground">Libérer l'espace utilisé par le cache</p>
+                </div>
+                <Button 
+                    variant="outline" 
+                    onClick={() => {
+                        // Clear cache logic
+                        if ('caches' in window) {
+                            caches.keys().then(names => {
+                                names.forEach(name => {
+                                    caches.delete(name);
+                                });
+                            }).then(() => {
+                                toast({
+                                    title: "Cache vidé",
+                                    description: "Le cache de l'application a été vidé avec succès.",
+                                });
+                            });
+                        }
+                    }}
+                >
+                    Vider
+                </Button>
+            </div>
+            
+            <FormField
+                control={form.control}
+                name="developerMode"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <FormLabel className="text-base">
+                                Mode développeur
+                            </FormLabel>
+                            <FormDescription>
+                                Activer les fonctionnalités de développement
+                            </FormDescription>
+                        </div>
+                        <FormControl>
+                            <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                            />
+                        </FormControl>
+                    </FormItem>
+                )}
+            />
+        </SettingsSection>
 
         <Button type="submit" className="h-12 rounded-full px-8">Enregistrer les modifications</Button>
       </form>
