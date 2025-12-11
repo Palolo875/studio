@@ -2,6 +2,7 @@
 
 import { generateDailyPlaylist } from "@/ai/flows/daily-playlist-generation";
 import { personalizedTaskRecommendations } from "@/ai/flows/personalized-task-recommendations";
+import { analyzeCapture, type AnalyzeCaptureOutput } from "@/ai/flows/analyze-capture-flow";
 import type { DailyRituals, Task } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -65,7 +66,7 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
         id: "task-1",
         name: "Finaliser le prototype de l'interface utilisateur",
         completed: false,
-        subtasks: 3,
+        subtasks: [],
         lastAccessed: new Date(Date.now() - 86400000 * 2).toISOString(), // Il y a 2 jours
         completionRate: 75,
         priority: "high",
@@ -79,7 +80,7 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
         id: "task-2",
         name: "Préparer la présentation trimestrielle",
         completed: false,
-        subtasks: 5,
+        subtasks: [],
         lastAccessed: new Date(Date.now() - 86400000 * 1).toISOString(), // Hier
         completionRate: 40,
         priority: "high",
@@ -93,7 +94,7 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
         id: "task-3",
         name: "Lire le nouveau livre sur l'innovation",
         completed: false,
-        subtasks: 0,
+        subtasks: [],
         lastAccessed: new Date(Date.now() - 86400000 * 10).toISOString(), // Il y a 10 jours
         completionRate: 90,
         priority: "medium",
@@ -107,7 +108,7 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
         id: "task-4",
         name: "Planifier les congés d'été",
         completed: false,
-        subtasks: 2,
+        subtasks: [],
         lastAccessed: new Date(Date.now() - 86400000 * 30).toISOString(), // Il y a 1 mois
         completionRate: 20,
         priority: "low",
@@ -121,7 +122,7 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
         id: "task-5",
         name: "Session de brainstorming pour le nouveau produit",
         completed: false,
-        subtasks: 0,
+        subtasks: [],
         lastAccessed: new Date(Date.now() - 86400000 * 5).toISOString(), // Il y a 5 jours
         completionRate: 85,
         priority: "medium",
@@ -135,7 +136,7 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
         id: "task-6",
         name: "Mettre à jour la documentation technique",
         completed: false,
-        subtasks: 4,
+        subtasks: [],
         lastAccessed: new Date(Date.now() - 86400000 * 7).toISOString(), // Il y a 1 semaine
         completionRate: 60,
         priority: "medium",
@@ -149,7 +150,7 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
         id: "task-7",
         name: "Répondre aux emails importants",
         completed: false,
-        subtasks: 0,
+        subtasks: [],
         lastAccessed: new Date().toISOString(), // Aujourd'hui
         completionRate: 95,
         priority: "high",
@@ -225,12 +226,37 @@ export async function handleGetRecommendations(formData: FormData) {
       intention,
       focus,
       timeOfDay,
-      tasks,
+      tasks: tasks.map(t => ({...t, subtasks: t.subtasks.length, lastAccessed: t.lastAccessed.toString(), completionRate: t.completionRate / 100})),
     });
     
     return { recommendations: result.recommendedTasks, error: null };
   } catch (error) {
     console.error(error);
     return { recommendations: [], error: "Failed to get recommendations." };
+  }
+}
+
+const analyzeCaptureSchema = z.object({
+  text: z.string().min(1, "Le texte ne peut pas être vide."),
+});
+
+export async function handleAnalyzeCapture(prevState: any, formData: FormData): Promise<{ analysis: AnalyzeCaptureOutput | null; error: string | null }> {
+  try {
+    const validatedFields = analyzeCaptureSchema.safeParse({
+      text: formData.get("text"),
+    });
+
+    if (!validatedFields.success) {
+      return { analysis: null, error: "Données du formulaire invalides." };
+    }
+
+    const { text } = validatedFields.data;
+
+    const result = await analyzeCapture({ text });
+
+    return { analysis: result, error: null };
+  } catch (error) {
+    console.error(error);
+    return { analysis: null, error: "Échec de l'analyse de la capture." };
   }
 }
