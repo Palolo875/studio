@@ -6,6 +6,7 @@ import { Zap, Smile, Coffee, BrainCircuit, Paintbrush, ArrowUp, ArrowRight, Arro
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 
 const energyStates = [
   { id: "energized", label: "Plein d'énergie", icon: Zap, color: "text-yellow-500", bgColor: "bg-yellow-100 dark:bg-yellow-900/30" },
