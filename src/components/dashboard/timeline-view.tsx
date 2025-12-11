@@ -11,12 +11,13 @@ import Image from "next/image";
 
 interface TimelineViewProps {
   tasks: Task[];
+  onToggleCompletion?: (taskId: string) => void;
 }
 
 const userAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
 
 
-export function TimelineView({ tasks }: TimelineViewProps) {
+export function TimelineView({ tasks, onToggleCompletion }: TimelineViewProps) {
   const tasksWithTime = tasks.map((task, index) => {
     // Basic time estimation logic, can be improved
     const baseTime = new Date();
@@ -71,7 +72,10 @@ export function TimelineView({ tasks }: TimelineViewProps) {
                                             <AvatarFallback>D</AvatarFallback>
                                         </Avatar>
                                     </div>
-                                    <button className="h-8 w-8 rounded-full bg-primary-foreground/20 flex items-center justify-center">
+                                    <button 
+                                      className="h-8 w-8 rounded-full bg-primary-foreground/20 flex items-center justify-center hover:bg-primary-foreground/30 transition-colors"
+                                      onClick={() => onToggleCompletion?.(task.id)}
+                                    >
                                         <Check className="h-5 w-5 text-primary-foreground" />
                                     </button>
                                 </div>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import {useState, useTransition, useEffect} from 'react';
@@ -413,7 +414,7 @@ export function DashboardClient() {
               </div>
             </TabsContent>
             <TabsContent value="timeline">
-              <TimelineView tasks={tasks} />
+              <TimelineView tasks={tasks} onToggleCompletion={handleTaskCompletion} />
             </TabsContent>
           </Tabs>
 

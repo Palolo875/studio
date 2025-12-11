@@ -107,7 +107,7 @@ export function CaptureClient() {
               <CardFooter>
                  <Button onClick={handleAddToTasks}>
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Ajouter à l'Atelier
+                    Ajouter à la Bibliothèque
                 </Button>
               </CardFooter>
             </Card>
