@@ -11,19 +11,19 @@ import { cn } from '@/lib/utils';
 const rhythms = [
   {
     name: 'L’Alouette',
-    description: 'Plein d’énergie le matin',
+    description: 'Je suis en forme dès le matin.',
     icon: Sunrise,
     color: 'text-orange-400'
   },
   {
     name: 'Le Colibri',
-    description: 'Énergie stable toute la journée',
+    description: 'Je suis plutôt régulier toute la journée.',
     icon: Sun,
     color: 'text-yellow-400'
   },
   {
-    name: 'Le Hibou',
-    description: 'Plus productif le soir',
+    name: 'La Chouette',
+    description: 'Je suis plus performant l’après-midi et le soir.',
     icon: Moon,
     color: 'text-purple-400'
   }
@@ -40,11 +40,8 @@ export default function EnergyQuizPage() {
       className="w-full max-w-4xl"
     >
       <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground text-center">
-        Quel est votre rythme énergétique ?
+        À quelle heure tu es généralement au top de ton énergie ?
       </h1>
-      <p className="mt-4 text-lg text-muted-foreground text-center">
-        Cela nous aidera à vous suggérer les bonnes tâches au bon moment.
-      </p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
         {rhythms.map((rhythm) => (
@@ -77,9 +74,9 @@ export default function EnergyQuizPage() {
         transition={{ delay: 0.5, duration: 0.5 }}
         className="mt-16 flex justify-center"
       >
-        <Link href="/dashboard">
+        <Link href="/onboarding/schedule">
           <Button size="lg" className="h-14 px-8 rounded-full text-lg" disabled={!selectedRythm}>
-            Commencer
+            Continuer
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </Link>
@@ -87,5 +84,3 @@ export default function EnergyQuizPage() {
     </motion.div>
   );
 }
-
-    

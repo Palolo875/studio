@@ -4,32 +4,49 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { Input } from '@/components/ui/input';
+import { useState } from 'react';
 
 export default function OnboardingWelcomePage() {
+  const [name, setName] = useState('');
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, ease: 'easeOut' }}
-      className="text-center max-w-xl"
+      className="text-center max-w-xl w-full"
     >
       <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
         Bienvenue sur KairuFlow
       </h1>
       <p className="mt-6 text-lg text-muted-foreground">
-        L'assistant qui transforme votre manière de travailler. Nous allons vous
-        aider à trouver votre rythme, à vous concentrer sur ce qui compte vraiment
-        et à terminer chaque journée avec un sentiment d'accomplissement.
+        Commençons par faire connaissance.
       </p>
+
+      <div className="mt-12 max-w-sm mx-auto">
+        <label htmlFor="name" className="text-lg font-medium text-foreground block mb-4">
+            Comment dois-je t’appeler ?
+        </label>
+        <Input
+            id="name"
+            type="text"
+            placeholder="Votre prénom ou pseudo"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-14 text-center text-xl rounded-full"
+        />
+      </div>
+
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5, duration: 0.5 }}
         className="mt-12"
       >
-        <Link href="/onboarding/personalization">
-          <Button size="lg" className="h-14 px-8 rounded-full text-lg">
-            Commencer l'aventure
+        <Link href="/onboarding/energy-quiz">
+          <Button size="lg" className="h-14 px-8 rounded-full text-lg" disabled={!name}>
+            Continuer
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </Link>
