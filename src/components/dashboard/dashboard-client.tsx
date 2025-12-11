@@ -227,7 +227,7 @@ export function DashboardClient() {
       id: `bonus-task-${Date.now()}`,
       name: 'Tâche bonus : Préparer la journée de demain',
       completed: false,
-      subtasks: 2,
+      subtasks: [],
       lastAccessed: new Date().toISOString(),
       completionRate: 0,
       priority: 'low',
@@ -245,7 +245,7 @@ export function DashboardClient() {
       completed: false,
       priority: 'high',
       tags: ['Urgent'],
-      subtasks: 0,
+      subtasks: [],
       lastAccessed: new Date().toISOString(),
       completionRate: 0,
     };
