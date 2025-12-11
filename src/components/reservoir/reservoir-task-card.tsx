@@ -74,13 +74,11 @@ const cardStyles = [
   },
 ];
 
-const priorityStyles = {
+export const priorityStyles: Record<string, string> = {
   low: "bg-green-200/50 text-green-800 dark:bg-green-900/50 dark:text-green-200 border-green-300/50",
   medium: "bg-yellow-200/50 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200 border-yellow-300/50",
   high: "bg-red-200/50 text-red-800 dark:bg-red-900/50 dark:text-red-200 border-red-300/50",
 };
-
-export { priorityStyles };
 
 export function ReservoirTaskCard({ task }: ReservoirTaskCardProps) {
   const style = cardStyles[parseInt(task.id.replace(/[^0-9]/g, "") || "0", 10) % cardStyles.length];

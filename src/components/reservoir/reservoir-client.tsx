@@ -6,7 +6,7 @@ import { addDays, format, isSameDay, startOfDay, subDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { ReservoirTaskCard, priorityStyles } from './reservoir-task-card';
-import { Calendar as CalendarIcon, Plus, SlidersHorizontal, Zap, Search, Grid, List, Archive, Trash2, Star } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, SlidersHorizontal, Zap, Search, Grid, List, Archive, Trash2, Star, MoreHorizontal, ChevronDown } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
 import {
@@ -47,11 +47,8 @@ import { Separator } from '../ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { initialTasks } from '@/lib/data';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { ChevronDown } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MoreHorizontal } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 type Filters = {
@@ -66,7 +63,7 @@ type GroupedTasks = {
 
 
 export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: Task[] }) {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [tasks, setTasks] = useState<Task[]>(defaultTasks);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -414,7 +411,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
       'high': { label: 'Haute', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200' }
     };
     
-    const energyInfo = energyMap[energy];
+    const energyInfo = energyMap[energy as keyof typeof energyMap];
     if (!energyInfo) return null;
     
     return (
@@ -548,7 +545,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                     <h2 className="text-lg font-bold sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10">{title}</h2>
                     {viewMode === 'grid' ? (
                       // Grid View
-                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {tasksForDay.map(task => (
                           <div 
                             key={task.id} 
@@ -590,9 +587,10 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                                 checked={selectedTasks.length === tasksForDay.length && tasksForDay.length > 0}
                                 onCheckedChange={(checked) => {
                                   if (checked) {
-                                    setSelectedTasks([...selectedTasks, ...tasksForDay.map(t => t.id)]);
+                                    setSelectedTasks([...new Set([...selectedTasks, ...tasksForDay.map(t => t.id)])]);
                                   } else {
-                                    setSelectedTasks(selectedTasks.filter(id => !tasksForDay.some(t => t.id === id)));
+                                    const dayTaskIds = new Set(tasksForDay.map(t => t.id));
+                                    setSelectedTasks(selectedTasks.filter(id => !dayTaskIds.has(id)));
                                   }
                                 }}
                               />
