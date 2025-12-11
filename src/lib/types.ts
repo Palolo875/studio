@@ -1,8 +1,14 @@
+export type Subtask = {
+  id: string;
+  name: string;
+  completed: boolean;
+};
+
 export type Task = {
   id: string;
   name: string;
   completed: boolean;
-  subtasks: number;
+  subtasks: Subtask[];
   lastAccessed: string; // ISO string
   completionRate: number; // 0-100
   description?: string;

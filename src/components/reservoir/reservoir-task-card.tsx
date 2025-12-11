@@ -3,7 +3,7 @@
 import type { Task } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -83,6 +83,8 @@ export const priorityStyles: Record<string, string> = {
 export function ReservoirTaskCard({ task }: ReservoirTaskCardProps) {
   const style = cardStyles[parseInt(task.id.replace(/[^0-9]/g, "") || "0", 10) % cardStyles.length];
   const Icon = style.icon;
+  const subtasksCount = task.subtasks?.length || 0;
+  const completedSubtasks = task.subtasks?.filter(st => st.completed).length || 0;
 
   return (
     <motion.div
@@ -120,11 +122,29 @@ export function ReservoirTaskCard({ task }: ReservoirTaskCardProps) {
                 <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
             ))}
           </div>
-          <div className="flex justify-between items-center mb-1">
-            <p className="text-sm text-muted-foreground">Progression</p>
-            <span className="text-sm font-semibold text-muted-foreground">{task.completionRate}%</span>
-          </div>
-          <Progress value={task.completionRate} className="h-2" />
+
+          {(subtasksCount > 0) ? (
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>{completedSubtasks} / {subtasksCount}</span>
+                </div>
+                <span className="text-sm font-semibold text-muted-foreground">{task.completionRate}%</span>
+              </div>
+              <Progress value={task.completionRate} className="h-2" />
+            </div>
+          ) : (
+            <div>
+                <div className="flex justify-between items-center mb-1">
+                    <p className="text-sm text-muted-foreground">Progression</p>
+                    <span className="text-sm font-semibold text-muted-foreground">{task.completionRate}%</span>
+                </div>
+                <Progress value={task.completionRate} className="h-2" />
+            </div>
+          )}
+
+
         </div>
         <div className="relative z-10 flex justify-between items-center mt-4">
           <div className="flex -space-x-2">

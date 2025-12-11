@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import type { Task } from '@/lib/types';
+import type { Subtask, Task } from '@/lib/types';
 import { addDays, format, isSameDay, startOfDay, subDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { ReservoirTaskCard, priorityStyles } from './reservoir-task-card';
-import { Calendar as CalendarIcon, Plus, SlidersHorizontal, Zap, Search, Grid, List, Archive, Trash2, Star, MoreHorizontal, ChevronDown } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, SlidersHorizontal, Zap, Search, Grid, List, Archive, Trash2, Star, MoreHorizontal, ChevronDown, PlusCircle } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sheet,
   SheetContent,
@@ -50,6 +50,7 @@ import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
+import { Progress } from '../ui/progress';
 
 type Filters = {
   status: 'all' | 'completed' | 'not_completed';
@@ -80,6 +81,10 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const { toast } = useToast();
 
+  const [sheetTaskData, setSheetTaskData] = useState<Partial<Task>>({});
+  const [newSubtask, setNewSubtask] = useState('');
+
+
   // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -103,12 +108,22 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
+    setSheetTaskData(task);
     setIsCreatingNewTask(false);
     setIsSheetOpen(true);
   };
 
   const handleAddNewClick = () => {
+    const newTaskTemplate: Partial<Task> = {
+      name: '',
+      description: '',
+      priority: 'medium',
+      subtasks: [],
+      completionRate: 0,
+      autoSelected: true,
+    };
     setSelectedTask(null);
+    setSheetTaskData(newTaskTemplate);
     setIsCreatingNewTask(true);
     setIsSheetOpen(true);
   };
@@ -117,6 +132,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     setIsSheetOpen(false);
     setSelectedTask(null);
     setIsCreatingNewTask(false);
+    setSheetTaskData({});
   };
 
   const handleDeleteTask = (taskId: string) => {
@@ -145,60 +161,59 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
 
   const handleSaveTask = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get('name') as string;
-    const description = formData.get('description') as string;
-    const priority = formData.get('priority') as 'low' | 'medium' | 'high';
-    const energyRequired = formData.get('energyRequired') as
-      | 'low'
-      | 'medium'
-      | 'high'
-      | undefined;
-    const estimatedDuration = formData.get('estimatedDuration')
-      ? Number(formData.get('estimatedDuration'))
-      : undefined;
-    const objective = formData.get('objective') as string | undefined;
-    const autoSelected = formData.get('autoSelected') === 'on';
-    const tagsString = formData.get('tags') as string;
-    const tags = tagsString
-      ? tagsString.split(',').map((tag) => tag.trim()).filter((tag) => tag)
-      : [];
-    const completionRate = formData.get('completionRate')
-      ? Number(formData.get('completionRate'))
-      : 0;
-      
-    const scheduledDateString = formData.get('scheduledDate') as string;
-    const scheduledDate = scheduledDateString ? new Date(scheduledDateString).toISOString() : undefined;
 
-    const taskData = {
-      name,
-      description,
-      priority,
-      energyRequired,
-      estimatedDuration,
-      objective,
-      autoSelected,
-      tags,
-      completionRate,
-      completed: completionRate === 100,
-      scheduledDate,
-    };
+    const finalTaskData = { ...sheetTaskData };
+
+    // Recalculate completionRate based on subtasks if there are any
+    if (finalTaskData.subtasks && finalTaskData.subtasks.length > 0) {
+      const completedSubtasks = finalTaskData.subtasks.filter(st => st.completed).length;
+      finalTaskData.completionRate = Math.round((completedSubtasks / finalTaskData.subtasks.length) * 100);
+    }
+    
+    finalTaskData.completed = finalTaskData.completionRate === 100;
 
     if (isCreatingNewTask) {
       const newTask: Task = {
         id: `task-${Date.now()}`,
-        ...taskData,
-        subtasks: 0,
         lastAccessed: new Date().toISOString(),
-      };
+        ...finalTaskData,
+      } as Task;
       setTasks([newTask, ...tasks]);
     } else if (selectedTask) {
       const updatedTasks = tasks.map((task) =>
-        task.id === selectedTask.id ? { ...task, ...taskData } : task
+        task.id === selectedTask.id ? { ...task, ...finalTaskData } as Task : task
       );
       setTasks(updatedTasks);
     }
     handleSheetClose();
+  };
+  
+  const handleSheetDataChange = (field: keyof Task, value: any) => {
+    setSheetTaskData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddSubtask = () => {
+    if (!newSubtask.trim()) return;
+    const subtask: Subtask = {
+      id: `sub-${Date.now()}`,
+      name: newSubtask.trim(),
+      completed: false
+    };
+    const updatedSubtasks = [...(sheetTaskData.subtasks || []), subtask];
+    handleSheetDataChange('subtasks', updatedSubtasks);
+    setNewSubtask('');
+  };
+
+  const handleToggleSubtask = (subtaskId: string) => {
+    const updatedSubtasks = (sheetTaskData.subtasks || []).map(st => 
+      st.id === subtaskId ? { ...st, completed: !st.completed } : st
+    );
+    handleSheetDataChange('subtasks', updatedSubtasks);
+  };
+  
+  const handleDeleteSubtask = (subtaskId: string) => {
+    const updatedSubtasks = (sheetTaskData.subtasks || []).filter(st => st.id !== subtaskId);
+    handleSheetDataChange('subtasks', updatedSubtasks);
   };
 
   const dates = Array.from({ length: 14 }).map((_, i) =>
@@ -286,9 +301,10 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
   const getObsoleteTasks = () => {
     const thirtyDaysAgo = subDays(new Date(), 30);
     return tasks.filter(task => {
+        const lastAccessedDate = task.lastAccessed ? new Date(task.lastAccessed) : new Date(0);
         return !task.scheduledDate &&
                task.completionRate === 0 &&
-               new Date(task.lastAccessed) < thirtyDaysAgo;
+               lastAccessedDate < thirtyDaysAgo;
     });
   };
 
@@ -313,13 +329,11 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
   
   const activeFilterCount = (filters.priorities.length > 0 ? 1 : 0) + (filters.energy.length > 0 ? 1 : 0) + (filters.status !== 'not_completed' ? 1 : 0);
   
-  const [sheetTaskDate, setSheetTaskDate] = useState<Date | undefined>(
-    selectedTask?.scheduledDate ? new Date(selectedTask.scheduledDate) : undefined
-  );
-
-  useEffect(() => {
-    setSheetTaskDate(selectedTask?.scheduledDate ? new Date(selectedTask.scheduledDate) : undefined)
-  }, [selectedTask]);
+  const subtasksProgress = useMemo(() => {
+    if (!sheetTaskData.subtasks || sheetTaskData.subtasks.length === 0) return 0;
+    const completed = sheetTaskData.subtasks.filter(st => st.completed).length;
+    return (completed / sheetTaskData.subtasks.length) * 100;
+  }, [sheetTaskData.subtasks]);
 
 
   // Batch action menu
@@ -584,13 +598,14 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                           <TableRow>
                             <TableHead className="w-12">
                               <Checkbox 
-                                checked={selectedTasks.length === tasksForDay.length && tasksForDay.length > 0}
+                                checked={selectedTasks.length === tasksForDay.length && tasksForDay.length > 0 && tasksForDay.every(t => selectedTasks.includes(t.id))}
                                 onCheckedChange={(checked) => {
+                                  const dayTaskIds = tasksForDay.map(t => t.id);
                                   if (checked) {
-                                    setSelectedTasks([...new Set([...selectedTasks, ...tasksForDay.map(t => t.id)])]);
+                                    setSelectedTasks([...new Set([...selectedTasks, ...dayTaskIds])]);
                                   } else {
-                                    const dayTaskIds = new Set(tasksForDay.map(t => t.id));
-                                    setSelectedTasks(selectedTasks.filter(id => !dayTaskIds.has(id)));
+                                    const dayTaskIdsSet = new Set(dayTaskIds);
+                                    setSelectedTasks(selectedTasks.filter(id => !dayTaskIdsSet.has(id)));
                                   }
                                 }}
                               />
@@ -686,7 +701,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
           >
             <ScrollArea className="flex-1">
               <div className="space-y-6 py-6 px-6">
-                 <input type="hidden" name="scheduledDate" value={sheetTaskDate ? sheetTaskDate.toISOString() : ''} />
+                 
                 <div className="space-y-2">
                   <Label htmlFor="name" className="font-semibold">
                     Titre de la tâche
@@ -694,7 +709,8 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                   <Input
                     id="name"
                     name="name"
-                    defaultValue={selectedTask?.name || ''}
+                    value={sheetTaskData.name || ''}
+                    onChange={(e) => handleSheetDataChange('name', e.target.value)}
                     placeholder="Ex: Appeler le client pour le feedback"
                     required
                     className="h-12 rounded-xl text-base"
@@ -707,12 +723,70 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                   <Textarea
                     id="description"
                     name="description"
-                    defaultValue={selectedTask?.description || ''}
+                    value={sheetTaskData.description || ''}
+                    onChange={(e) => handleSheetDataChange('description', e.target.value)}
                     placeholder="Ajouter plus de détails, des notes ou des liens..."
                     rows={4}
                     className="rounded-xl"
                   />
                 </div>
+                
+                {/* Subtasks Section */}
+                <div className="space-y-4">
+                  <Label className="font-semibold">Sous-tâches</Label>
+                  {(sheetTaskData.subtasks && sheetTaskData.subtasks.length > 0) && (
+                    <div className='space-y-1'>
+                      <Progress value={subtasksProgress} className="h-2" />
+                      <p className='text-xs text-muted-foreground text-right'>{Math.round(subtasksProgress)}% complété</p>
+                    </div>
+                  )}
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                    {sheetTaskData.subtasks?.map(subtask => (
+                      <div key={subtask.id} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted">
+                        <Checkbox 
+                          id={`subtask-${subtask.id}`}
+                          checked={subtask.completed}
+                          onCheckedChange={() => handleToggleSubtask(subtask.id)}
+                        />
+                        <Label 
+                          htmlFor={`subtask-${subtask.id}`}
+                          className={cn("flex-1 cursor-pointer", subtask.completed && "line-through text-muted-foreground")}
+                        >
+                          {subtask.name}
+                        </Label>
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6"
+                          onClick={() => handleDeleteSubtask(subtask.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="new-subtask"
+                      placeholder="Ajouter une sous-tâche..."
+                      value={newSubtask}
+                      onChange={(e) => setNewSubtask(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddSubtask();
+                        }
+                      }}
+                      className="h-10 rounded-lg"
+                    />
+                    <Button type="button" size="icon" onClick={handleAddSubtask} className="rounded-lg flex-shrink-0">
+                      <PlusCircle className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </div>
+
+
                  <div className="space-y-2">
                     <Label htmlFor="scheduledDate" className="font-semibold">
                       Date planifiée
@@ -723,18 +797,18 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                             variant={"outline"}
                             className={cn(
                                 "w-full justify-start text-left font-normal h-12 rounded-xl",
-                                !sheetTaskDate && "text-muted-foreground"
+                                !sheetTaskData.scheduledDate && "text-muted-foreground"
                             )}
                             >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {sheetTaskDate ? format(sheetTaskDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
+                            {sheetTaskData.scheduledDate ? format(new Date(sheetTaskData.scheduledDate), "PPP", { locale: fr }) : <span>Choisir une date</span>}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
                             <Calendar
                             mode="single"
-                            selected={sheetTaskDate}
-                            onSelect={setSheetTaskDate}
+                            selected={sheetTaskData.scheduledDate ? new Date(sheetTaskData.scheduledDate) : undefined}
+                            onSelect={(date) => handleSheetDataChange('scheduledDate', date?.toISOString())}
                             initialFocus
                             />
                         </PopoverContent>
@@ -744,7 +818,8 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                   <Label className="font-semibold">Priorité</Label>
                   <RadioGroup
                     name="priority"
-                    defaultValue={selectedTask?.priority || 'medium'}
+                    value={sheetTaskData.priority || 'medium'}
+                    onValueChange={(value: 'low' | 'medium' | 'high') => handleSheetDataChange('priority', value)}
                     className="grid grid-cols-3 gap-3"
                   >
                     <Label
@@ -785,7 +860,8 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                     </Label>
                     <Select
                       name="energyRequired"
-                      defaultValue={selectedTask?.energyRequired}
+                      value={sheetTaskData.energyRequired}
+                      onValueChange={(value: 'low' | 'medium' | 'high') => handleSheetDataChange('energyRequired', value)}
                     >
                       <SelectTrigger className="h-12 rounded-xl">
                         <SelectValue placeholder="Sélectionner" />
@@ -810,27 +886,14 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                       id="estimatedDuration"
                       name="estimatedDuration"
                       type="number"
-                      defaultValue={selectedTask?.estimatedDuration || ''}
+                      value={sheetTaskData.estimatedDuration || ''}
+                      onChange={(e) => handleSheetDataChange('estimatedDuration', e.target.valueAsNumber)}
                       placeholder="Ex: 30"
                       className="h-12 rounded-xl"
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="completionRate" className="font-semibold">
-                    Progression (%)
-                  </Label>
-                  <Input
-                    id="completionRate"
-                    name="completionRate"
-                    type="number"
-                    min="0"
-                    max="100"
-                    defaultValue={selectedTask?.completionRate || 0}
-                    placeholder="Ex: 50"
-                    className="h-12 rounded-xl"
-                  />
-                </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="tags" className="font-semibold">
                     Tags
@@ -838,7 +901,8 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                   <Input
                     id="tags"
                     name="tags"
-                    defaultValue={selectedTask?.tags?.join(', ') || ''}
+                    value={Array.isArray(sheetTaskData.tags) ? sheetTaskData.tags.join(', ') : ''}
+                    onChange={(e) => handleSheetDataChange('tags', e.target.value.split(',').map(t => t.trim()))}
                     placeholder="Ex: UI/UX, Dev, Marketing"
                     className="h-12 rounded-xl"
                   />
@@ -850,7 +914,8 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                   <Textarea
                     id="objective"
                     name="objective"
-                    defaultValue={selectedTask?.objective || ''}
+                    value={sheetTaskData.objective || ''}
+                    onChange={(e) => handleSheetDataChange('objective', e.target.value)}
                     placeholder="Quel est le but final de cette tâche ?"
                     rows={2}
                     className="rounded-xl"
@@ -865,7 +930,8 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                   </div>
                   <Switch
                     name="autoSelected"
-                    defaultChecked={selectedTask?.autoSelected ?? true}
+                    checked={sheetTaskData.autoSelected ?? true}
+                    onCheckedChange={(checked) => handleSheetDataChange('autoSelected', checked)}
                   />
                 </div>
               </div>
