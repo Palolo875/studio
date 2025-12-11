@@ -31,11 +31,25 @@ import { useState } from 'react';
 import { Textarea } from '../ui/textarea';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ExpandableSection } from '../ui/expandable-section';
+import { Badge } from '../ui/badge';
 
 interface TaskListProps {
   tasks: Task[];
   onToggleCompletion: (taskId: string) => void;
 }
+
+const effortStyles: Record<string, string> = {
+    'S': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    'M': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    'L': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+};
+
+const energyStyles: Record<string, string> = {
+    'créatif': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+    'focus': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    'admin': 'bg-gray-100 text-gray-800 dark:bg-gray-700/30 dark:text-gray-300',
+};
+
 
 export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
   const [openCollapsibleId, setOpenCollapsibleId] = useState<string | null>(
@@ -92,11 +106,11 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
               }}
               className="group rounded-2xl border border-border/80 bg-card shadow-sm transition-all hover:border-primary/50"
             >
-              <div className="flex items-center p-4">
+              <div className="flex items-start p-4">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 rounded-full"
+                  className="h-8 w-8 rounded-full mt-1"
                   onClick={() => onToggleCompletion(task.id)}
                 >
                   {task.completed ? (
@@ -114,12 +128,21 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
                   >
                     {task.name}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {task.priority && (
-                      <span className="capitalize">{task.priority}</span>
+                  <div className="flex items-center gap-2 flex-wrap mt-2">
+                    {task.effort && (
+                        <Badge className={cn("capitalize", effortStyles[task.effort])}>
+                            {task.effort}
+                        </Badge>
                     )}
-                    {task.subtasks > 0 && ` · ${task.subtasks} sous-tâches`}
-                  </p>
+                    {task.energyRequired && (
+                        <Badge className={cn("capitalize", energyStyles[task.energyRequired as string] || 'bg-gray-100')}>
+                            {task.energyRequired}
+                        </Badge>
+                    )}
+                    {task.deadlineDisplay && (
+                        <Badge variant="outline">{task.deadlineDisplay}</Badge>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <FocusButton taskId={task.id} taskName={task.name} />
