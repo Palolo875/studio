@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Check, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -64,40 +63,39 @@ export function FocusMode({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="w-full max-w-2xl p-4"
+        className="relative w-full max-w-2xl bg-card/50 p-6 rounded-3xl border border-white/10 shadow-2xl"
       >
-        <Card className="w-full shadow-2xl rounded-3xl border-0 bg-gradient-to-br from-background to-muted/50">
-          <CardHeader className="pb-4">
-            <div className="flex justify-between items-center">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleBack}
-                className="rounded-full"
-              >
-                <ArrowLeft className="h-5 w-5" />
-                <span className="ml-2">Retour</span>
-              </Button>
-              
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleTaskComplete}
-                className="rounded-full text-green-600 hover:text-green-700 hover:bg-green-50"
-              >
-                <Check className="h-5 w-5" />
-                <span className="ml-2">Terminé</span>
-              </Button>
-            </div>
-          </CardHeader>
-          
-          <CardContent className="space-y-8">
-             <div className="text-center">
+        <div className="absolute -inset-2 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 rounded-3xl -z-10 blur-md"></div>
+        <header className="flex justify-between items-center mb-6">
+            <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleBack}
+            className="rounded-full"
+            >
+            <ArrowLeft className="h-5 w-5" />
+            <span className="ml-2">Retour</span>
+            </Button>
+            
+            <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleTaskComplete}
+            className="rounded-full text-green-600 hover:text-green-700 hover:bg-green-50"
+            >
+            <Check className="h-5 w-5" />
+            <span className="ml-2">Terminé</span>
+            </Button>
+        </header>
+
+        <main className="space-y-8">
+            <div className="text-center">
                 <h2 className="text-xl font-light truncate">{taskName}</h2>
             </div>
             
@@ -114,9 +112,8 @@ export function FocusMode({
             
             {/* Notes Section */}
             <NotesSection autoSaveDelay={settings.autoSaveNotes ? 2000 : 0} />
-            
-          </CardContent>
-        </Card>
+        </main>
+
       </motion.div>
     </div>
   );
