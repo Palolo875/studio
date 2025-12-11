@@ -6,7 +6,7 @@ import { addDays, format, isSameDay, startOfDay, subDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { ReservoirTaskCard, priorityStyles } from './reservoir-task-card';
-import { Calendar as CalendarIcon, Plus, SlidersHorizontal, Zap, Search, Grid, List, Archive, Trash2, Star, MoreHorizontal, ChevronDown, PlusCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, SlidersHorizontal, Zap, Search, Grid, List, Archive, Trash2, Star, MoreHorizontal, ChevronDown, PlusCircle, Edit, Check } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -65,10 +65,9 @@ type GroupedTasks = {
 
 export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: Task[] }) {
   const [tasks, setTasks] = useState<Task[]>(defaultTasks);
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [isCreatingNewTask, setIsCreatingNewTask] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [filters, setFilters] = useState<Filters>({
     status: 'not_completed',
@@ -96,20 +95,10 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
 
   const dateRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
 
-  const handleDateSelect = (date: Date) => {
-    setSelectedDate(date);
-    const dateString = format(date, 'yyyy-MM-dd');
-    const element = dateRefs.current[dateString];
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
-
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
     setSheetTaskData(task);
-    setIsCreatingNewTask(false);
+    setIsEditing(false); // Start in read-only mode
     setIsSheetOpen(true);
   };
 
@@ -124,14 +113,14 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     };
     setSelectedTask(null);
     setSheetTaskData(newTaskTemplate);
-    setIsCreatingNewTask(true);
+    setIsEditing(true); // Start in edit mode for new tasks
     setIsSheetOpen(true);
   };
 
   const handleSheetClose = () => {
     setIsSheetOpen(false);
     setSelectedTask(null);
-    setIsCreatingNewTask(false);
+    setIsEditing(false);
     setSheetTaskData({});
   };
 
@@ -164,7 +153,6 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
 
     const finalTaskData = { ...sheetTaskData };
 
-    // Recalculate completionRate based on subtasks if there are any
     if (finalTaskData.subtasks && finalTaskData.subtasks.length > 0) {
       const completedSubtasks = finalTaskData.subtasks.filter(st => st.completed).length;
       finalTaskData.completionRate = Math.round((completedSubtasks / finalTaskData.subtasks.length) * 100);
@@ -172,14 +160,14 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     
     finalTaskData.completed = finalTaskData.completionRate === 100;
 
-    if (isCreatingNewTask) {
+    if (!selectedTask) { // Creating a new task
       const newTask: Task = {
         id: `task-${Date.now()}`,
         lastAccessed: new Date().toISOString(),
         ...finalTaskData,
       } as Task;
       setTasks([newTask, ...tasks]);
-    } else if (selectedTask) {
+    } else { // Updating an existing task
       const updatedTasks = tasks.map((task) =>
         task.id === selectedTask.id ? { ...task, ...finalTaskData } as Task : task
       );
@@ -216,13 +204,8 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     handleSheetDataChange('subtasks', updatedSubtasks);
   };
 
-  const dates = Array.from({ length: 14 }).map((_, i) =>
-    addDays(new Date(), i - 7)
-  );
-
   const { filteredAndGroupedTasks, sortedGroupKeys } = useMemo(() => {
     const filtered = tasks.filter(task => {
-      // Apply search filter
       const searchMatch = debouncedSearchTerm === '' || 
         task.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
         (task.description && task.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) ||
@@ -386,12 +369,11 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
 
   // Format deadline for display
   const formatDeadline = (dateString?: string) => {
-    if (!dateString) return '';
+    if (!dateString) return 'N/A';
     
     const date = new Date(dateString);
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const today = startOfDay(new Date());
+    const tomorrow = addDays(today, 1);
     
     if (isSameDay(date, today)) return "Aujourd'hui";
     if (isSameDay(date, tomorrow)) return "Demain";
@@ -399,48 +381,63 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     const diffTime = date.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays <= 7) return `Dans ${diffDays}j`;
+    if (diffDays > 0 && diffDays <= 7) return `Dans ${diffDays}j`;
     
-    return format(date, 'dd MMM', { locale: fr });
+    return format(date, 'dd MMM yyyy', { locale: fr });
   };
 
   // Get effort display
-  const getEffortDisplay = (effort?: string) => {
-    if (!effort) return '';
+  const getEffortDisplay = (effort?: 'S' | 'M' | 'L') => {
+    if (!effort) return 'N/A';
     const effortMap: Record<string, string> = {
-      'S': 'Simple',
-      'M': 'Moyen',
-      'L': 'Long'
+      'S': 'Simple (<15m)',
+      'M': 'Moyen (15-120m)',
+      'L': 'Long (>2h)'
     };
     return effortMap[effort] || effort;
   };
 
   // Get energy badge
-  const getEnergyBadge = (energy?: string) => {
+  const getEnergyBadge = (energy?: 'low' | 'medium' | 'high') => {
     if (!energy) return null;
     
-    const energyMap: Record<string, {label: string, color: string}> = {
-      'low': { label: 'Faible', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200' },
-      'medium': { label: 'Moyenne', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200' },
-      'high': { label: 'Haute', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200' }
-    };
-    
-    const energyInfo = energyMap[energy as keyof typeof energyMap];
+    const energyInfo = energyLevels.find(e => e.value === energy);
     if (!energyInfo) return null;
     
     return (
-      <Badge className={`${energyInfo.color} capitalize`}>
+      <Badge variant="outline" className="capitalize">
         {energyInfo.label}
       </Badge>
     );
   };
+  
+  const getPriorityDisplay = (priority?: 'low' | 'medium' | 'high') => {
+    if (!priority) return null;
+    const priorityMap: Record<string, {label: string, className: string}> = {
+      'low': { label: 'Basse', className: priorityStyles.low },
+      'medium': { label: 'Moyenne', className: priorityStyles.medium },
+      'high': { label: 'Haute', className: priorityStyles.high }
+    };
+    const priorityInfo = priorityMap[priority];
+    return (
+      <Badge variant="outline" className={cn("capitalize", priorityInfo.className)}>{priorityInfo.label}</Badge>
+    );
+  };
+
+  const ReadOnlyField = ({ label, value, children }: { label: string; value?: string | React.ReactNode; children?: React.ReactNode }) => (
+    <div className="space-y-1">
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      {children ? <div className="text-base text-foreground">{children}</div> : <p className="text-base text-foreground">{value || 'Non défini'}</p>}
+    </div>
+  );
+
 
   return (
     <div className="space-y-8 h-full flex flex-col">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold">L'Atelier</h1>
-        <div className="flex items-center gap-2 w-full md:w-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -492,55 +489,16 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                   </AlertDialogFooter>
               </AlertDialogContent>
           </AlertDialog>
-          <Button size="icon" onClick={handleAddNewClick}>
+          <Button size="icon" onClick={handleAddNewClick} className="rounded-full">
             <Plus className="h-5 w-5" />
           </Button>
         </div>
-      </div>
+      </header>
 
       {/* Batch Actions Bar */}
       {selectedTasks.length > 0 && (
         <BatchActionMenu />
       )}
-
-      {/* Timeline */}
-      <ScrollArea className="w-full whitespace-nowrap -mx-4 sm:-mx-8 px-4 sm:px-8">
-        <div className="flex space-x-2 pb-4">
-          {dates.map((date, index) => {
-            const isSelected = isSameDay(date, selectedDate);
-            const isToday = isSameDay(date, new Date());
-
-            return (
-              <motion.div
-                key={index}
-                whileTap={{ scale: 0.95 }}
-                className="relative"
-              >
-                <Button
-                  variant={isSelected ? 'default' : 'outline'}
-                  className={`flex flex-col h-auto p-3 rounded-2xl ${
-                    isSelected
-                      ? 'bg-primary text-primary-foreground shadow-lg'
-                      : 'bg-card'
-                  }`}
-                  onClick={() => handleDateSelect(date)}
-                >
-                  <span className="text-xs capitalize font-medium text-muted-foreground">
-                    {format(date, 'EEE', { locale: fr })}
-                  </span>
-                  <span className="text-xl font-bold mt-1">
-                    {format(date, 'dd')}
-                  </span>
-                  {isToday && !isSelected && (
-                    <span className="absolute -bottom-1 w-1.5 h-1.5 bg-primary rounded-full"></span>
-                  )}
-                </Button>
-              </motion.div>
-            );
-          })}
-        </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
 
       {/* Task List */}
       <ScrollArea className="flex-1 -mx-4 sm:-mx-8 px-4 sm:px-8">
@@ -555,11 +513,11 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                 const title = isUnplanned ? 'Non planifié' : format(groupDate!, 'EEEE d MMMM', { locale: fr });
                 
                 return (
-                  <div key={dateKey} ref={(el) => { if (!isUnplanned) dateRefs.current[dateKey] = el; }}>
-                    <h2 className="text-lg font-bold sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10">{title}</h2>
+                  <div key={dateKey}>
+                    <h2 className="text-lg font-bold sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10 capitalize">{title}</h2>
                     {viewMode === 'grid' ? (
                       // Grid View
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
                         {tasksForDay.map(task => (
                           <div 
                             key={task.id} 
@@ -569,10 +527,6 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                               } else {
                                 handleTaskClick(task);
                               }
-                            }}
-                            onDoubleClick={() => {
-                              // Quick edit on double click
-                              handleTaskClick(task);
                             }}
                             className={`relative ${selectedTasks.includes(task.id) ? 'ring-2 ring-primary rounded-3xl' : ''}`}
                           >
@@ -593,12 +547,12 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                       </div>
                     ) : (
                       // List View
-                      <Table>
+                      <Table className="mt-4">
                         <TableHeader>
                           <TableRow>
                             <TableHead className="w-12">
                               <Checkbox 
-                                checked={selectedTasks.length === tasksForDay.length && tasksForDay.length > 0 && tasksForDay.every(t => selectedTasks.includes(t.id))}
+                                checked={selectedTasks.length > 0 && tasksForDay.every(t => selectedTasks.includes(t.id))}
                                 onCheckedChange={(checked) => {
                                   const dayTaskIds = tasksForDay.map(t => t.id);
                                   if (checked) {
@@ -626,11 +580,9 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                               onClick={() => {
                                 if (selectedTasks.length > 0) {
                                   toggleTaskSelection(task.id);
+                                } else {
+                                  handleTaskClick(task);
                                 }
-                              }}
-                              onDoubleClick={() => {
-                                // Quick edit on double click
-                                handleTaskClick(task);
                               }}
                             >
                               <TableCell>
@@ -642,11 +594,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                               <TableCell className="font-medium">{task.name}</TableCell>
                               <TableCell>{formatDeadline(task.scheduledDate)}</TableCell>
                               <TableCell>
-                                {task.priority && (
-                                  <Badge variant="outline" className={cn("capitalize text-xs", priorityStyles[task.priority])}>
-                                    {task.priority}
-                                  </Badge>
-                                )}
+                                {task.priority && getPriorityDisplay(task.priority)}
                               </TableCell>
                               <TableCell>{getEffortDisplay(task.effort)}</TableCell>
                               <TableCell>{getEnergyBadge(task.energyRequired)}</TableCell>
@@ -683,302 +631,118 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
       {/* Task Detail/Edit Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={handleSheetClose}>
         <SheetContent className="flex flex-col w-full sm:max-w-lg p-0">
-          <SheetHeader className="bg-card p-6 pb-4">
-            <SheetTitle className="text-2xl font-bold">
-              {isCreatingNewTask
-                ? 'Créer une nouvelle tâche'
-                : 'Détails de la tâche'}
-            </SheetTitle>
-            <SheetDescription>
-              {isCreatingNewTask
-                ? 'Remplissez les détails ci-dessous pour ajouter une tâche à votre réservoir.'
-                : 'Modifiez les informations de votre tâche ci-dessous.'}
-            </SheetDescription>
+          <SheetHeader className="p-6 pb-4 flex flex-row items-center justify-between border-b">
+            <div>
+              <SheetTitle className="text-2xl font-bold">
+                {isEditing ? (selectedTask ? 'Modifier la tâche' : 'Nouvelle tâche') : sheetTaskData.name}
+              </SheetTitle>
+              {!isEditing && (
+                 <p className="text-sm text-muted-foreground">Créée le {sheetTaskData.lastAccessed ? format(new Date(sheetTaskData.lastAccessed), 'd MMM yyyy', {locale: fr}) : ''}</p>
+              )}
+            </div>
+            {!isEditing && selectedTask && (
+              <Button onClick={() => setIsEditing(true)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Modifier
+              </Button>
+            )}
           </SheetHeader>
-          <form
-            onSubmit={handleSaveTask}
-            className="flex-1 flex flex-col justify-between overflow-hidden"
-          >
-            <ScrollArea className="flex-1">
-              <div className="space-y-6 py-6 px-6">
-                 
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="font-semibold">
-                    Titre de la tâche
-                  </Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={sheetTaskData.name || ''}
-                    onChange={(e) => handleSheetDataChange('name', e.target.value)}
-                    placeholder="Ex: Appeler le client pour le feedback"
-                    required
-                    className="h-12 rounded-xl text-base"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description" className="font-semibold">
-                    Description
-                  </Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    value={sheetTaskData.description || ''}
-                    onChange={(e) => handleSheetDataChange('description', e.target.value)}
-                    placeholder="Ajouter plus de détails, des notes ou des liens..."
-                    rows={4}
-                    className="rounded-xl"
-                  />
-                </div>
-                
-                {/* Subtasks Section */}
-                <div className="space-y-4">
-                  <Label className="font-semibold">Sous-tâches</Label>
-                  {(sheetTaskData.subtasks && sheetTaskData.subtasks.length > 0) && (
-                    <div className='space-y-1'>
-                      <Progress value={subtasksProgress} className="h-2" />
-                      <p className='text-xs text-muted-foreground text-right'>{Math.round(subtasksProgress)}% complété</p>
+          {isEditing ? (
+            <form
+              onSubmit={handleSaveTask}
+              className="flex-1 flex flex-col justify-between overflow-hidden"
+            >
+              <ScrollArea className="flex-1">
+                <div className="space-y-6 py-6 px-6">
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="font-semibold">Titre</Label>
+                    <Input id="name" name="name" value={sheetTaskData.name || ''} onChange={(e) => handleSheetDataChange('name', e.target.value)} placeholder="Ex: Appeler le client pour le feedback" required className="h-12 rounded-xl text-base" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description" className="font-semibold">Détails</Label>
+                    <Textarea id="description" name="description" value={sheetTaskData.description || ''} onChange={(e) => handleSheetDataChange('description', e.target.value)} placeholder="Ajouter plus de détails, des notes ou des liens..." rows={4} className="rounded-xl" />
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <Label className="font-semibold">Sous-tâches</Label>
+                    {(sheetTaskData.subtasks && sheetTaskData.subtasks.length > 0) && (
+                      <div className='space-y-1'><Progress value={subtasksProgress} className="h-2" /><p className='text-xs text-muted-foreground text-right'>{Math.round(subtasksProgress)}% complété</p></div>
+                    )}
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                      {sheetTaskData.subtasks?.map(subtask => (
+                        <div key={subtask.id} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted">
+                          <Checkbox id={`subtask-${subtask.id}`} checked={subtask.completed} onCheckedChange={() => handleToggleSubtask(subtask.id)} />
+                          <Label htmlFor={`subtask-${subtask.id}`} className={cn("flex-1 cursor-pointer", subtask.completed && "line-through text-muted-foreground")}>{subtask.name}</Label>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDeleteSubtask(subtask.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+                        </div>
+                      ))}
                     </div>
-                  )}
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
-                    {sheetTaskData.subtasks?.map(subtask => (
-                      <div key={subtask.id} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted">
-                        <Checkbox 
-                          id={`subtask-${subtask.id}`}
-                          checked={subtask.completed}
-                          onCheckedChange={() => handleToggleSubtask(subtask.id)}
-                        />
-                        <Label 
-                          htmlFor={`subtask-${subtask.id}`}
-                          className={cn("flex-1 cursor-pointer", subtask.completed && "line-through text-muted-foreground")}
-                        >
-                          {subtask.name}
-                        </Label>
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6"
-                          onClick={() => handleDeleteSubtask(subtask.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </div>
-                    ))}
+                    <div className="flex items-center gap-2">
+                      <Input id="new-subtask" placeholder="Ajouter une sous-tâche..." value={newSubtask} onChange={(e) => setNewSubtask(e.target.value)} onKeyDown={(e) => {if (e.key === 'Enter') { e.preventDefault(); handleAddSubtask(); }}} className="h-10 rounded-lg"/>
+                      <Button type="button" size="icon" onClick={handleAddSubtask} className="rounded-lg flex-shrink-0"><PlusCircle className="h-5 w-5" /></Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="new-subtask"
-                      placeholder="Ajouter une sous-tâche..."
-                      value={newSubtask}
-                      onChange={(e) => setNewSubtask(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddSubtask();
-                        }
-                      }}
-                      className="h-10 rounded-lg"
-                    />
-                    <Button type="button" size="icon" onClick={handleAddSubtask} className="rounded-lg flex-shrink-0">
-                      <PlusCircle className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </div>
 
-
-                 <div className="space-y-2">
-                    <Label htmlFor="scheduledDate" className="font-semibold">
-                      Date planifiée
-                    </Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                            variant={"outline"}
-                            className={cn(
-                                "w-full justify-start text-left font-normal h-12 rounded-xl",
-                                !sheetTaskData.scheduledDate && "text-muted-foreground"
-                            )}
-                            >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {sheetTaskData.scheduledDate ? format(new Date(sheetTaskData.scheduledDate), "PPP", { locale: fr }) : <span>Choisir une date</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                            mode="single"
-                            selected={sheetTaskData.scheduledDate ? new Date(sheetTaskData.scheduledDate) : undefined}
-                            onSelect={(date) => handleSheetDataChange('scheduledDate', date?.toISOString())}
-                            initialFocus
-                            />
-                        </PopoverContent>
-                    </Popover>
-                </div>
-                <div className="space-y-3">
-                  <Label className="font-semibold">Priorité</Label>
-                  <RadioGroup
-                    name="priority"
-                    value={sheetTaskData.priority || 'medium'}
-                    onValueChange={(value: 'low' | 'medium' | 'high') => handleSheetDataChange('priority', value)}
-                    className="grid grid-cols-3 gap-3"
-                  >
-                    <Label
-                      htmlFor="p-low"
-                      className="flex items-center justify-center gap-2 rounded-xl border p-3 cursor-pointer has-[:checked]:bg-green-100 has-[:checked]:border-green-400 dark:has-[:checked]:bg-green-900/50 dark:has-[:checked]:border-green-700 transition-all"
-                    >
-                      <RadioGroupItem value="low" id="p-low" className="sr-only" />
-                      Basse
-                    </Label>
-                    <Label
-                      htmlFor="p-medium"
-                      className="flex items-center justify-center gap-2 rounded-xl border p-3 cursor-pointer has-[:checked]:bg-yellow-100 has-[:checked]:border-yellow-400 dark:has-[:checked]:bg-yellow-900/50 dark:has-[:checked]:border-yellow-700 transition-all"
-                    >
-                      <RadioGroupItem
-                        value="medium"
-                        id="p-medium"
-                        className="sr-only"
-                      />
-                      Moyenne
-                    </Label>
-                    <Label
-                      htmlFor="p-high"
-                      className="flex items-center justify-center gap-2 rounded-xl border p-3 cursor-pointer has-[:checked]:bg-red-100 has-[:checked]:border-red-400 dark:has-[:checked]:bg-red-900/50 dark:has-[:checked]:border-red-700 transition-all"
-                    >
-                      <RadioGroupItem
-                        value="high"
-                        id="p-high"
-                        className="sr-only"
-                      />
-                      Haute
-                    </Label>
-                  </RadioGroup>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-2 font-semibold">
-                      <Zap size={16} /> Énergie requise
-                    </Label>
-                    <Select
-                      name="energyRequired"
-                      value={sheetTaskData.energyRequired}
-                      onValueChange={(value: 'low' | 'medium' | 'high') => handleSheetDataChange('energyRequired', value)}
-                    >
-                      <SelectTrigger className="h-12 rounded-xl">
-                        <SelectValue placeholder="Sélectionner" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {energyLevels.map((level) => (
-                          <SelectItem key={level.value} value={level.value}>
-                            {level.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <Label htmlFor="scheduledDate" className="font-semibold">Date</Label>
+                      <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal h-12 rounded-xl", !sheetTaskData.scheduledDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{sheetTaskData.scheduledDate ? format(new Date(sheetTaskData.scheduledDate), "PPP", { locale: fr }) : <span>Choisir une date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={sheetTaskData.scheduledDate ? new Date(sheetTaskData.scheduledDate) : undefined} onSelect={(date) => handleSheetDataChange('scheduledDate', date?.toISOString())} initialFocus /></PopoverContent></Popover>
                   </div>
+                  <div className="space-y-3">
+                    <Label className="font-semibold">Priorité</Label>
+                    <RadioGroup name="priority" value={sheetTaskData.priority || 'medium'} onValueChange={(value: 'low' | 'medium' | 'high') => handleSheetDataChange('priority', value)} className="grid grid-cols-3 gap-3">
+                      <Label htmlFor="p-low" className="flex items-center justify-center gap-2 rounded-xl border p-3 cursor-pointer has-[:checked]:bg-green-100 has-[:checked]:border-green-400 dark:has-[:checked]:bg-green-900/50 dark:has-[:checked]:border-green-700 transition-all"><RadioGroupItem value="low" id="p-low" className="sr-only" />Basse</Label>
+                      <Label htmlFor="p-medium" className="flex items-center justify-center gap-2 rounded-xl border p-3 cursor-pointer has-[:checked]:bg-yellow-100 has-[:checked]:border-yellow-400 dark:has-[:checked]:bg-yellow-900/50 dark:has-[:checked]:border-yellow-700 transition-all"><RadioGroupItem value="medium" id="p-medium" className="sr-only" />Moyenne</Label>
+                      <Label htmlFor="p-high" className="flex items-center justify-center gap-2 rounded-xl border p-3 cursor-pointer has-[:checked]:bg-red-100 has-[:checked]:border-red-400 dark:has-[:checked]:bg-red-900/50 dark:has-[:checked]:border-red-700 transition-all"><RadioGroupItem value="high" id="p-high" className="sr-only" />Haute</Label>
+                    </RadioGroup>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2"><Label className="flex items-center gap-2 font-semibold"><Zap size={16} /> Énergie</Label><Select name="energyRequired" value={sheetTaskData.energyRequired} onValueChange={(value: 'low' | 'medium' | 'high') => handleSheetDataChange('energyRequired', value)}><SelectTrigger className="h-12 rounded-xl"><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{energyLevels.map((level) => (<SelectItem key={level.value} value={level.value}>{level.label}</SelectItem>))}</SelectContent></Select></div>
+                    <div className="space-y-2"><Label htmlFor="effort" className="font-semibold">Effort</Label><Select name="effort" value={sheetTaskData.effort} onValueChange={(value: 'S' | 'M' | 'L') => handleSheetDataChange('effort', value)}><SelectTrigger className="h-12 rounded-xl"><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent><SelectItem value="S">Simple (&lt; 15min)</SelectItem><SelectItem value="M">Moyen (15-120min)</SelectItem><SelectItem value="L">Long (&gt; 2h)</SelectItem></SelectContent></Select></div>
+                  </div>
+                  <div className="space-y-2"><Label htmlFor="tags" className="font-semibold">Tags</Label><Input id="tags" name="tags" value={Array.isArray(sheetTaskData.tags) ? sheetTaskData.tags.join(', ') : ''} onChange={(e) => handleSheetDataChange('tags', e.target.value.split(',').map(t => t.trim()))} placeholder="Ex: UI/UX, Dev, Marketing" className="h-12 rounded-xl" /></div>
+                </div>
+              </ScrollArea>
+              <SheetFooter className="bg-card p-4 flex-row justify-end sm:justify-end border-t"><div className="flex gap-2"><Button type="button" variant="outline" onClick={() => setIsEditing(false)} className="h-12 rounded-full px-6">Annuler</Button><Button type="submit" className="h-12 rounded-full px-8">Enregistrer</Button></div></SheetFooter>
+            </form>
+          ) : (
+             <ScrollArea className="flex-1">
+              <div className="space-y-6 py-6 px-6">
+                <ReadOnlyField label="Description" value={sheetTaskData.description} />
+                <ReadOnlyField label="Objectif" value={sheetTaskData.objective} />
+                 
+                {sheetTaskData.subtasks && sheetTaskData.subtasks.length > 0 && (
                   <div className="space-y-2">
-                    <Label
-                      htmlFor="estimatedDuration"
-                      className="font-semibold"
-                    >
-                      Durée (minutes)
-                    </Label>
-                    <Input
-                      id="estimatedDuration"
-                      name="estimatedDuration"
-                      type="number"
-                      value={sheetTaskData.estimatedDuration || ''}
-                      onChange={(e) => handleSheetDataChange('estimatedDuration', e.target.valueAsNumber)}
-                      placeholder="Ex: 30"
-                      className="h-12 rounded-xl"
-                    />
+                    <Label className="font-semibold text-muted-foreground">Sous-tâches</Label>
+                    <div className='space-y-1'><Progress value={subtasksProgress} className="h-2" /><p className='text-xs text-muted-foreground text-right'>{Math.round(subtasksProgress)}% complété</p></div>
+                    <div className="space-y-2 pt-2">
+                      {sheetTaskData.subtasks.map(subtask => (
+                        <div key={subtask.id} className="flex items-center gap-3">
+                          <Check className={cn("h-4 w-4 rounded-full p-0.5", subtask.completed ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")} />
+                          <p className={cn("flex-1", subtask.completed && "line-through text-muted-foreground")}>{subtask.name}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+                )}
+                 
+                 <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                  <ReadOnlyField label="Deadline" value={formatDeadline(sheetTaskData.scheduledDate)} />
+                  <ReadOnlyField label="Priorité">{getPriorityDisplay(sheetTaskData.priority)}</ReadOnlyField>
+                  <ReadOnlyField label="Énergie">{getEnergyBadge(sheetTaskData.energyRequired)}</ReadOnlyField>
+                  <ReadOnlyField label="Effort" value={getEffortDisplay(sheetTaskData.effort)} />
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="tags" className="font-semibold">
-                    Tags
-                  </Label>
-                  <Input
-                    id="tags"
-                    name="tags"
-                    value={Array.isArray(sheetTaskData.tags) ? sheetTaskData.tags.join(', ') : ''}
-                    onChange={(e) => handleSheetDataChange('tags', e.target.value.split(',').map(t => t.trim()))}
-                    placeholder="Ex: UI/UX, Dev, Marketing"
-                    className="h-12 rounded-xl"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="objective" className="font-semibold">
-                    Objectif
-                  </Label>
-                  <Textarea
-                    id="objective"
-                    name="objective"
-                    value={sheetTaskData.objective || ''}
-                    onChange={(e) => handleSheetDataChange('objective', e.target.value)}
-                    placeholder="Quel est le but final de cette tâche ?"
-                    rows={2}
-                    className="rounded-xl"
-                  />
-                </div>
-                <div className="flex items-center justify-between rounded-xl border bg-card p-4 shadow-sm">
-                  <div className="space-y-0.5">
-                    <Label className="font-semibold">Sélection automatique</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Autoriser l'IA à suggérer cette tâche.
-                    </p>
-                  </div>
-                  <Switch
-                    name="autoSelected"
-                    checked={sheetTaskData.autoSelected ?? true}
-                    onCheckedChange={(checked) => handleSheetDataChange('autoSelected', checked)}
-                  />
-                </div>
-              </div>
-            </ScrollArea>
 
-            <SheetFooter className="bg-card p-4 flex-row justify-between sm:justify-between border-t">
-              <div>
-                {!isCreatingNewTask && selectedTask && (
-                   <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button type="button" variant="destructive">Supprimer</Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Cette action ne peut pas être annulée. Cela supprimera définitivement cette tâche.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeleteTask(selectedTask.id)}>
-                                    Supprimer
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
+                {sheetTaskData.tags && sheetTaskData.tags.length > 0 && (
+                  <ReadOnlyField label="Tags">
+                    <div className="flex flex-wrap gap-2">
+                      {sheetTaskData.tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+                    </div>
+                  </ReadOnlyField>
                 )}
               </div>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleSheetClose}
-                  className="h-12 rounded-full px-6"
-                >
-                  Annuler
-                </Button>
-                <Button
-                  type="submit"
-                  className="h-12 rounded-full px-8 bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  Enregistrer
-                </Button>
-              </div>
-            </SheetFooter>
-          </form>
+            </ScrollArea>
+          )}
         </SheetContent>
       </Sheet>
 
