@@ -3,9 +3,6 @@
 
 import { Sun, Smile, Sunrise, Sunset, Moon, Zap, Coffee, BrainCircuit, Paintbrush } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { EnergyCheckIn } from './energy-check-in';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -13,9 +10,8 @@ type EnergyState = "energized" | "normal" | "slow" | "focused" | "creative" | nu
 
 interface DailyGreetingProps {
   name: string;
-  onEnergyChange: (energy: EnergyState) => void;
-  onIntentionChange: (intention: string) => void;
   energyLevel: EnergyState;
+  intention: string;
 }
 
 const energyInfo = {
@@ -33,7 +29,7 @@ const timeInfo = {
     night: { icon: Moon, color: "text-purple-400", message: "Prêt pour une nuit productive ?" },
 }
 
-export function DailyGreeting({ name, onEnergyChange, onIntentionChange, energyLevel }: DailyGreetingProps) {
+export function DailyGreeting({ name, energyLevel, intention }: DailyGreetingProps) {
   const [timeOfDay, setTimeOfDay] = useState<keyof typeof timeInfo>("morning");
 
   useEffect(() => {
@@ -64,7 +60,7 @@ export function DailyGreeting({ name, onEnergyChange, onIntentionChange, energyL
         <div className="flex justify-between items-start mb-6">
           <div>
             <h1 className="text-2xl font-bold">Bonjour {name},</h1>
-            <p className="text-gray-300 mt-1">{greetingMessage}</p>
+            <p className="text-gray-300 mt-1">{intention || greetingMessage}</p>
           </div>
           <motion.div
             key={energyLevel}
@@ -84,22 +80,6 @@ export function DailyGreeting({ name, onEnergyChange, onIntentionChange, energyL
             <GreetingIcon className={cn("h-10 w-10", greetingColor)} />
           </motion.div>
         </div>
-        
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="rounded-full h-12 px-6 shadow-sm bg-white/10 border-white/20 text-white hover:bg-white/20">
-                <Smile className="mr-2 h-5 w-5 text-yellow-400" />
-                Comment ça va ?
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80 bg-popover" side="bottom" align="start">
-            <EnergyCheckIn 
-              onEnergyChange={onEnergyChange}
-              onIntentionChange={onIntentionChange}
-            />
-          </PopoverContent>
-        </Popover>
-
       </div>
     </div>
   );

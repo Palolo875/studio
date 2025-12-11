@@ -88,15 +88,32 @@ export function DashboardClient() {
     } else {
         setMorningRitualCompleted(true);
         // Load tasks from somewhere if ritual is already done
+        const storedEnergy = localStorage.getItem('todayEnergyLevel') as EnergyState;
+        const storedIntention = localStorage.getItem('todayIntention');
+        if (storedEnergy) setEnergyLevel(storedEnergy);
+        if (storedIntention) setIntention(storedIntention);
+
+        // For demo, we'll just load initial tasks. In a real app, you'd fetch the user's playlist for the day.
         setTasks(initialTasks);
         setInitialTaskCount(initialTasks.length);
     }
   }, []);
 
   const handleMorningRitualSubmit = () => {
+    if (!energyLevel) {
+        toast({
+            variant: "destructive",
+            title: "Oups !",
+            description: "Veuillez sélectionner votre niveau d'énergie.",
+        });
+        return;
+    }
     setShowMorningRitual(false);
     setMorningRitualCompleted(true);
-    localStorage.setItem('lastMorningCheckin', new Date().toISOString().split('T')[0]);
+    const today = new Date().toISOString().split('T')[0];
+    localStorage.setItem('lastMorningCheckin', today);
+    localStorage.setItem('todayEnergyLevel', energyLevel);
+    localStorage.setItem('todayIntention', intention);
     handleRegeneratePlaylist(true);
   };
 
@@ -305,9 +322,8 @@ export function DashboardClient() {
 
       <DailyGreeting
         name="Junior"
-        onEnergyChange={setEnergyLevel}
-        onIntentionChange={setIntention}
         energyLevel={energyLevel}
+        intention={intention}
       />
 
       {morningRitualCompleted && (
