@@ -75,7 +75,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     energy: [],
   });
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const { toast } = useToast();
@@ -296,7 +296,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
       if (obsoleteTasks.length === 0) {
           toast({
               title: "Aucune tâche obsolète",
-              description: "Votre atelier est déjà bien rangé !",
+              description: "Votre bibliothèque est déjà bien rangée !",
           });
           return;
       }
@@ -436,7 +436,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     <div className="space-y-8 h-full flex flex-col">
       {/* Header */}
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold">L'Atelier</h1>
+        <h1 className="text-3xl font-bold">Bibliothèque</h1>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -478,7 +478,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
               </AlertDialogTrigger>
               <AlertDialogContent>
                   <AlertDialogHeader>
-                      <AlertDialogTitle>Nettoyer l'atelier ?</AlertDialogTitle>
+                      <AlertDialogTitle>Nettoyer la bibliothèque ?</AlertDialogTitle>
                       <AlertDialogDescription>
                           Cela archivera {getObsoleteTasks().length} tâche(s) obsolète(s) (créées il y a plus de 30 jours, sans deadline et jamais commencées).
                       </AlertDialogDescription>

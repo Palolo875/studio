@@ -24,6 +24,7 @@ import { ArrowRight, Lightbulb, Rocket } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card } from '../ui/card';
 import { PlaylistGenerator } from './playlist-generator';
+import { ScrollArea, ScrollBar } from '../ui/scroll-area';
 
 interface RecommendationsProps {
   tasks: Task[];
@@ -91,7 +92,7 @@ export function Recommendations({ tasks }: RecommendationsProps) {
     onClick?: () => void;
   }) => (
     <Card
-      className="rounded-3xl shadow-sm flex-1 flex flex-col justify-between p-4 bg-card hover:bg-accent transition-colors cursor-pointer"
+      className="rounded-2xl shadow-sm flex-shrink-0 w-48 flex flex-col justify-between p-4 bg-card hover:bg-accent transition-colors cursor-pointer"
       onClick={onClick}
     >
       <div>{icon}</div>
@@ -100,7 +101,7 @@ export function Recommendations({ tasks }: RecommendationsProps) {
         <div className="flex justify-between items-center mt-2">
           <p className="text-xs text-muted-foreground">{description}</p>
           <div className="bg-muted rounded-full p-1">
-            <ArrowRight className="h-4 w-4 text-foreground" />
+            <ArrowRight className="h-3 w-3 text-foreground" />
           </div>
         </div>
       </div>
@@ -109,28 +110,41 @@ export function Recommendations({ tasks }: RecommendationsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4">
-        <CategoryCard
-          icon={
-            <div className="p-2 bg-secondary rounded-full w-fit">
-              <Rocket className="h-5 w-5 text-secondary-foreground" />
-            </div>
-          }
-          title="Boost d’énergie"
-          description="1 tâche"
-          onClick={getRecommendations}
-        />
-        <CategoryCard
-          icon={
-            <div className="p-2 bg-secondary rounded-full w-fit">
-              <Lightbulb className="h-5 w-5 text-secondary-foreground" />
-            </div>
-          }
-          title="Générer ma playlist"
-          description="Explorer"
-          onClick={() => setIsGeneratorOpen(true)}
-        />
-      </div>
+      <ScrollArea className="w-full whitespace-nowrap">
+        <div className="flex gap-4 pb-4">
+          <CategoryCard
+            icon={
+              <div className="p-2 bg-secondary rounded-full w-fit">
+                <Rocket className="h-5 w-5 text-secondary-foreground" />
+              </div>
+            }
+            title="Boost d’énergie"
+            description="1 tâche"
+            onClick={getRecommendations}
+          />
+          <CategoryCard
+            icon={
+              <div className="p-2 bg-secondary rounded-full w-fit">
+                <Lightbulb className="h-5 w-5 text-secondary-foreground" />
+              </div>
+            }
+            title="Générer ma playlist"
+            description="Explorer"
+            onClick={() => setIsGeneratorOpen(true)}
+          />
+           <CategoryCard
+            icon={
+              <div className="p-2 bg-secondary rounded-full w-fit">
+                <Lightbulb className="h-5 w-5 text-secondary-foreground" />
+              </div>
+            }
+            title="Autre chose"
+            description="Explorer"
+            onClick={() => setIsGeneratorOpen(true)}
+          />
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
 
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>

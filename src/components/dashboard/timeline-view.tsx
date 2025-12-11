@@ -17,10 +17,22 @@ const userAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
 
 
 export function TimelineView({ tasks }: TimelineViewProps) {
-  const tasksWithTime = tasks.map((task, index) => ({
-    ...task,
-    time: `${9 + index}:00 AM`,
-  }));
+  const tasksWithTime = tasks.map((task, index) => {
+    // Basic time estimation logic, can be improved
+    const baseTime = new Date();
+    baseTime.setHours(9, 0, 0, 0);
+    const duration = task.estimatedDuration || 60; // default to 60 mins
+    const startTime = new Date(baseTime.getTime() + index * duration * 60000);
+    
+    return {
+      ...task,
+      time: startTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+    }
+  });
+
+  if (tasks.length === 0) {
+    return <div className="text-center py-10 text-muted-foreground">Aucune tâche dans la timeline.</div>;
+  }
 
   return (
     <div className="space-y-8 relative">
@@ -48,7 +60,7 @@ export function TimelineView({ tasks }: TimelineViewProps) {
                                     <p className="font-semibold">{task.name}</p>
                                     <p className="text-sm opacity-80">{task.time}</p>
                                 </div>
-                                <p className="text-sm opacity-80 mb-4">{task.description || "No description available."}</p>
+                                <p className="text-sm opacity-80 mb-4">{task.description || "Tâche actuelle de la playlist."}</p>
                                 <div className="flex justify-between items-center">
                                     <div className="flex -space-x-2">
                                         <Avatar className="h-8 w-8 border-2 border-primary">
@@ -69,7 +81,7 @@ export function TimelineView({ tasks }: TimelineViewProps) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="font-medium text-foreground">{task.name}</p>
-                                <p className="text-sm text-muted-foreground">{task.description || "Edit icons for team task"}</p>
+                                <p className="text-sm text-muted-foreground">{task.description || "Prochaine tâche."}</p>
                             </div>
                             <p className="text-sm text-muted-foreground">{task.time}</p>
                         </div>
