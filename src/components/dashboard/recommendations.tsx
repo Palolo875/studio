@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useTransition } from 'react';
@@ -92,7 +93,7 @@ export function Recommendations({ tasks }: RecommendationsProps) {
     onClick?: () => void;
   }) => (
     <Card
-      className="rounded-2xl shadow-sm flex-shrink-0 w-40 flex flex-col justify-between p-4 bg-card hover:bg-accent transition-colors cursor-pointer"
+      className="rounded-2xl shadow-sm flex-shrink-0 w-36 flex flex-col justify-between p-4 bg-card hover:bg-accent transition-colors cursor-pointer"
       onClick={onClick}
     >
       <div>{icon}</div>
@@ -181,3 +182,5 @@ export function Recommendations({ tasks }: RecommendationsProps) {
     </div>
   );
 }
+
+    
