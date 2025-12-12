@@ -39,3 +39,29 @@ export type FocusSettings = {
   autoSaveNotes: boolean;
   soundEnabled: boolean;
 };
+
+// Types pour l'algorithme de génération de playlist
+export type EnergyLevel = "high" | "medium" | "low";
+export type Priority = "low" | "medium" | "high";
+
+export interface UserPatterns {
+  skippedTaskTypes: Record<string, number>; // Types de tâches souvent ignorées
+  completedTaskTypes: Record<string, number>; // Types de tâches souvent complétées
+  shuffleCount: number; // Nombre de fois où l'utilisateur a mélangé la playlist
+}
+
+export interface TaskScore {
+  task: Task;
+  score: number;
+  reason: string;
+  reasonDetails?: string[]; // Détails pour les badges
+}
+
+export interface PlaylistGeneratorOptions {
+  energyLevel: EnergyLevel;
+  currentTime: Date;
+  taskHistory?: Task[];
+  maxTasks?: number; // Par défaut 5
+  userPatterns?: UserPatterns; // Ajout pour l'apprentissage automatique
+  workdayHours?: number; // Heures de travail par jour (défaut: 8)
+}
