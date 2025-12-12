@@ -32,6 +32,7 @@ import { Textarea } from '../ui/textarea';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '../ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Progress } from '../ui/progress';
 
 interface TaskListProps {
   tasks: Task[];
@@ -135,7 +136,7 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
             exit={{ opacity: 0, x: -50, height: 0 }}
             transition={{ duration: 0.5, ease: 'easeInOut' }}
           >
-            <div
+            <Collapsible
               className="group rounded-2xl border border-border/80 bg-card shadow-sm transition-all hover:border-primary/50"
             >
               <div className="flex items-start p-4">
@@ -152,14 +153,16 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
                   )}
                 </Button>
                 <div className="flex-1 ml-4">
-                  <p
-                    className={cn(
-                      'font-medium text-foreground',
-                      task.completed && 'text-muted-foreground line-through'
-                    )}
-                  >
-                    {task.name}
-                  </p>
+                  <CollapsibleTrigger className="w-full text-left">
+                    <p
+                      className={cn(
+                        'font-medium text-foreground',
+                        task.completed && 'text-muted-foreground line-through'
+                      )}
+                    >
+                      {task.name}
+                    </p>
+                  </CollapsibleTrigger>
                   <div className="flex items-center gap-2 flex-wrap mt-2">
                     {task.effort && (
                         <Badge className={cn("capitalize", effortStyles[task.effort])}>
@@ -182,16 +185,40 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
                       <PopoverTrigger asChild>
                            <Button variant="ghost" size="sm">
                                 <HelpCircle className="h-4 w-4 mr-2" />
-                                Comment l'aborder ?
+                                Stratégie
                             </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-80">
                          <StrategyPopoverContent />
                       </PopoverContent>
                   </Popover>
+                  <CollapsibleTrigger asChild>
+                     <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                     </Button>
+                  </CollapsibleTrigger>
                 </div>
               </div>
-            </div>
+              <CollapsibleContent className="px-6 pb-4 space-y-4">
+                 {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
+                 {task.subtasks && task.subtasks.length > 0 && (
+                     <div>
+                        <div className="mb-2">
+                           <Progress value={task.completionRate} className="h-1.5" />
+                           <p className="text-xs text-muted-foreground mt-1.5">{task.subtasks.filter(st => st.completed).length} sur {task.subtasks.length} sous-tâches terminées</p>
+                        </div>
+                        <ul className="space-y-2">
+                           {task.subtasks.map(subtask => (
+                              <li key={subtask.id} className="flex items-center gap-2 text-sm">
+                                 {subtask.completed ? <CheckCircle2 className="h-4 w-4 text-green-500"/> : <Circle className="h-4 w-4 text-muted-foreground" />}
+                                 <span className={cn(subtask.completed && "line-through text-muted-foreground")}>{subtask.name}</span>
+                              </li>
+                           ))}
+                        </ul>
+                     </div>
+                 )}
+              </CollapsibleContent>
+            </Collapsible>
           </motion.div>
         ))}
       </AnimatePresence>

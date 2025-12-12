@@ -67,26 +67,26 @@ function EveningContent() {
   const pattern = getDailyPattern();
 
   const FocusScoreGauge = () => {
-    const radius = 90;
+    const radius = 60; // smaller radius
     const circumference = 2 * Math.PI * radius;
     const progress = (focusScore / 100) * circumference;
     return (
-      <Card className="bg-card/80 backdrop-blur-lg border-white/20 shadow-2xl rounded-3xl p-8 flex flex-col items-center justify-center aspect-square">
-        <h3 className="text-lg font-medium text-muted-foreground mb-6 flex items-center justify-center gap-2">
-            <Target className="h-5 w-5" />
+      <div className="flex flex-col items-center justify-center p-6">
+        <h3 className="text-md font-medium text-muted-foreground mb-4 flex items-center justify-center gap-2">
+            <Target className="h-4 w-4" />
             Focus Score
         </h3>
-        <div className="relative w-48 h-48 mx-auto">
-            <svg className="w-full h-full" viewBox="0 0 200 200">
-                <circle cx="100" cy="100" r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth="12" />
-                <motion.circle cx="100" cy="100" r={radius} fill="none" stroke="hsl(var(--primary))" strokeWidth="12" strokeLinecap="round" transform="rotate(-90 100 100)" initial={{ strokeDasharray: 0 }} animate={{ strokeDasharray: `${progress} ${circumference}` }} transition={{ duration: 1.5, ease: "easeOut" }} />
+        <div className="relative w-36 h-36 mx-auto">
+            <svg className="w-full h-full" viewBox="0 0 140 140">
+                <circle cx="70" cy="70" r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth="10" />
+                <motion.circle cx="70" cy="70" r={radius} fill="none" stroke="hsl(var(--primary))" strokeWidth="10" strokeLinecap="round" transform="rotate(-90 70 70)" initial={{ strokeDasharray: 0 }} animate={{ strokeDasharray: `${progress} ${circumference}` }} transition={{ duration: 1.5, ease: "easeOut" }} />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-5xl font-bold text-foreground">{focusScore}%</span>
+                <span className="text-4xl font-bold text-foreground">{focusScore}%</span>
             </div>
         </div>
-        <p className="text-muted-foreground mt-6 text-center">{getFocusScoreMessage()}</p>
-      </Card>
+        <p className="text-muted-foreground text-sm mt-4 text-center">{getFocusScoreMessage()}</p>
+      </div>
     );
   };
 
@@ -127,30 +127,30 @@ function EveningContent() {
       <div className="absolute inset-0 z-0"><div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[200%] h-[100%] bg-gradient-to-t from-accent/30 via-primary/20 to-secondary/30 rounded-t-full blur-3xl animate-pulse"></div></div>
 
       <motion.div variants={containerVariants} initial="hidden" animate="visible" className="relative z-10 w-full max-w-5xl text-center space-y-12">
-        <motion.h1 variants={itemVariants} className="text-5xl md:text-7xl font-extralight tracking-tight text-foreground">{getTitle()}</motion.h1>
+        <motion.h1 variants={itemVariants} className="text-4xl md:text-6xl font-extralight tracking-tight text-foreground">{getTitle()}</motion.h1>
 
-        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {completedTasks.length > 0 ? (
-            <div className="text-left space-y-6">
-              <h2 className="text-2xl font-medium text-muted-foreground">Aujourd'hui, vous avez accompli :</h2>
-              <ul className="space-y-4">
+            <div className="lg:col-span-2 text-left space-y-4">
+              <h2 className="text-xl font-medium text-muted-foreground">Aujourd'hui, vous avez accompli :</h2>
+              <ul className="space-y-3">
                 {completedTasks.map((task, index) => (
-                  <motion.li key={index} custom={index} variants={itemVariants} className="flex items-center gap-4 bg-card/80 p-4 rounded-xl backdrop-blur-sm">
-                    <CheckCircle2 className="h-6 w-6 text-green-500 flex-shrink-0" />
-                    <span className="text-foreground font-medium">{task}</span>
+                  <motion.li key={index} custom={index} variants={itemVariants} className="flex items-center gap-3 bg-card/50 p-3 rounded-lg backdrop-blur-sm">
+                    <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    <span className="text-foreground font-medium text-sm">{task}</span>
                   </motion.li>
                 ))}
               </ul>
             </div>
           ) : (
-            <p className="mt-8 text-muted-foreground">Demain est un nouveau jour. Reposez-vous.</p>
+            <p className="mt-8 text-muted-foreground lg:col-span-2">Demain est un nouveau jour. Reposez-vous.</p>
           )}
           <FocusScoreGauge />
         </motion.div>
 
         <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Card className="bg-purple-100/50 dark:bg-purple-900/20 border-purple-200/50 p-6 rounded-2xl text-left">
-            <h4 className="font-semibold text-foreground flex items-center gap-2 mb-4"><Lightbulb className="h-5 w-5 text-purple-400" />Votre pattern aujourd'hui</h4>
+          <div className="bg-purple-100/10 dark:bg-purple-900/10 border border-purple-200/20 p-6 rounded-2xl text-left">
+            <h4 className="font-semibold text-foreground flex items-center gap-2 mb-4"><Lightbulb className="h-5 w-5 text-purple-400" />Votre pattern du jour</h4>
             <div className="space-y-4">
               <div>
                 <h5 className="font-semibold text-foreground">{pattern.title}</h5>
@@ -160,11 +160,11 @@ function EveningContent() {
               <div className="flex items-start gap-3 text-sm"><Target className="h-4 w-4 text-purple-400 mt-1 flex-shrink-0" /><span className="text-muted-foreground">{pattern.action}</span></div>
             </div>
             <Button variant="link" size="sm" className="p-0 h-auto mt-4 text-purple-600 dark:text-purple-400">Voir tous mes patterns →</Button>
-          </Card>
+          </div>
 
-          <Card className="bg-card/80 backdrop-blur-lg border-white/20 shadow-xl rounded-2xl p-6 text-left">
+          <div className="bg-card/20 backdrop-blur-lg border border-white/10 shadow-xl rounded-2xl p-6 text-left">
             <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-foreground">Une dernière pensée pour demain ?</h4>
+              <h4 className="font-semibold text-foreground">Une dernière pensée ?</h4>
               {showActionBadge && <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{actionsDetected} action{actionsDetected > 1 ? 's' : ''} détectée{actionsDetected > 1 ? 's' : ''}</span>}
             </div>
             <p className="text-sm text-muted-foreground/80 mt-1 mb-4">Videz votre esprit avant de vous déconnecter.</p>
@@ -173,7 +173,7 @@ function EveningContent() {
               <Button variant="outline" size="sm" onClick={() => { if (brainDump.trim() && brainDump !== lastSavedBrainDump) { console.log("Brain dump saved:", brainDump); setLastSavedBrainDump(brainDump); } }}>Sauvegarder</Button>
               {showActionBadge && <Button variant="default" size="sm" onClick={() => alert(`${actionsDetected} action(s) détectée(s).`)}>Trier les actions</Button>}
             </div>
-          </Card>
+          </div>
         </motion.div>
 
         <motion.div variants={itemVariants} className="pt-8">
