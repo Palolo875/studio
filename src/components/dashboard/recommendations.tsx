@@ -132,16 +132,6 @@ export function Recommendations({ tasks }: RecommendationsProps) {
             description="Explorer"
             onClick={() => setIsGeneratorOpen(true)}
           />
-           <CategoryCard
-            icon={
-              <div className="p-2 bg-secondary rounded-full w-fit">
-                <Lightbulb className="h-5 w-5 text-secondary-foreground" />
-              </div>
-            }
-            title="Autre chose"
-            description="Explorer"
-            onClick={() => setIsGeneratorOpen(true)}
-          />
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
