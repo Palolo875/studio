@@ -5,13 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { motion } from 'framer-motion';
 import { ArrowRight, Clock } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 
 export default function SchedulePage() {
   const [startTime, setStartTime] = useState([9]);
   const [endTime, setEndTime] = useState([18]);
+  const router = useRouter();
+
+  const handleNext = () => {
+    router.push('/onboarding/summary');
+  };
 
   const productiveHours = endTime[0] - startTime[0];
 
@@ -71,12 +76,10 @@ export default function SchedulePage() {
         transition={{ delay: 0.5, duration: 0.5 }}
         className="mt-12 flex justify-center"
       >
-        <Link href="/onboarding/summary">
-          <Button size="lg" className="h-14 px-8 rounded-full text-lg">
-            Continuer
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
-        </Link>
+        <Button size="lg" className="h-14 px-8 rounded-full text-lg" onClick={handleNext}>
+          Continuer
+          <ArrowRight className="ml-2 h-5 w-5" />
+        </Button>
       </motion.div>
     </motion.div>
   );

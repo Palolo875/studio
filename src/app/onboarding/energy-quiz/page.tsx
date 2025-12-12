@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sunrise, Sun, Moon, CheckCircle2 } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 const rhythms = [
@@ -31,6 +31,11 @@ const rhythms = [
 
 export default function EnergyQuizPage() {
   const [selectedRythm, setSelectedRythm] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleNext = () => {
+    router.push('/onboarding/schedule');
+  };
 
   return (
     <motion.div
@@ -74,12 +79,10 @@ export default function EnergyQuizPage() {
         transition={{ delay: 0.5, duration: 0.5 }}
         className="mt-16 flex justify-center"
       >
-        <Link href="/onboarding/schedule">
-          <Button size="lg" className="h-14 px-8 rounded-full text-lg" disabled={!selectedRythm}>
-            Continuer
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
-        </Link>
+        <Button size="lg" className="h-14 px-8 rounded-full text-lg" disabled={!selectedRythm} onClick={handleNext}>
+          Continuer
+          <ArrowRight className="ml-2 h-5 w-5" />
+        </Button>
       </motion.div>
     </motion.div>
   );

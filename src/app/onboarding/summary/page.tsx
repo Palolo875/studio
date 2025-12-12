@@ -2,12 +2,17 @@
 
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function OnboardingSummaryPage() {
   const name = "Junior";
   const rhythm = "Chouette";
   const hours = 9;
+  const router = useRouter();
+
+  const handleNext = () => {
+    router.push('/dashboard');
+  };
 
   return (
     <motion.div
@@ -30,11 +35,9 @@ export default function OnboardingSummaryPage() {
         transition={{ delay: 0.5, duration: 0.5 }}
         className="mt-12"
       >
-        <Link href="/dashboard">
-          <Button size="lg" className="h-14 px-8 rounded-full text-lg">
-            Allons-y, je suis prêt(e)
-          </Button>
-        </Link>
+        <Button size="lg" className="h-14 px-8 rounded-full text-lg" onClick={handleNext}>
+          Allons-y, je suis prêt(e)
+        </Button>
       </motion.div>
     </motion.div>
   );

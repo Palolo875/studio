@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import {
   SidebarProvider,
@@ -11,7 +13,7 @@ import {
 } from '@/components/ui/sidebar';
 import {Logo} from '@/components/logo';
 import {LayoutDashboard, Settings, BookCopy, BarChart, Feather} from 'lucide-react';
-import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
 import {UserNav} from '@/components/user-nav';
 import {SidebarTrigger} from '@/components/ui/sidebar';
 import {ScrollArea} from '@/components/ui/scroll-area';
@@ -22,6 +24,17 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const menuItems = [
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/dashboard/bibliotheque', label: 'Bibliothèque', icon: BookCopy },
+    { href: '/dashboard/capture', label: 'Capture', icon: Feather },
+    { href: '/dashboard/stats', label: 'Statistiques', icon: BarChart },
+    { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+  ];
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen">
@@ -37,46 +50,20 @@ export default function DashboardLayout({
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/dashboard">
-                    <LayoutDashboard />
-                    Dashboard
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/dashboard/bibliotheque">
-                    <BookCopy />
-                    Bibliothèque
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/dashboard/capture">
-                    <Feather />
-                    Capture
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/dashboard/stats">
-                    <BarChart />
-                    Statistiques
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/dashboard/settings">
-                    <Settings />
-                    Settings
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {menuItems.map(item => {
+                const Icon = item.icon;
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton 
+                      onClick={() => router.push(item.href)}
+                      isActive={pathname === item.href}
+                    >
+                      <Icon />
+                      {item.label}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarContent>
         </Sidebar>

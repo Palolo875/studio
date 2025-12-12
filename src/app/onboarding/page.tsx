@@ -3,12 +3,17 @@
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 
 export default function OnboardingWelcomePage() {
   const [name, setName] = useState('');
+  const router = useRouter();
+
+  const handleNext = () => {
+    router.push('/onboarding/energy-quiz');
+  };
 
   return (
     <motion.div
@@ -46,12 +51,10 @@ export default function OnboardingWelcomePage() {
         transition={{ delay: 0.5, duration: 0.5 }}
         className="mt-12"
       >
-        <Link href="/onboarding/energy-quiz">
-          <Button size="lg" className="h-14 px-8 rounded-full text-lg" disabled={!name}>
-            Continuer
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
-        </Link>
+        <Button size="lg" className="h-14 px-8 rounded-full text-lg" disabled={!name} onClick={handleNext}>
+          Continuer
+          <ArrowRight className="ml-2 h-5 w-5" />
+        </Button>
       </motion.div>
     </motion.div>
   );
