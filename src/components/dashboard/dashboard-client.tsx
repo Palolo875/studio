@@ -95,8 +95,15 @@ export function DashboardClient() {
         if (storedIntention) setIntention(storedIntention);
 
         // For demo, we'll just load initial tasks. In a real app, you'd fetch the user's playlist for the day.
-        setTasks(initialTasks);
-        setInitialTaskCount(initialTasks.length);
+        const storedTasks = localStorage.getItem('dailyTasks');
+        if (storedTasks) {
+          const parsedTasks = JSON.parse(storedTasks);
+          setTasks(parsedTasks);
+          setInitialTaskCount(parsedTasks.length);
+        } else {
+          setTasks(initialTasks);
+          setInitialTaskCount(initialTasks.length);
+        }
     }
   }, []);
 
@@ -114,7 +121,7 @@ export function DashboardClient() {
     const today = new Date().toISOString().split('T')[0];
     localStorage.setItem('lastMorningCheckin', today);
     localStorage.setItem('todayEnergyLevel', energyLevel);
-    localStorage.setItem('todayIntention', intention);
+    if(intention) localStorage.setItem('todayIntention', intention);
     handleRegeneratePlaylist(true);
   };
 
@@ -122,6 +129,7 @@ export function DashboardClient() {
   const handleSetTasks = (newTasks: Task[]) => {
     setTasks(newTasks);
     setInitialTaskCount(newTasks.length);
+    localStorage.setItem('dailyTasks', JSON.stringify(newTasks));
     if (newTasks !== initialTasks) {
       setDailyRituals((prev: DailyRituals) => ({
         ...prev,
@@ -169,8 +177,7 @@ export function DashboardClient() {
           description: response.message,
         });
       } else {
-        setTasks(response.tasks);
-        setInitialTaskCount(response.tasks.length);
+        handleSetTasks(response.tasks);
         if (response.playlistShuffledCount) {
           setDailyRituals((prev: DailyRituals) => ({
             ...prev,
@@ -219,12 +226,16 @@ export function DashboardClient() {
         setTimeout(() => {
           const updatedTasks = newTasks.filter((t: Task) => t.id !== taskId);
           setTasks(updatedTasks);
+          localStorage.setItem('dailyTasks', JSON.stringify(updatedTasks));
+
 
           const remainingTasks = updatedTasks.filter((t: Task) => !t.completed);
           if (remainingTasks.length === 0) {
             setTimeout(() => handleAllTasksCompleted(newDailyRituals), 2000);
           }
         }, 800);
+      } else {
+        localStorage.setItem('dailyTasks', JSON.stringify(newTasks));
       }
     }
   };
@@ -250,7 +261,9 @@ export function DashboardClient() {
       completionRate: 0,
       priority: 'low',
     };
-    setTasks((prev: Task[]) => [...prev, bonusTask]);
+    const newTasks = [...tasks, bonusTask];
+    setTasks(newTasks);
+    localStorage.setItem('dailyTasks', JSON.stringify(newTasks));
     setShowBonusCard(false);
   };
 
@@ -268,20 +281,24 @@ export function DashboardClient() {
       completionRate: 0,
     };
 
+    let newTasks;
     if (replaceTask && tasks.length > 0) {
         const remainingTasks = tasks.slice(1);
-        setTasks([newTask, ...remainingTasks]);
+        newTasks = [newTask, ...remainingTasks];
         toast({
             title: "Tâche urgente ajoutée",
             description: `"${newTask.name}" a remplacé la tâche précédente.`,
         });
     } else {
-        setTasks([newTask, ...tasks]);
+        newTasks = [newTask, ...tasks];
         toast({
             title: "Tâche urgente ajoutée",
             description: `"${newTask.name}" est maintenant en haut de votre liste.`,
         });
     }
+    setTasks(newTasks);
+    localStorage.setItem('dailyTasks', JSON.stringify(newTasks));
+
 
     setUrgentTaskName('');
     setReplaceTask(false);
@@ -499,5 +516,3 @@ export function DashboardClient() {
     </div>
   );
 }
-
-    

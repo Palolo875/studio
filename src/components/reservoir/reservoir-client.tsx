@@ -7,7 +7,7 @@ import { addDays, format, isSameDay, startOfDay, subDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { ReservoirTaskCard, priorityStyles } from './reservoir-task-card';
-import { Calendar as CalendarIcon, Plus, SlidersHorizontal, Zap, Search, Grid, List, Archive, Trash2, Star, MoreHorizontal, ChevronDown, PlusCircle, Edit, Check } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, SlidersHorizontal, Zap, Search, Grid, List, Archive, Trash2, Star, MoreHorizontal, ChevronDown, PlusCircle, Edit, Check, KanbanSquare, LayoutGrid } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -449,22 +449,34 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button 
-            variant={viewMode === 'grid' ? 'default' : 'outline'} 
-            size="icon" 
-            onClick={() => setViewMode('grid')}
-            className="hidden sm:inline-flex"
-          >
-            <Grid className="h-5 w-5" />
-          </Button>
-          <Button 
-            variant={viewMode === 'list' ? 'default' : 'outline'} 
-            size="icon" 
-            onClick={() => setViewMode('list')}
-            className="hidden sm:inline-flex"
-          >
-            <List className="h-5 w-5" />
-          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                    {viewMode === 'list' && <List className="h-5 w-5" />}
+                    {viewMode === 'grid' && <Grid className="h-5 w-5" />}
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setViewMode('list')}>
+                    <List className="mr-2 h-4 w-4" />
+                    Liste
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode('grid')}>
+                    <Grid className="mr-2 h-4 w-4" />
+                    Grille
+                </DropdownMenuItem>
+                 <DropdownMenuItem disabled>
+                    <LayoutGrid className="mr-2 h-4 w-4" />
+                    Masonry
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                    <KanbanSquare className="mr-2 h-4 w-4" />
+                    Kanban
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button variant="ghost" size="icon" className="relative" onClick={() => setIsFilterSheetOpen(true)}>
             <SlidersHorizontal className="h-5 w-5" />
             {activeFilterCount > 0 && (
@@ -518,7 +530,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                     <h2 className="text-lg font-bold sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10 capitalize">{title}</h2>
                     {viewMode === 'grid' ? (
                       // Grid View
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
                         {tasksForDay.map(task => (
                           <div 
                             key={task.id} 

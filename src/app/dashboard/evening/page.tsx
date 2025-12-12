@@ -6,7 +6,6 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, Lightbulb, TrendingUp, Target } from 'lucide-react';
 import { useWindowSize } from 'react-use';
 import Confetti from 'react-confetti';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { calculateFocusScore, getFocusScoreMessage as getFocusScoreMessageInternal } from '@/lib/focus-score-calculator';
@@ -35,7 +34,7 @@ function EveningContent() {
       totalTasks, 
       null
     );
-  }, [completedTasks.length, totalTasks]);
+  }, [completedTasks, totalTasks]);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowConfetti(false), 2500);
@@ -79,7 +78,7 @@ function EveningContent() {
         <div className="relative w-36 h-36 mx-auto">
             <svg className="w-full h-full" viewBox="0 0 140 140">
                 <circle cx="70" cy="70" r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth="10" />
-                <motion.circle cx="70" cy="70" r={radius} fill="none" stroke="hsl(var(--primary))" strokeWidth="10" strokeLinecap="round" transform="rotate(-90 70 70)" initial={{ strokeDasharray: 0 }} animate={{ strokeDasharray: `${progress} ${circumference}` }} transition={{ duration: 1.5, ease: "easeOut" }} />
+                <motion.circle cx="70" cy="70" r={radius} fill="none" stroke="hsl(var(--primary))" strokeWidth="10" strokeLinecap="round" transform="rotate(-90 70 70)" initial={{ strokeDasharray: `0 ${circumference}` }} animate={{ strokeDasharray: `${progress} ${circumference}` }} transition={{ duration: 1.5, ease: "easeOut" }} />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-4xl font-bold text-foreground">{focusScore}%</span>

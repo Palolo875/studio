@@ -21,6 +21,8 @@ export default function OnboardingWelcomePage() {
         Bienvenue sur KairuFlow
       </h1>
       <p className="mt-6 text-lg text-muted-foreground">
+        Votre nouvel assistant pour une productivité sereine.
+        <br />
         Commençons par faire connaissance.
       </p>
 
