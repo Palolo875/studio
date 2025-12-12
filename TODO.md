@@ -12,7 +12,7 @@
 ### 📁 Fichiers manquants à créer/vérifier
 - [x] Vérifier la présence de tous les fichiers de test
 - [x] Créer `specification_sota.md` pour documenter les améliorations SOTA
-- [ ] Créer `todo_sota.md` pour le plan d'implémentation SOTA
+- [x] Créer `todo_sota.md` pour le plan d'implémentation SOTA
 - [x] Mettre à jour `README_PLAYLIST.md` avec les améliorations SOTA
 - [x] Créer `impactAnalyzer.ts` pour le calcul d'impact
 - [x] Créer `momentumTracker.ts` pour le suivi du momentum
@@ -20,7 +20,7 @@
 - [x] Créer `feedbackGenerator.ts` pour le feedback intelligent
 - [x] Créer `analyticsTracker.ts` pour le suivi des analytics
 - [x] Créer `rewardSystem.ts` pour le système de récompenses
-- [ ] Mettre à jour `playlistGenerator.ts` avec le nouveau facteur d'impact
+- [x] Mettre à jour `playlistGenerator.ts` avec le nouveau facteur d'impact
 - [x] Créer `PlaylistGeneratorSOTA.ts` pour la nouvelle version
 - [x] Créer `playlistGeneratorSOTA.test.ts` pour les tests
 - [x] Créer `index.ts` pour exporter tous les services
@@ -41,8 +41,8 @@
 - [x] Optimiser davantage les performances du classificateur mmBERT
 - [x] Ajouter plus de cas de test pour les langues ESP/EN
 - [x] Améliorer la gestion des erreurs et fallbacks
-- [ ] Implémenter le nouveau facteur d'impact (15%) dans le scoring
-- [ ] Implémenter le calcul : Impact = (Valeur Perçue + Momentum Passé) / Effort Estimé
+- [x] Implémenter le nouveau facteur d'impact (15%) dans le scoring
+- [x] Implémenter le calcul : Impact = (Valeur Perçue + Momentum Passé) / Effort Estimé
 - [x] Ajouter la détection automatique des keystone habits
 - [x] Mettre en place le feedback intelligent contextuel
 - [x] Configurer le système de récompenses gamifiées
@@ -57,12 +57,12 @@
 - [ ] Mettre à jour l'interface utilisateur
 
 ### 🎯 Améliorations SOTA de l'algorithme de playlist
-- [ ] Intégrer le nouveau facteur d'impact (15%) dans le scoring
-- [ ] Implémenter le calcul : Impact = (Valeur Perçue + Momentum Passé) / Effort Estimé
+- [x] Intégrer le nouveau facteur d'impact (15%) dans le scoring
+- [x] Implémenter le calcul : Impact = (Valeur Perçue + Momentum Passé) / Effort Estimé
 - [x] Ajouter la détection automatique des keystone habits
 - [x] Mettre en place le feedback intelligent contextuel
 - [x] Configurer le système de récompenses gamifiées
-- [ ] Limiter à 4 tâches max avec 1 keystone habit
+- [x] Limiter à 4 tâches max avec 1 keystone habit
 - [ ] Implémenter le feedback basé sur l'impact moyen (>80% ou <50%)
 - [ ] Ajouter le suivi des tâches high-impact complétées
 

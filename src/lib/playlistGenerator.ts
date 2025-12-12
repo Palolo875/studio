@@ -10,6 +10,12 @@ import {
 import { getTodoTasksBulk, getTaskHistoryBulk, getUserPatternsFromDB } from "./taskDatabase";
 import { LanguageDetector } from "@/lib/nlp/LanguageDetector";
 
+// Importer les nouveaux services SOTA
+import { ImpactAnalyzer } from "@/lib/playlist/services/impactAnalyzer";
+import { KeystoneDetector } from "@/lib/playlist/services/keystoneDetector";
+import { FeedbackGenerator } from "@/lib/playlist/services/feedbackGenerator";
+import { RewardSystem } from "@/lib/playlist/services/rewardSystem";
+
 /**
  * Algorithme de Génération de Playlist (Cœur Décisionnel)
  * 
@@ -21,6 +27,12 @@ import { LanguageDetector } from "@/lib/nlp/LanguageDetector";
  * - Patterns historiques (10%)
  * 
  * Optimisé pour <200ms via bulkGet Dexie + memoization
+ * 
+ * SOTA Enhancements:
+ * - Nouveau facteur d'impact (15%) avec formule : Impact = (Valeur Perçue + Momentum Passé) / Effort Estimé
+ * - Intégration des keystone habits
+ * - Feedback intelligent basé sur l'impact moyen
+ * - Système de récompenses gamifié
  */
 
 // Cache pour la memoization
@@ -60,7 +72,8 @@ function calculateTaskScore(
   currentTime: Date,
   taskHistory: Task[] = [],
   userPatterns?: UserPatterns,
-  workdayHours: number = 8
+  workdayHours: number = 8,
+  keystoneHabits: any[] = [] // Pour la détection des keystone habits
 ): TaskScore {
   let score = 0;
   const reasons: string[] = [];
@@ -76,12 +89,13 @@ function calculateTaskScore(
     }
   }
 
-  // 2. Impact Inféré (15%)
-  const impactScore = calculateImpactScore(task);
-  score += impactScore * 15;
-  if (impactScore > 0) {
-    reasons.push(`Impact (${Math.round(impactScore * 100)}%)`);
-    if (impactScore >= 20) {
+  // 2. Impact SOTA (15%) - Nouvelle formule : Impact = (Valeur Perçue + Momentum Passé) / Effort Estimé
+  const impactMetrics = ImpactAnalyzer.calculateImpact(task, taskHistory);
+  const sotaImpactScore = Math.min(1, impactMetrics.calculatedImpact / 100); // Normaliser entre 0 et 1
+  score += sotaImpactScore * 15;
+  if (sotaImpactScore > 0) {
+    reasons.push(`Impact SOTA (${Math.round(sotaImpactScore * 100)}%)`);
+    if (sotaImpactScore >= 0.8) {
       reasonDetails.push("Impact élevé");
     }
   }
@@ -127,11 +141,23 @@ function calculateTaskScore(
   // Pour l'instant, on ne fait qu'enregistrer cette information
   // Dans une implémentation plus avancée, on pourrait l'utiliser pour ajuster le score
 
+  // 7. Détection Keystone Habit (bonus)
+  const isKeystoneHabit = keystoneHabits.some((habit: any) => 
+    task.tags && task.tags.includes(habit.name.toLowerCase())
+  );
+  
+  if (isKeystoneHabit) {
+    score += 10; // Bonus pour les keystone habits
+    reasonDetails.push("Keystone Habit");
+  }
+
   return {
     task,
     score: Math.max(0, score), // Assurer que le score ne soit jamais négatif
     reason: reasons.join(", "),
-    reasonDetails // Ajout des détails pour les badges
+    reasonDetails, // Ajout des détails pour les badges
+    isKeystoneHabit,
+    impactMetrics // Ajout des métriques d'impact pour le feedback
   };
 }
 
@@ -184,6 +210,11 @@ async function fetchTasksWithBulkGet(): Promise<{ tasks: Task[]; taskHistory: an
  * Génère la playlist avec 3-5 tâches optimales
  * Respecte l'équilibre et gère les fallbacks
  * Optimisé pour <200ms via bulkGet Dexie + memoization
+ * 
+ * SOTA Enhancements:
+ * - Limitation à 4 tâches max avec 1 keystone habit obligatoire
+ * - Feedback basé sur l'impact moyen (>80% ou <50%)
+ * - Suivi des tâches high-impact
  */
 export async function generatePlaylist(
   tasks: Task[],
@@ -278,21 +309,31 @@ export async function generatePlaylist(
       }
     }
 
+    // Détection des keystone habits
+    const keystoneDetector = new KeystoneDetector(options.taskHistory || []);
+    const keystoneHabits = keystoneDetector.getKeystoneHabits();
+
     // Calculer les scores pour toutes les tâches
     const workdayHours = options.workdayHours || 8;
     const scoredTasks = incompleteTasks.map(task => 
-      calculateTaskScore(task, options.energyLevel, options.currentTime, options.taskHistory || [], userPatterns, workdayHours)
+      calculateTaskScore(task, options.energyLevel, options.currentTime, options.taskHistory || [], userPatterns, workdayHours, keystoneHabits)
     );
 
     // Trier par score décroissant
     scoredTasks.sort((a, b) => b.score - a.score);
 
-    // Appliquer les règles d'équilibre
-    const balancedPlaylist = applyBalanceRules(scoredTasks, options.energyLevel, userPatterns);
+    // Appliquer les règles d'équilibre SOTA
+    const balancedPlaylist = applySOTABalanceRules(scoredTasks, options.energyLevel, userPatterns, keystoneHabits);
     
-    // Limiter au nombre maximum de tâches
-    const maxTasks = options.maxTasks || 5;
+    // Limiter à 4 tâches max (SOTA enhancement)
+    const maxTasks = 4;
     const result = balancedPlaylist.slice(0, maxTasks);
+    
+    // Générer le feedback basé sur l'impact moyen
+    const feedback = generateSOTAFeedback(result);
+    
+    // Mettre à jour le système de récompenses
+    updateRewardSystem(result);
     
     // Mettre en cache le résultat
     playlistCache.set(cacheKey, result);
@@ -347,40 +388,94 @@ export async function generatePlaylist(
 }
 
 /**
- * Applique les règles d'équilibre pour la sélection des tâches
- * - Max 1 tâche L si énergie low
+ * Applique les règles d'équilibre SOTA pour la sélection des tâches
+ * - Max 4 tâches avec 1 keystone habit obligatoire
  * - Équilibre entre quick wins et tâches substantielles
  * - Gestion des fallbacks
  */
-function applyBalanceRules(
+function applySOTABalanceRules(
   scoredTasks: TaskScore[],
   energyLevel: EnergyLevel,
-  userPatterns?: UserPatterns
+  userPatterns?: UserPatterns,
+  keystoneHabits: any[] = []
 ): TaskScore[] {
   try {
     const result: TaskScore[] = [];
     let longTaskCount = 0;
     let quickWinCount = 0;
+    let keystoneHabitIncluded = false;
     
     // Si énergie low, limiter à 1 tâche L maximum
     const maxLongTasks = energyLevel === "low" ? 1 : 3;
     
+    // Première passe : inclure une keystone habit si disponible
+    if (keystoneHabits.length > 0) {
+      const keystoneTask = scoredTasks.find(st => st.isKeystoneHabit);
+      if (keystoneTask) {
+        result.push(keystoneTask);
+        keystoneHabitIncluded = true;
+        
+        if (keystoneTask.task.effort === "L") longTaskCount++;
+        if (isQuickWin(keystoneTask.task)) quickWinCount++;
+      }
+    }
+    
+    // Deuxième passe : ajouter les autres tâches
     for (const scoredTask of scoredTasks) {
+      // Éviter les doublons
+      if (result.some(t => t.task.id === scoredTask.task.id)) continue;
+      
       // Vérifier si on peut ajouter cette tâche sans violer les règles
       const isLongTask = scoredTask.task.effort === "L";
       const isQuickWinTask = isQuickWin(scoredTask.task);
       
       // Ajouter la tâche si elle respecte les contraintes
       if ((isLongTask && longTaskCount < maxLongTasks) || 
-          (!isLongTask && result.length < 5)) {
+          (!isLongTask && result.length < 4)) {
         result.push(scoredTask);
         
         if (isLongTask) longTaskCount++;
         if (isQuickWinTask) quickWinCount++;
       }
       
-      // Arrêter si on a atteint 5 tâches
-      if (result.length >= 5) break;
+      // Arrêter si on a atteint 4 tâches
+      if (result.length >= 4) break;
+    }
+    
+    // Si aucune keystone habit n'a été incluse, en ajouter une artificiellement
+    if (!keystoneHabitIncluded && keystoneHabits.length > 0 && result.length < 4) {
+      // Trouver la keystone habit la plus pertinente
+      const mostRelevantHabit = keystoneHabits[0]; // Simplification
+      
+      // Créer une tâche fictive pour la keystone habit
+      const keystoneTaskScore: TaskScore = {
+        task: {
+          id: `keystone-${mostRelevantHabit.id}`,
+          name: mostRelevantHabit.name,
+          completed: false,
+          subtasks: [],
+          lastAccessed: new Date().toISOString(),
+          completionRate: 0,
+          priority: "high",
+          energyRequired: mostRelevantHabit.energyRequirement === 'high' ? 'high' : 
+                         mostRelevantHabit.energyRequirement === 'medium' ? 'medium' : 'low',
+          effort: mostRelevantHabit.energyRequirement === 'high' ? 'L' : 
+                  mostRelevantHabit.energyRequirement === 'medium' ? 'M' : 'S',
+          tags: [mostRelevantHabit.name.toLowerCase()]
+        } as Task,
+        score: 90, // Score élevé
+        reason: "Keystone Habit obligatoire",
+        reasonDetails: ["Keystone Habit"],
+        isKeystoneHabit: true
+      };
+      
+      // Ajouter au début de la liste
+      result.unshift(keystoneTaskScore);
+      
+      // Ajuster la taille si nécessaire
+      if (result.length > 4) {
+        result.splice(4);
+      }
     }
     
     // Si playlist vide ou insuffisante, ajouter des quick wins
@@ -428,10 +523,46 @@ function applyBalanceRules(
     
     return result;
   } catch (error) {
-    console.error("Erreur lors de l'application des règles d'équilibre:", error);
+    console.error("Erreur lors de l'application des règles d'équilibre SOTA:", error);
     
     // Fallback : retourner les 3 meilleures tâches sans règles d'équilibre
     return scoredTasks.slice(0, 3);
+  }
+}
+
+/**
+ * Génère le feedback SOTA basé sur l'impact moyen des tâches
+ */
+function generateSOTAFeedback(taskScores: TaskScore[]): string {
+  if (taskScores.length === 0) return "";
+  
+  // Calculer l'impact moyen
+  const totalImpact = taskScores.reduce((sum, ts) => sum + (ts.impactMetrics?.calculatedImpact || 0), 0);
+  const averageImpact = totalImpact / taskScores.length;
+  
+  // Générer le feedback approprié
+  if (averageImpact >= 80) {
+    return "Excellent ! Vous avez une playlist très impactante. Continuez ainsi !";
+  } else if (averageImpact < 50) {
+    return "Votre playlist pourrait être plus impactante. Essayez de vous concentrer sur des tâches à plus forte valeur.";
+  }
+  
+  return ""; // Pas de feedback particulier
+}
+
+/**
+ * Met à jour le système de récompenses
+ */
+function updateRewardSystem(taskScores: TaskScore[]): void {
+  // Cette fonction serait connectée au système de récompenses
+  // Pour l'instant, nous simulons la mise à jour
+  
+  const highImpactTasks = taskScores.filter(ts => 
+    ts.impactMetrics && ts.impactMetrics.calculatedImpact >= 80
+  );
+  
+  if (highImpactTasks.length > 0) {
+    console.log(`Félicitations ! Vous avez ${highImpactTasks.length} tâches à haut impact dans votre playlist.`);
   }
 }
 

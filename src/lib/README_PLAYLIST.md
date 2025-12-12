@@ -176,6 +176,8 @@ Identification automatique des habitudes clés :
 ```
 src/lib/playlist/
 ├── PlaylistGeneratorSOTA.ts     # Nouveau générateur SOTA
+├── playlistGenerator.ts          # Générateur mis à jour avec SOTA
+├── scoringRules.ts               # Règles de scoring mises à jour
 ├── services/
 │   ├── impactAnalyzer.ts        # Analyse d'impact
 │   ├── momentumTracker.ts       # Suivi du momentum

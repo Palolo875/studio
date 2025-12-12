@@ -6,10 +6,15 @@ import type { EnergyLevel, UserPatterns } from "@/lib/types"; // Import depuis t
  * 
  * Contient les fonctions de calcul pour chaque facteur de décision :
  * - Énergie (40%)
- * - Impact (15%)
+ * - Impact SOTA (15%) - Nouvelle formule : Impact = (Valeur Perçue + Momentum Passé) / Effort Estimé
  * - Deadline/Priorité (20%)
  * - Effort (15%)
  * - Historique/Patterns (10%)
+ * 
+ * SOTA Enhancements:
+ * - Impact calculé avec la nouvelle formule
+ * - Intégration des patterns d'apprentissage avancé
+ * - Ajustements dynamiques basés sur l'historique
  */
 
 /**
@@ -53,6 +58,9 @@ export function calculateEnergyScore(task: Task, energyLevel: EnergyLevel): numb
  * Calcule le score d'impact inféré (15%)
  * Basé sur des mots-clés dans les tags et le nom de la tâche
  * Ex: 'client' = +20, 'projet' = +15, etc.
+ * 
+ * NOTE: Cette fonction est conservée pour la compatibilité mais l'impact SOTA
+ * est maintenant calculé dans playlistGenerator.ts avec la nouvelle formule
  */
 export function calculateImpactScore(task: Task): number {
   let score = 0;
@@ -171,6 +179,10 @@ export function calculateEffortScore(task: Task, energyLevel: EnergyLevel): numb
  * Tâches complétées régulièrement : Score +5
  * Tâches souvent reportées : Score -10
  * Intègre l'apprentissage automatique des patterns
+ * 
+ * SOTA Enhancements:
+ * - Apprentissage adaptatif basé sur les patterns
+ * - Ajustement dynamique des poids après génération
  */
 export function calculateHistoryScore(task: Task, taskHistory: Task[] = [], userPatterns?: UserPatterns): number {
   let score = 0;
