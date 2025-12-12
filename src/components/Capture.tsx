@@ -16,13 +16,11 @@ export function Capture() {
     if (result.success) {
       setText(''); // Reset
       // Afficher un message de succès avec des détails
-      const avgConfidence = result.tasks.reduce((acc, task) => acc + ((task as any).confidence || 0), 0) / result.tasks.length;
-      const energyTypes = result.tasks.map(t => (t as any).energy).filter(Boolean).join(', ');
+      const avgConfidence = result.tasks.reduce((acc, task) => acc + (task.confidence || 0), 0) / result.tasks.length;
+      const energyTypes = result.tasks.map(t => t.energy).filter(Boolean).join(', ');
       alert(`${result.tasks.length} tâches créées !
 Confiance moyenne: ${(avgConfidence * 100).toFixed(1)}%
-Types d'énergie: ${energyTypes || 'non spécifiés'}
-
-Les tâches ont été stockées dans votre base de données et sont prêtes à être utilisées dans votre playlist quotidienne.`);
+Types d'énergie: ${energyTypes || 'non spécifiés'}`);
     } else {
       alert('Tâches créées avec le mode fallback.');
     }
@@ -33,7 +31,7 @@ Les tâches ont été stockées dans votre base de données et sont prêtes à �
       <div className="bg-white rounded-2xl shadow-lg p-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Capture Inteligente SOTA</h2>
         <p className="text-gray-600 mb-6">
-          Décrivez vos tâches en langage naturel, KairuFlow les transforme automatiquement en tâches structurées avec intelligence mmBERT et les stocke dans votre base.
+          Décrivez vos tâches en langage naturel, KairuFlow les transforme automatiquement en tâches structurées avec intelligence mmBERT.
         </p>
         
         <div className="mb-6">
@@ -60,29 +58,25 @@ Les tâches ont été stockées dans votre base de données et sont prêtes à �
           {isProcessing ? (
             <div className="flex items-center justify-center">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-              🤖 Pipeline NLP en cours...
+              🤖 Analyse SOTA mmBERT...
             </div>
           ) : (
-            '✨ Créer mes tâches (Pipeline complet)'
+            '✨ Créer mes tâches (SOTA mmBERT)'
           )}
         </button>
         
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-blue-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-blue-800 mb-2">Détection</h3>
-            <p className="text-sm text-blue-600">Langue SOTA</p>
+            <h3 className="font-semibold text-blue-800 mb-2">Multilingue SOTA</h3>
+            <p className="text-sm text-blue-600">FR • EN • ES</p>
           </div>
           <div className="bg-purple-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-purple-800 mb-2">Extraction</h3>
-            <p className="text-sm text-purple-600">Structurelle</p>
+            <h3 className="font-semibold text-purple-800 mb-2">Intelligence mmBERT</h3>
+            <p className="text-sm text-purple-600">Classification énergie/effort</p>
           </div>
           <div className="bg-green-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-green-800 mb-2">Classification</h3>
-            <p className="text-sm text-green-600">mmBERT</p>
-          </div>
-          <div className="bg-orange-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-orange-800 mb-2">Stockage</h3>
-            <p className="text-sm text-orange-600">Dexie optimisé</p>
+            <h3 className="font-semibold text-green-800 mb-2">Performance SOTA</h3>
+            <p className="text-sm text-green-600">&lt;1s</p>
           </div>
         </div>
         

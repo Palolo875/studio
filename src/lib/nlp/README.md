@@ -48,31 +48,6 @@ Classifie les tâches selon leur type d'énergie, niveau d'effort, sentiment et 
 - **Support multilingue** : FR/EN/ES
 - **Fallback robuste** : Gestion des erreurs
 
-## Fabrique de Tâches et Stockage Dexie
-
-Assemble les données brutes et la classification pour créer des objets Task complets et les stocke de manière optimisée.
-
-### Fonctionnalités
-
-- **Fusion intelligente** : Combine extraction et classification
-- **Mapping NLP → Task** : Conversion des métadonnées NLP en champs Task
-- **Calcul automatique** : Priorité, durée estimée, dates
-- **Stockage optimisé** : Bulk insert avec gestion de conflits
-- **Statistiques quotidiennes** : Mise à jour des métriques
-- **Rafraîchissement UI** : Événements pour mise à jour en temps réel
-- **Transactions atomiques** : Cohérence des données
-
-## Écouteurs Globaux
-
-Gère les notifications et le rafraîchissement de l'UI en réponse aux événements NLP.
-
-### Fonctionnalités
-
-- **Notifications IA** : Toasts pour tâches créées par IA
-- **Rafraîchissement automatique** : Playlist mise à jour en temps réel
-- **Détection contextuelle** : Actions basées sur la page courante
-- **Gestion d'événements** : nlptasks:processed, nlptasks:added
-
 ## Hooks React Intégrés SOTA
 
 Intégration complète avec l'écosystème React et Zustand pour une expérience utilisateur fluide et state-of-the-art.
@@ -80,7 +55,7 @@ Intégration complète avec l'écosystème React et Zustand pour une expérience
 ### Fonctionnalités
 
 - **Hook useNLP SOTA** : Point d'entrée central pour le traitement NLP avec approche avancée
-- **Pipeline complet** : Détection → Extraction → Classification → Stockage
+- **Pipeline complet** : Détection → Extraction → Classification
 - **Intégration automatique** : Connexion directe avec le store de tâches
 - **Gestion d'erreurs** : Fallback gracieux vers le mode manuel
 - **Feedback utilisateur** : Indicateurs de chargement et messages d'erreur
@@ -95,14 +70,11 @@ Intégration complète avec l'écosystème React et Zustand pour une expérience
 1. `LanguageDetector.ts` - Classe principale de détection SOTA
 2. `TaskExtractor.ts` - Extracteur de tâches structurel SOTA
 3. `TaskClassifier.ts` - Classificateur mmBERT-small
-4. `TaskFactory.ts` - Fabrique de tâches complètes
-5. `TaskStorage.ts` - Stockage optimisé Dexie
-6. `globalListeners.ts` - Écouteurs globaux
-7. `useNLP.ts` - Hook React complet SOTA
-8. `testLanguageDetector.ts` - Tests unitaires complets avec mesures de précision
-9. `testTaskExtractor.ts` - Tests de l'extracteur de tâches
-10. `testTaskClassifier.ts` - Tests du classificateur mmBERT
-11. `Capture.tsx` - Composant React d'exemple SOTA
+4. `useNLP.ts` - Hook React complet SOTA
+5. `testLanguageDetector.ts` - Tests unitaires complets avec mesures de précision
+6. `testTaskExtractor.ts` - Tests de l'extracteur de tâches
+7. `testTaskClassifier.ts` - Tests du classificateur mmBERT
+8. `Capture.tsx` - Composant React d'exemple SOTA
 
 #### Techniques avancées
 
@@ -138,13 +110,6 @@ Intégration complète avec l'écosystème React et Zustand pour une expérience
    - Génération automatique de tags
    - Calcul d'urgence contextuel
 
-6. **Stockage optimisé** :
-   - Transactions atomiques
-   - Bulk operations
-   - Gestion de conflits
-   - Mise à jour statistiques
-   - Événements UI
-
 #### Utilisation
 
 ```typescript
@@ -159,19 +124,6 @@ const tasks = extractTasks("Appeler Marc demain 15h urgent", 'fr');
 // Classification mmBERT
 import { classifyTask } from '@/lib/nlp/TaskClassifier';
 const classification = await classifyTask(rawTask);
-
-// Création de tâche complète
-import { createFullTask } from '@/lib/nlp/TaskFactory';
-const fullTask = createFullTask(rawTask, classification);
-
-// Stockage
-import { NlpTaskStorage } from '@/lib/nlp/TaskStorage';
-const storage = new NlpTaskStorage(db);
-await storage.bulkStoreTasks([fullTask]);
-
-// Écouteurs globaux
-import { setupNlpListeners } from '@/lib/nlp/globalListeners';
-setupNlpListeners();
 
 // Pipeline complet
 import { useNLP } from '@/hooks/useNLP';
@@ -230,9 +182,6 @@ Les tests unitaires couvrent :
 - Génération de tags
 - Calcul d'urgence
 - Détection de sentiment
-- Fusion de tâches
-- Stockage optimisé
-- Écouteurs globaux
 
 ### Extensibilité
 
@@ -246,15 +195,12 @@ Pour ajouter de nouvelles fonctionnalités :
 2. Ajouter de nouveaux extracteurs
 3. Mettre à jour le hook useNLP
 4. Ajouter des classes de classification
-5. Mettre à jour la fabrique de tâches
-6. Adapter le stockage
 
 ### Performance
 
 - Temps de détection : <1ms (moyenne ~0.05ms)
 - Temps d'extraction : <200ms
 - Temps de classification : <800ms
-- Temps de stockage : <50ms
 - Temps total pipeline : <1s
 - Mémoire : Utilisation minimale
 - Optimisé pour mobile
@@ -310,7 +256,7 @@ Types d'énergie: ${energyTypes || 'non spécifiés'}`);
 }
 ```
 
-## Résultat : Pipeline Étape 1+2+3+4 fonctionnel SOTA
+## Résultat : Pipeline Étape 1+2+3 fonctionnel SOTA
 
 ```
 Input: "Appeler Marc demain 15h urgent, écrire rapport Q4 complexe"
@@ -318,7 +264,6 @@ Input: "Appeler Marc demain 15h urgent, écrire rapport Q4 complexe"
 ↓ Étape 1 : Langue = 'fr'
 ↓ Étape 2 : 2 RawTasks extraites
 ↓ Étape 3 : mmBERT classification
-↓ Étape 4 : Fusion + Stockage
 
 Output tâches finales :
 1. {
@@ -329,40 +274,21 @@ Output tâches finales :
     priority: "high",
     urgency: 0.85,
     tags: ["appeler", "relationnel", "deadline"],
-    confidence: 0.95,
-    deadline: "2023-06-15T15:00:00.000Z",
-    estimatedMinutes: 15,
-    nlpMetadata: {
-      detectedLang: "fr",
-      energyConfidence: 0.92,
-      urgency: 0.85,
-      rawAction: "appeler",
-      rawSentence: "Appeler Marc demain 15h urgent"
-    }
+    confidence: 0.95
   }
 2. {
     content: "Écrire rapport Q4",
     energy: "focus",
     energyConfidence: 0.88,
     effort: "L",
-    priority: "medium",
     tags: ["écrire", "focus", "rapport Q4"],
-    confidence: 0.87,
-    estimatedMinutes: 240,
-    nlpMetadata: {
-      detectedLang: "fr",
-      energyConfidence: 0.88,
-      urgency: 0.3,
-      rawAction: "écrire",
-      rawSentence: "écrire rapport Q4 complexe"
-    }
+    confidence: 0.87
   }
 
 Performance :
     Langue : 50ms
     Extraction : 100ms
     mmBERT : 800ms
-    Stockage : 50ms
     Total : ~1s (mobile OK)
 ```
 
@@ -371,9 +297,6 @@ Ce pipeline est déjà production-ready :
 ✅ Détection auto SOTA
 ✅ Extraction intelligente SOTA
 ✅ Classification mmBERT
-✅ Fusion de tâches
-✅ Stockage optimisé
-✅ Écouteurs globaux
 ✅ Hook React complet SOTA
 ✅ Gestion erreurs SOTA
 ✅ Scores de confiance

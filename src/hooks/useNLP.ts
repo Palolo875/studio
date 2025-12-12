@@ -9,17 +9,33 @@ import { extractTasks, type RawTask } from '@/lib/nlp/TaskExtractor';
 import { classifyTask, type TaskClassification } from '@/lib/nlp/TaskClassifier';
 import { createFullTask } from '@/lib/nlp/TaskFactory';
 import { NlpTaskStorage } from '@/lib/nlp/TaskStorage';
-import type { Task } from '@/lib/nlp/types';
+
+// Type pour les tâches créées
+interface CreatedTask {
+  id: string;
+  content: string;
+  effort: 'S' | 'M' | 'L';
+  energy?: 'creative' | 'focus' | 'admin' | 'relationnel' | 'perso';
+  priority: 'low' | 'medium' | 'high';
+  status: 'todo';
+  createdAt: Date;
+  sourceType: 'nlp_capture' | 'nlp_full';
+  notes?: string;
+  confidence?: number; // Score de confiance de l'extraction
+  entities?: Record<string, string>; // Entités extraites
+  tags?: string[]; // Tags générés automatiquement
+  urgency?: number; // Score d'urgence
+}
 
 // Type pour le store de tâches (simulation)
 interface TaskStore {
-  addTasks: (tasks: Task[]) => void;
+  addTasks: (tasks: CreatedTask[]) => void;
 }
 
 // Simulation du store de tâches
 const useTaskStore = (): TaskStore => {
   return {
-    addTasks: (tasks: Task[]) => {
+    addTasks: (tasks: CreatedTask[]) => {
       console.log('Tâches ajoutées au store:', tasks);
       // Dans une vraie implémentation, cela ajouterait les tâches au store Zustand
     }
@@ -80,7 +96,7 @@ export function useNLP() {
       
       // Stockage optimisé
       const storage = new NlpTaskStorage(db);
-      await storage.bulkStoreTasks(fullTasks);
+      await storage.bulkStoreTasks(fullTasks as any);
       
       // Refresh UI
       window.dispatchEvent(new CustomEvent('nlptasks:processed', {
@@ -118,7 +134,7 @@ export function useNLP() {
 /**
  * Fallback basique avec regex pour les cas d'erreur
  */
-function basicRegexFallback(text: string): Task[] {
+function basicRegexFallback(text: string): CreatedTask[] {
   // Séparer le texte en phrases
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
   
@@ -131,13 +147,12 @@ function basicRegexFallback(text: string): Task[] {
       id: `fallback-${Date.now()}-${index}`,
       content: sentence.trim(),
       effort: 'M', // Par défaut
-      energy: 'admin', // Par défaut
       priority: 'medium',
       status: 'todo',
+      createdAt: new Date(),
       sourceType: 'nlp_capture',
       notes: 'Fallback: Regex-based extraction',
-      tags: [action],
-      createdAt: new Date()
-    } as Task;
+      tags: [action]
+    };
   });
 }

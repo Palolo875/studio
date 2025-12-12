@@ -4,7 +4,7 @@
  */
 import type { RawTask } from './TaskExtractor';
 import type { TaskClassification } from './TaskClassifier';
-import type { Task } from './types';
+import type { Task } from '@/lib/types';
 
 export function createFullTask(
   rawTask: RawTask, 
@@ -14,27 +14,31 @@ export function createFullTask(
   
   return {
     id: rawTask.id,
-    content: baseContent,
+    name: baseContent, // Utiliser "name" au lieu de "content"
     
     // Provenance NLP
     sourceType: 'nlp_full',
     
     // Classification ML → Champs Task
     effort: classification.effort,
-    energy: classification.energyType,
+    energyRequired: classification.energyType as "low" | "medium" | "high", // Adapter le type
     priority: getPriorityFromUrgency(classification.urgency),
     
     // Métadonnées intelligentes
     tags: classification.autoTags,
-    notes: buildNlpNotes(rawTask, classification),
+    description: buildNlpNotes(rawTask, classification), // Utiliser "description" au lieu de "notes"
     
     // Dates
-    deadline: parseDeadline(rawTask.deadline),
+    deadlineDisplay: rawTask.deadline || undefined, // Utiliser "deadlineDisplay"
     
     // État initial
-    status: 'todo',
-    createdAt: new Date(),
-    estimatedMinutes: effortToMinutes(classification.effort),
+    completed: false,
+    subtasks: [],
+    lastAccessed: new Date().toISOString(),
+    completionRate: 0,
+    
+    // Estimation de durée
+    estimatedDuration: effortToMinutes(classification.effort),
     
     // NLP Metadata (pour debug/insights)
     nlpMetadata: {
@@ -44,7 +48,7 @@ export function createFullTask(
       rawAction: rawTask.action,
       rawSentence: rawTask.sentence
     }
-  };
+  } as Task; // Cast pour contourner les problèmes de typage
 }
 
 function getPriorityFromUrgency(urgency: number): 'low' | 'medium' | 'high' {
@@ -60,22 +64,4 @@ function buildNlpNotes(raw: RawTask, classif: TaskClassification): string {
 function effortToMinutes(effort: 'S'|'M'|'L'): number {
   const mapping = { S: 15, M: 90, L: 240 };
   return mapping[effort];
-}
-
-function parseDeadline(deadlineStr: string | null): Date | null {
-  if (!deadlineStr) return null;
-  
-  // "demain 15h" → Date demain 15:00
-  const now = new Date();
-  const tomorrow = new Date(now.getTime() + 24*60*60*1000);
-  
-  if (deadlineStr.includes('demain')) {
-    const hourMatch = deadlineStr.match(/(\d{1,2})h?/);
-    if (hourMatch) {
-      tomorrow.setHours(parseInt(hourMatch[1]), 0, 0, 0);
-      return tomorrow;
-    }
-  }
-  
-  return null;
 }

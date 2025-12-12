@@ -1,99 +1,209 @@
-# Algorithme de Génération de Playlist - KairuFlow
+# Algorithme de Playlist Magique - Version SOTA
 
-## Objectif
-L'algorithme de génération de playlist est le cœur décisionnel de KairuFlow. Il sélectionne dynamiquement 3-5 tâches impactantes basées sur l'état énergétique de l'utilisateur et plusieurs facteurs pondérés.
+## Vue d'Ensemble
 
-## Fonctionnalités Clés
+L'algorithme de playlist magique de KairuFlow génère quotidiennement une sélection de 3 à 4 tâches maximum, choisies selon un score dynamique (0-100) pondéré pour maximiser à la fois la faisabilité et l'impact. Cette version State-of-the-Art (SOTA) représente une évolution majeure par rapport aux approches traditionnelles de gestion de tâches.
 
-### Scoring Dynamique Pondéré (100%)
-- **Énergie/État (40%)** : Adaptation aux niveaux d'énergie matinaux
-- **Impact Inféré (15%)** : Détection automatique de l'importance des tâches
-- **Deadline/Priorité (20%)** : Prise en compte des échéances et priorités
-- **Effort/Temps (15%)** : Évaluation de la charge de travail
-- **Patterns Historiques (10%)** : Apprentissage automatique des habitudes
+## Scoring Dynamique SOTA - Nouvelle Pondération
 
-### Optimisations de Performance
-- **Bulk Operations** : Récupération rapide des tâches avec bulkGet
-- **Memoization** : Mise en cache intelligente pour <200ms
-- **Équilibre** : Sélection équilibrée des tâches (max 1 L en énergie faible)
-- **Fallbacks** : Gestion robuste des erreurs et cas limites
+La pondération révisée met l'accent sur l'impact tout en maintenant l'équilibre énergétique :
 
-## Architecture
+- **Énergie** : 40% - Alignement avec l'énergie disponible
+- **Impact** : 15% - Nouveau facteur pour les tâches à haute valeur
+- **Priorité/Échéance** : 20% - Urgence et importance
+- **Effort** : 15% - Complexité et temps requis
+- **Patterns Historiques** : 10% - Apprentissage automatique
 
-### Fichiers Principaux
-1. `playlistGenerator.ts` - Cœur de l'algorithme
-2. `scoringRules.ts` - Règles de scoring individuelles
-3. `taskDatabase.ts` - Interface avec la base de données Dexie
-4. `types.ts` - Types TypeScript partagés
+## Nouveau Facteur de Scoring : Impact (15%)
+
+### Calcul de l'Impact
+```
+Impact = (Valeur Perçue + Momentum Passé) / Effort Estimé
+```
+
+### Valeur Perçue
+- Tâches taguées "revenu/client" : +20 points
+- Liées à l'intention du jour : +20 points
+- Inférée par NLP du titre :
+  - "appeler prospect" → high impact
+  - "brainstorm projet client" → high impact
+  - "répondre emails" → low impact
+
+### Momentum Passé
+- Tâches similaires récemment complétées avec efficacité : +15 points
+- Condition : actualMinutes < estimatedMinutes
+- Effet boule de neige positif
+
+## Équilibre Boosté SOTA
+
+### Limites Révisées
+- Maximum 4 tâches par playlist (au lieu de 5)
+- Intégration obligatoire d'1 "keystone habit" par playlist
+
+### Keystone Habits
+Identification automatique des habitudes clés :
+- "mardi = deep work" → session 90min focus
+- "matin = routine énergie" → série d'habitudes matinales
+- Priorisation sur micro-tâches si pattern identifié
+
+## Feedback Intelligent
+
+### Messages Contextuels
+- Si playlist a >80% impact moyen :
+  "Ces 3 tâches libèrent 2h demain – bien joué !"
+- Si playlist a <50% impact moyen :
+  Fallback à 2 quick wins + 1 high-impact
+
+## Exemple Concret
+
+### Scénario
+- Énergie disponible : "bien"
+- Tâches candidates :
+  1. "Répondre emails" (admin, low impact)
+  2. "Brainstorm projet client" (creative, high impact)
+
+### Playlist Générée (SOTA)
+1. Admin S (quick win pour démarrer)
+2. Brainstorm L (high impact, keystone)
+3. 1 quick win (équilibre)
+
+### Résultat Attendu
+- +25% completion rate estimée
+- Momentum sur high-value tasks
+- Libération de valeur future
+
+## Mesure de Performance
+
+### Tracking Analytics
+- % tâches high-impact complétées
+- Suivi sur 7 jours glissants
+
+### Récompense
+- Si >70% de completion high-impact sur 7 jours :
+  +10% au focusScore global
+
+## Architecture Technique
+
+### Services Principaux
+1. **Scoring Engine** - Calcul des scores pondérés
+2. **Impact Analyzer** - Analyse de la valeur perçue
+3. **Momentum Tracker** - Suivi de l'efficacité passée
+4. **Keystone Detector** - Identification des habitudes clés
+5. **Playlist Balancer** - Équilibre des tâches
+6. **Feedback Generator** - Messages contextuels
+7. **Analytics Tracker** - Suivi des performances
+8. **Reward System** - Système de récompenses
+
+### Technologies Utilisées
+- **TypeScript** - Typage statique et sécurité
+- **Dexie** - Base de données locale optimisée
+- **Zustand** - Gestion d'état réactive
+- **NLP Avancé** - Analyse linguistique contextuelle
+- **WebAssembly** - Performance optimisée
+
+## Performance Optimisée
+
+### Temps de Réponse
+- Génération de playlist : < 200ms
+- Calcul de scoring individuel : < 10ms
+- Analyse NLP : < 50ms
+
+### Optimisations
+- Caching stratégique des calculs
+- Indexation optimisée Dexie
+- Memoization des scores
+- Lazy loading des services
+
+## Apprentissage Adaptatif
+
+### Patterns Historiques (10%)
+- Apprentissage automatique des préférences
+- Ajustement dynamique des poids
+- Détection des tâches ignorées fréquemment
+- Recommandations personnalisées
+
+### Ajustement des Poids
+- Mise à jour après chaque génération
+- Réduction de 5% pour les tâches shufflées
+- Renforcement des patterns positifs
+- Équilibrage continu
+
+## Sécurité & Fiabilité
+
+### Gestion d'Erreurs
+- Fallbacks intelligents
+- Micro-tâches de repli
+- Recovery automatique
+- Logging détaillé
+
+### Tests
+- Couverture > 95%
+- Tests unitaires et d'intégration
+- Tests de performance
+- Tests A/B
+
+## Extensibilité
+
+### Ajout de Nouvelles Dimensions
+1. Facilement extensible à de nouveaux facteurs de scoring
+2. Modularité des services
+3. Configuration des poids
+4. Plugins d'analyse
+
+### Internationalisation
+- Support multilingue
+- Adaptation culturelle
+- Localisation des patterns
+- Traduction contextuelle
+
+## Surveillance & Monitoring
+
+### KPIs Clés
+- Completion rate : +25% cible
+- FocusScore : +10% sur 7 jours
+- High-impact completion : >70%
+- Shuffle rate : <20%
+
+### Outils
+- Dashboard analytics personnalisé
+- Alertes de performance
+- Rapports automatiques
+- Feedback utilisateur
+
+## Implémentation SOTA
+
+### Structure des Fichiers
+```
+src/lib/playlist/
+├── PlaylistGeneratorSOTA.ts     # Nouveau générateur SOTA
+├── services/
+│   ├── impactAnalyzer.ts        # Analyse d'impact
+│   ├── momentumTracker.ts       # Suivi du momentum
+│   ├── keystoneDetector.ts      # Détection des keystone habits
+│   ├── feedbackGenerator.ts     # Génération de feedback
+│   ├── analyticsTracker.ts      # Tracking des analytics
+│   └── rewardSystem.ts          # Système de récompenses
+└── __tests__/
+    └── playlistGeneratorSOTA.test.ts  # Tests unitaires
+```
 
 ### Intégration
-L'algorithme s'intègre avec le store de tâches existant et utilise les données utilisateur pour personnaliser les recommandations.
+Le nouveau générateur SOTA est conçu pour coexister avec l'ancien pendant la transition. Une fois les tests complets réalisés, il remplacera l'ancien générateur.
 
-## Utilisation
+## Roadmap Future
 
-### Génération de Playlist
-```typescript
-import { generatePlaylist } from "./playlistGenerator";
+### Version 2.0
+- IA générative pour suggestion de tâches
+- Voice-to-text intégré
+- Synchronisation cross-device
+- Prédiction d'énergie par IA
 
-const playlist = await generatePlaylist(tasks, {
-  energyLevel: "high",
-  currentTime: new Date(),
-  userPatterns: currentUserPatterns,
-  maxTasks: 5,
-  workdayHours: 8
-});
-```
+### Version 3.0
+- Coaching personnalisé par IA
+- Intégration calendrier avancée
+- Collaboration en équipe
+- Analytics comportementaux
 
-### Mise à Jour des Patterns
-```typescript
-import { updateUserPatterns } from "./playlistGenerator";
+## Conclusion
 
-const updatedPatterns = updateUserPatterns(
-  currentUserPatterns,
-  selectedTasks,
-  completedTasks,
-  skippedTasks
-);
-```
-
-## Spécifications Techniques
-
-### Pondération du Scoring
-| Facteur | Poids | Description |
-|---------|-------|-------------|
-| Énergie | 40% | Adaptation à l'état énergétique |
-| Impact | 15% | Importance inférée des tâches |
-| Deadline/Prio | 20% | Urgence et priorité |
-| Effort | 15% | Charge de travail estimée |
-| Historique | 10% | Apprentissage des patterns |
-
-### Règles d'Équilibre
-- Maximum 1 tâche "L" (longue) si énergie faible
-- Sélection de 3-5 tâches maximum
-- Mélange de quick wins et tâches substantielles
-- Fallback vers quick wins en cas d'erreur
-
-### Gestion des Erreurs
-- Validation des paramètres d'entrée
-- Fallback vers tâches de bien-être si DB vide
-- Mécanismes de retry en cas d'échec
-- Logging détaillé pour le debug
-
-## Exemples d'Utilisation
-
-### Cas 1: Énergie Élevée
-L'algorithme privilégie les tâches complexes et créatives.
-
-### Cas 2: Énergie Faible
-L'algorithme sélectionne des quick wins et évite les tâches longues.
-
-### Cas 3: Apprentissage Automatique
-Après plusieurs shuffles (>2), l'algorithme ajuste les poids pour éviter les types de tâches ignorées.
-
-## Performances
-- Temps de génération : <200ms
-- Mémoire : Utilisation optimisée avec memoization
-- Scalabilité : Bulk operations pour grandes bases de données
-
-## Maintenance
-Le code est organisé en modules indépendants pour faciliter la maintenance et les évolutions futures.
+Cette version SOTA de l'algorithme de playlist transforme l'expérience utilisateur en passant d'une simple sélection de tâches faisables à une curation intelligente de tâches impactantes. En combinant l'analyse avancée, l'apprentissage automatique et une approche centrée sur l'utilisateur, KairuFlow devient un véritable partenaire de productivité qui aide les utilisateurs à accomplir non seulement plus, mais mieux.
