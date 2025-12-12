@@ -339,13 +339,6 @@ export function DashboardClient() {
             />
           </div>
 
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Ton énergie du jour</h2>
-            </div>
-            <Recommendations tasks={tasks} />
-          </div>
-
           <Tabs defaultValue="playlist" className="w-full">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
               <TabsList className="grid w-full grid-cols-2 bg-card h-12 rounded-2xl p-1 sm:max-w-sm">
@@ -378,39 +371,48 @@ export function DashboardClient() {
               </Button>
             </div>
 
-            <TabsContent value="playlist">
-              <p className="text-lg font-medium text-foreground mt-4 mb-6">
-                {playlistMessage}
-              </p>
+            <TabsContent value="playlist" className="space-y-8">
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold">Ton énergie du jour</h2>
+                </div>
+                <Recommendations tasks={tasks} />
+              </div>
 
-              <div className="overflow-hidden relative min-h-[100px]">
-                <AnimatePresence mode="wait">
-                  {isGenerating ? (
-                    <motion.div
-                      key="generating"
-                      initial={{opacity: 0, y: 50}}
-                      animate={{opacity: 1, y: 0}}
-                      exit={{opacity: 0, y: -50}}
-                      transition={{duration: 0.3}}
-                      className="absolute inset-0 flex items-center justify-center"
-                    >
-                      <p>Génération de votre playlist...</p>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="tasks"
-                      initial={{opacity: 0}}
-                      animate={{opacity: 1}}
-                      exit={{opacity: 0}}
-                      transition={{duration: 0.3}}
-                    >
-                      <TaskList
-                        tasks={filteredTasks}
-                        onToggleCompletion={handleTaskCompletion}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+              <div>
+                <p className="text-lg font-medium text-foreground mb-6">
+                  {playlistMessage}
+                </p>
+
+                <div className="overflow-hidden relative min-h-[100px]">
+                  <AnimatePresence mode="wait">
+                    {isGenerating ? (
+                      <motion.div
+                        key="generating"
+                        initial={{opacity: 0, y: 50}}
+                        animate={{opacity: 1, y: 0}}
+                        exit={{opacity: 0, y: -50}}
+                        transition={{duration: 0.3}}
+                        className="absolute inset-0 flex items-center justify-center"
+                      >
+                        <p>Génération de votre playlist...</p>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="tasks"
+                        initial={{opacity: 0}}
+                        animate={{opacity: 1}}
+                        exit={{opacity: 0}}
+                        transition={{duration: 0.3}}
+                      >
+                        <TaskList
+                          tasks={filteredTasks}
+                          onToggleCompletion={handleTaskCompletion}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </TabsContent>
             <TabsContent value="timeline">
@@ -497,3 +499,5 @@ export function DashboardClient() {
     </div>
   );
 }
+
+    
