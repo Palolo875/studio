@@ -117,5 +117,3 @@ export function CaptureClient() {
     </div>
   );
 }
-
-    

@@ -182,5 +182,3 @@ export function Recommendations({ tasks }: RecommendationsProps) {
     </div>
   );
 }
-
-    
