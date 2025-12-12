@@ -8,6 +8,7 @@ import {
   calculateHistoryScore as calculateHistoryScoreFromRules
 } from "./scoringRules";
 import { getTodoTasksBulk, getTaskHistoryBulk, getUserPatternsFromDB } from "./taskDatabase";
+import { LanguageDetector } from "@/lib/nlp/LanguageDetector";
 
 /**
  * Algorithme de Génération de Playlist (Cœur Décisionnel)
@@ -25,6 +26,29 @@ import { getTodoTasksBulk, getTaskHistoryBulk, getUserPatternsFromDB } from "./t
 // Cache pour la memoization
 const playlistCache = new Map<string, TaskScore[]>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Analyse le contexte linguistique d'une tâche pour améliorer le scoring
+ */
+function analyzeTaskLanguageContext(task: Task): { primaryLanguage: 'fr' | 'en' | 'es', confidence: number } {
+  // Combiner le nom, la description et les tags pour l'analyse
+  const textToAnalyze = [
+    task.name,
+    task.description,
+    task.tags ? task.tags.join(' ') : ''
+  ].filter(Boolean).join(' ');
+  
+  if (!textToAnalyze.trim()) {
+    return { primaryLanguage: 'fr', confidence: 0.5 }; // Fallback par défaut
+  }
+  
+  const detectedLanguage = LanguageDetector.detect(textToAnalyze);
+  
+  // Calculer la confiance basée sur la longueur du texte
+  const confidence = Math.min(1, textToAnalyze.length / 50); // 100% de confiance à partir de 50 caractères
+  
+  return { primaryLanguage: detectedLanguage, confidence };
+}
 
 /**
  * Calcule le score d'une tâche en fonction des facteurs spécifiés
@@ -95,6 +119,13 @@ function calculateTaskScore(
       reasonDetails.push("Pattern négatif");
     }
   }
+
+  // 6. Contexte Linguistique (ajustement mineur)
+  // L'analyse linguistique peut légèrement ajuster le score pour favoriser
+  // les tâches dans la langue préférée de l'utilisateur
+  const languageContext = analyzeTaskLanguageContext(task);
+  // Pour l'instant, on ne fait qu'enregistrer cette information
+  // Dans une implémentation plus avancée, on pourrait l'utiliser pour ajuster le score
 
   return {
     task,
