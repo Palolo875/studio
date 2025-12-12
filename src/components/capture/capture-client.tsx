@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useTransition } from 'react';
-import Textarea from 'react-textarea-autosize';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Bot, Mic, Sparkles, PlusCircle } from 'lucide-react';
 import { useActionState } from 'react';
