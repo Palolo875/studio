@@ -542,9 +542,10 @@ function generateSOTAFeedback(taskScores: TaskScore[]): string {
   
   // Générer le feedback approprié
   if (averageImpact >= 80) {
-    return "Excellent ! Vous avez une playlist très impactante. Continuez ainsi !";
+    return "Ces 3 tâches libèrent 2h demain – bien joué !";
   } else if (averageImpact < 50) {
-    return "Votre playlist pourrait être plus impactante. Essayez de vous concentrer sur des tâches à plus forte valeur.";
+    // Fallback à 2 quick wins + 1 high-impact
+    return "Nous avons sélectionné 2 tâches rapides et 1 tâche à fort impact pour vous aider à reprendre le momentum.";
   }
   
   return ""; // Pas de feedback particulier

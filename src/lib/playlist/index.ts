@@ -16,6 +16,9 @@ export type { KeystoneHabit, WeeklyPattern } from './services/keystoneDetector';
 export { FeedbackGenerator } from './services/feedbackGenerator';
 export type { FeedbackMessage } from './services/feedbackGenerator';
 
+export { AnalyticsTracker } from './services/analyticsTracker';
+export type { AnalyticsData, DailyAnalytics } from './services/analyticsTracker';
+
 export { RewardSystem } from './services/rewardSystem';
 export type { Reward, UserProgress } from './services/rewardSystem';
 
@@ -24,5 +27,5 @@ export { PlaylistGeneratorSOTA } from './PlaylistGeneratorSOTA';
 export type { PlaylistTask } from './PlaylistGeneratorSOTA';
 
 // Version héritée
-export { default as playlistGenerator } from '../playlistGenerator';
-export { default as scoringRules } from '../scoringRules';
+export * as playlistGenerator from '../playlistGenerator';
+export * as scoringRules from '../scoringRules';

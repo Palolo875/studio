@@ -55,6 +55,8 @@ export interface TaskScore {
   score: number;
   reason: string;
   reasonDetails?: string[]; // Détails pour les badges
+  isKeystoneHabit?: boolean; // Indique si la tâche est une keystone habit
+  impactMetrics?: any; // Métriques d'impact pour le feedback
 }
 
 export interface PlaylistGeneratorOptions {
