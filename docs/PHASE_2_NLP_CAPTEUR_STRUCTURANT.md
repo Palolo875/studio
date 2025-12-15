@@ -878,107 +878,95 @@ Le NLP doit explicitement déclarer ce qu'il n'a PAS fait.
 
 Sans ça → dérive silencieuse à 100%.
 
-### 🔴 PROBLÈME 2 — L'échec propre n'est pas exploité comme SIGNAL
+## 5️⃣ ÉCHEC NLP = SIGNAL, PAS BUG
 
-Tu acceptes :
+### Problème
 
-- unknown
-- ambiguous
-- low_confidence
+unknown aujourd'hui = fin de l'histoire.
+❌ Faux.
 
-❌ MAIS tu ne définis pas comment le système apprend de l'échec sans l'apprendre.
-
-**Risque**
-
-- Trop de unknown
-- UX frustrante
-- Ou pire : le dev baisse les seuils "pour améliorer"
-
-**Correction SOTA — Failure Telemetry**
+### 5.1 Failure Telemetry
 
 ```typescript
 NLPFailureMetrics {
-  unknown_rate: number,        // %
-  ambiguous_rate: number,
-  split_failure_rate: number,
-  user_override_rate: number
+  unknownRate
+  ambiguousRate
+  splitFailureRate
+  overrideRate
 }
 ```
 
-**Invariant XV**
-
-Si unknown_rate > 30% sur 10 entrées
-→ le NLP se met en mode strict passif
+### 5.2 Circuit breaker
 
 ```
-mode = "RAW_CAPTURE_ONLY"
+if unknownRate > 0.3:
+  NLP_MODE = "RAW_CAPTURE_ONLY"
 ```
 
-**Message UX** :
 
-"Je note exactement ce que tu écris.
-On structurera plus tard."
+UX :
 
-⚠️ Très important : le NLP se dégrade volontairement, il ne s'améliore pas seul.
+"Je note exactement ce que tu écris."
 
-### 🔴 PROBLÈME 3 — Le split multi-tâches est dangereux cognitivement
+**Invariant V**
 
-Tu proposes un algo correct.
-Mais tu ignores l'impact cognitif du split.
+```
+Le NLP peut régresser volontairement.
+```
 
-**Cas réel**
+## 6️⃣ SPLIT MULTI-TÂCHES + COHÉSION
 
-"Préparer le dossier et parler à Marc"
+### Problème
 
-Techniquement : 2 tâches
-Cognitivement : 1 contexte émotionnel
+Découper ≠ aider.
 
-**Correction SOTA — Task Cohesion Score**
+### 6.1 Cohesion Score
 
 ```typescript
 CohesionScore {
-  shared_object: boolean,
-  shared_context: boolean,
-  emotional_weight: number
+  sharedContext: boolean
+  sharedObject: boolean
+  emotionalWeight: number
 }
 ```
 
-**Règle**
+### Règle
 
 ```
-if cohesion_score > 0.7:
-  keep_as_single_task_group()
+if cohesionScore > 0.7:
+  keep_grouped()
 ```
 
-Sinon tu fragmentes artificiellement → surcharge mentale.
+**Invariant VI**
 
-### 🔴 PROBLÈME 4 — Le NLP ne connaît pas la fatigue linguistique
+```
+Ne jamais fragmenter une charge émotionnelle.
+```
 
-Utilisateur fatigué =
+## 7️⃣ FATIGUE LINGUISTIQUE (HUMAIN FAIBLE)
 
-- phrases plus courtes
-- moins de verbes
-- plus d'implicite
-
-Ton NLP va produire :
-
-- plus de unknown
-- donc plus de friction
-- donc abandon
-
-**Correction SOTA — Linguistic Fatigue Detector (simple)**
+### Détection simple (pas ML)
 
 ```
 if (
-  avg_sentence_length ↓ &&
-  confidence ↓ &&
-  typo_rate ↑
+  sentence_length ↓ &&
+  typo_rate ↑ &&
+  confidence ↓
 ):
-  lower_expectations()
-  relax_split()
+  relax_expectations()
 ```
 
-👉 Le NLP devient plus permissif quand l'humain est faible, pas l'inverse.
+### Effets :
+
+- moins de split
+- moins de questions
+- plus de brut
+
+**Invariant VII**
+
+```
+Plus l'humain est fatigué, plus le système devient permissif.
+```
 
 ---
 
@@ -1189,198 +1177,133 @@ Un système SOTA respecte 5 lois non négociables :
 
 ## 🔴 CE QUI MANQUE ENCORE (ET QUI PEUT TOUT FAIRE ÉCHOUER)
 
-### FAILLE 1 — ABSENCE DE "BUDGET COGNITIF GLOBAL"
+## 2️⃣ BUDGET COGNITIF GLOBAL (LE VRAI TUEUR SILENCIEUX)
 
-Tu gères :
-- sessions
-- tâches
-- énergie
-- stabilité
+Tu l'as identifié. Maintenant on le rend exécutable.
 
-❌ **MAIS tu n'as pas de budget cognitif global journalier contraignant.**
-
-#### Problème
-
-Un utilisateur peut :
-- respecter chaque session
-- mais exploser sur la journée
-- accumuler fatigue latente
-- sans jamais déclencher d'alerte
-
-👉 **C'est exactement comme dépasser un quota mémoire sans OOM.**
-
-#### CORRECTION SOTA — Cognitive Load Budget (CLB)
+### 2.1 Structure finale
 
 ```typescript
 DailyCognitiveBudget {
-  max_load: number       // ex: 10 points
-  used_load: number
+  max: number        // ex: 10
+  used: number
   remaining: number
+
+  warningThreshold: 0.4
+  lockThreshold: 0.2
+
+  history: BudgetEvent[]
 }
 ```
 
-**Chaque tâche consomme :**
-```
-task_cost = effort_class × duration_factor × stability_penalty
-```
-
-#### Invariant NOUVEAU (XII)
+### 2.2 Invariants
 
 ```
-Si budget restant < 20%
-→ aucune tâche effort HEAVY autorisée
-→ seulement maintenance ou arrêt
+if remaining < 0.4:
+  warn_user()
+
+if remaining < 0.2:
+  hard_block_heavy_tasks()
+  suggest_stop()
 ```
 
-#### Seuils d'alerte précoce
+**Invariant II**
 
 ```
-Si budget restant < 40%
-→ warn("⚠️ Budget cognitif à 60%. Ralentis.")
-
-Si budget restant < 20%
-→ alert("🔴 Budget critique. Arrête aujourd'hui.")
+Aucune tâche HEAVY ne peut être créée si budget < 20%
 ```
 
-#### Message utilisateur (non culpabilisant) :
-
-> "Ta capacité cognitive du jour est presque atteinte. Continuer maintenant risque de coûter demain."
-
-⚠️ **Sans ça, ton système encourage le surmenage intelligent.**
+Pas suggérée.
+Pas négociée.
+Pas "juste une".
 
 ---
 
-### FAILLE 2 — AUCUNE LIMITE SUR L'APPRENTISSAGE ADAPTATIF
+## 3️⃣ LIMITES D’APPRENTISSAGE (ANTI-DÉRIVE)
 
-Tu adaptes :
-- énergie
-- stabilité
-- suggestions
-- ambitions
+### Problème
 
-❌ **MAIS tu n'as aucune limite à ce que le système peut apprendre.**
+Sans plafonds → le système apprend la pathologie.
 
-#### Problème
-
-Le système peut :
-- sur-apprendre un mauvais pattern
-- normaliser un comportement dysfonctionnel
-- devenir permissif au chaos
-
-👉 **C'est un biais de renforcement négatif classique.**
-
-#### CORRECTION SOTA — Learning Guardrails
+### 3.1 Guardrails définitifs
 
 ```typescript
 LearningConstraints {
-  max_adjustment_per_day: 15%
-  min_baseline_reset: every 7 days
-  forbidden_learns: [
+  maxDailyAdjustment: 0.15
+  baselineResetDays: 7
+
+  forbiddenPatterns: [
     "chronic_overwork",
     "chronic_avoidance",
-    "always_override"
+    "always_override",
+    "sleep_stealing"
   ]
 }
 ```
 
-#### Invariant XIII
+### 3.2 Règle clé
 
 ```
-Le système ne peut PAS apprendre d'un comportement
-qui viole un invariant de santé.
+if forbidden_pattern_detected:
+  freeze_learning()
+  log_refusal()
 ```
 
-#### Exemple :
+**Invariant III**
 
 ```
-user force ×3 tous les jours en DETOX
-→ ❌ ce pattern ne devient jamais "normal"
+Le système a le DROIT de refuser d'apprendre
 ```
+
+C'est ce qui le rend éthique.
 
 ---
 
-### FAILLE 3 — ABSENCE DE "MODE SILENCE LONG"
+## 4️⃣ MODE SILENCE LONG (ANTI-INTRUSION)
 
-Tu as :
-- mode minimal
-- chaos
-- detox
-
-❌ **MAIS tu n'as pas prévu : l'utilisateur qui ne veut plus RIEN pendant 48h.**
-
-#### Cas réel
-
-- burnout
-- dépression
-- surcharge émotionnelle
-- rejet total de la planification
-
-👉 **Si ton système continue de "suggérer", il devient intrusif.**
-
-#### CORRECTION SOTA — Silent Recovery Mode
+### Décision claire
 
 ```typescript
-SilentMode {
-  trigger: user ignores all interactions 48h
-  behavior:
-    - no suggestions
-    - no nudges
-    - no alerts
-    - only passive logging
+SilentRecoveryMode {
+  trigger: {
+    noInteractionHours: 48
+    ignoredSuggestions: 5
+  }
+
+  behavior: {
+    suggestions: false
+    nudges: false
+    alerts: false
+    logging: passive
+  }
 }
 ```
 
-#### Sortie :
 
-- uniquement par action explicite
-- ou par nouveau jour + interaction volontaire
+Message unique :
 
-#### Message unique :
+"Je suis là quand tu veux. Rien d'autre."
 
-> "Je suis là quand tu veux. Rien d'autre."
+**Invariant IV**
 
-⚠️ **C'est un marqueur de maturité produit.**
+```
+Un système qui ne peut pas se taire est un système toxique.
+```
 
 ---
 
-## 🧱 CE QUI DOIT ÊTRE VERROUILLÉ MAINTENANT (CHECKLIST SOTA)
+## 📋 CHECKLIST DE SORTIE (OBLIGATOIRE)
 
-### Verrous algorithmiques
+Avant Phase 3, tu dois pouvoir dire OUI à tout :
 
-| Verrou | Statut |
-|--------|--------|
-| Budget cognitif global journalier | IMPLEMENTÉ |
-| Limite d'apprentissage adaptatif | IMPLEMENTÉ |
-| Mode silence long | IMPLEMENTÉ |
-| Classes de coût normalisées (déjà fait) | ✔ |
-| Invariants > heuristiques | ✔ |
-| Contrat de sortie NLP strict | IMPLEMENTÉ |
-| Failure telemetry + mode passif | IMPLEMENTÉ |
-| Cohesion score avant split | IMPLEMENTÉ |
-| Fatigue linguistique détectée | IMPLEMENTÉ |
-
-### Verrous UX
-
-| Verrou | Description | Statut |
-|--------|-------------|--------|
-| Aucune phrase injonctive | Éviter le ton autoritaire | ✔ |
-| Aucune auto-décision finale | Toujours validation utilisateur | ✔ |
-| Aucune surprise silencieuse | Transparence totale | ✔ |
-| Toujours une sortie sans coût | Pas de pénalité pour abandon | ✔ |
-| Mode RAW_CAPTURE_ONLY | Dégradation volontaire | IMPLEMENTÉ |
-| "Pourquoi cette suggestion ?" | Explication accessible | IMPLEMENTÉ |
-
-### Verrous techniques
-
-| Verrou | Description | Statut |
-|--------|-------------|--------|
-| Tous les scores traçables | Auditabilité complète | ✔ |
-| Tous les ajustements logués | Traçabilité des décisions | ✔ |
-| Tous les apprentissages plafonnés | Contrôle de l'évolution | ✔ |
-| Tous les modules désactivables | Modularité et tests | ✔ |
-| Contrat de sortie NLP | Schéma strict | IMPLEMENTÉ |
-| Journal d'audit cognitif | Logs immuables | IMPLEMENTÉ |
-| Mode "Banc d'essai" | Transparence décisionnelle | IMPLEMENTÉ |
+- [x] Contrat NLP bloquant
+- [x] Budget cognitif global actif
+- [x] Verrou apprentissage + reset
+- [x] Mode silence long fonctionnel
+- [x] Failure telemetry branchée
+- [x] Split conditionné à la cohésion
+- [x] Fatigue linguistique gérée
+- [x] Tous les invariants documentés (I-VII)
 
 ---
 
