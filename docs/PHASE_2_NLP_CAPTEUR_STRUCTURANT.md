@@ -878,95 +878,107 @@ Le NLP doit explicitement déclarer ce qu'il n'a PAS fait.
 
 Sans ça → dérive silencieuse à 100%.
 
-## 5️⃣ ÉCHEC NLP = SIGNAL, PAS BUG
+### 🔴 PROBLÈME 2 — L'échec propre n'est pas exploité comme SIGNAL
 
-### Problème
+Tu acceptes :
 
-unknown aujourd'hui = fin de l'histoire.
-❌ Faux.
+- unknown
+- ambiguous
+- low_confidence
 
-### 5.1 Failure Telemetry
+❌ MAIS tu ne définis pas comment le système apprend de l'échec sans l'apprendre.
+
+**Risque**
+
+- Trop de unknown
+- UX frustrante
+- Ou pire : le dev baisse les seuils "pour améliorer"
+
+**Correction SOTA — Failure Telemetry**
 
 ```typescript
 NLPFailureMetrics {
-  unknownRate
-  ambiguousRate
-  splitFailureRate
-  overrideRate
+  unknown_rate: number,        // %
+  ambiguous_rate: number,
+  split_failure_rate: number,
+  user_override_rate: number
 }
 ```
 
-### 5.2 Circuit breaker
+**Invariant XV**
+
+Si unknown_rate > 30% sur 10 entrées
+→ le NLP se met en mode strict passif
 
 ```
-if unknownRate > 0.3:
-  NLP_MODE = "RAW_CAPTURE_ONLY"
+mode = "RAW_CAPTURE_ONLY"
 ```
 
+**Message UX** :
 
-UX :
+"Je note exactement ce que tu écris.
+On structurera plus tard."
 
-"Je note exactement ce que tu écris."
+⚠️ Très important : le NLP se dégrade volontairement, il ne s'améliore pas seul.
 
-**Invariant V**
+### 🔴 PROBLÈME 3 — Le split multi-tâches est dangereux cognitivement
 
-```
-Le NLP peut régresser volontairement.
-```
+Tu proposes un algo correct.
+Mais tu ignores l'impact cognitif du split.
 
-## 6️⃣ SPLIT MULTI-TÂCHES + COHÉSION
+**Cas réel**
 
-### Problème
+"Préparer le dossier et parler à Marc"
 
-Découper ≠ aider.
+Techniquement : 2 tâches
+Cognitivement : 1 contexte émotionnel
 
-### 6.1 Cohesion Score
+**Correction SOTA — Task Cohesion Score**
 
 ```typescript
 CohesionScore {
-  sharedContext: boolean
-  sharedObject: boolean
-  emotionalWeight: number
+  shared_object: boolean,
+  shared_context: boolean,
+  emotional_weight: number
 }
 ```
 
-### Règle
+**Règle**
 
 ```
-if cohesionScore > 0.7:
-  keep_grouped()
+if cohesion_score > 0.7:
+  keep_as_single_task_group()
 ```
 
-**Invariant VI**
+Sinon tu fragmentes artificiellement → surcharge mentale.
 
-```
-Ne jamais fragmenter une charge émotionnelle.
-```
+### 🔴 PROBLÈME 4 — Le NLP ne connaît pas la fatigue linguistique
 
-## 7️⃣ FATIGUE LINGUISTIQUE (HUMAIN FAIBLE)
+Utilisateur fatigué =
 
-### Détection simple (pas ML)
+- phrases plus courtes
+- moins de verbes
+- plus d'implicite
+
+Ton NLP va produire :
+
+- plus de unknown
+- donc plus de friction
+- donc abandon
+
+**Correction SOTA — Linguistic Fatigue Detector (simple)**
 
 ```
 if (
-  sentence_length ↓ &&
-  typo_rate ↑ &&
-  confidence ↓
+  avg_sentence_length ↓ &&
+  confidence ↓ &&
+  typo_rate ↑
 ):
-  relax_expectations()
+  lower_expectations()
+  relax_split()
 ```
 
-### Effets :
-
-- moins de split
-- moins de questions
-- plus de brut
-
-**Invariant VII**
-
-```
-Plus l'humain est fatigué, plus le système devient permissif.
-```
+👉 Le NLP devient plus permissif quand l'humain est faible, pas l'inverse.
 
 ---
 
@@ -1129,225 +1141,10 @@ C'est cette approche qui fera la différence entre un outil abandonné et un com
 
 ---
 
-## 🔴 VÉRITÉ BRUTE AVANT DE CONTINUER
-
-Aujourd'hui, KairuFlow est :
-
-| État | Description |
-|------|-------------|
-| ❌ déjà très avancé conceptuellement | Architecture solide établie |
-| ⚠️ encore vulnérable structurellement | Points faibles identifiés |
-| ❌ pas encore SOTA par défaut | Manque de verrous critiques |
-| ✅ rattrapable maintenant | Correctifs possibles |
-| ❌ irrattrapable si on avance sans verrouiller | Risque de dette technique |
-
-👉 **Le danger n'est plus l'algorithme. Le danger, c'est l'accumulation invisible de décisions implicites.**
-
----
-
-## 🧠 CE QUI FAIT UN SYSTÈME SOTA (ET PAS UN "BON PRODUIT")
-
-Un système SOTA respecte 5 lois non négociables :
-
-### Loi 1 — Toute intelligence doit être bornée
-
-**Principe :** Si un module peut faire "un peu plus", il le fera trop.
-
-👉 **Chaque module doit avoir un plafond dur.**
-
-### Loi 2 — Toute heuristique doit être mesurable
-
-**Principe :** Si tu ne peux pas mesurer quand elle échoue → elle échouera en silence.
-
-### Loi 3 — Toute adaptation doit être réversible
-
-**Principe :** Sinon tu fabriques de la dépendance ou de la dérive.
-
-### Loi 4 — Toute aide doit réduire la charge, pas la déplacer
-
-**Principe :** Beaucoup d'apps déplacent la charge vers la culpabilité.
-
-### Loi 5 — Tout système doit prévoir l'utilisateur non idéal
-
-**Principe :** Fatigué. Chaotique. Anxieux. Irrationnel. Silencieux.
-
-👉 **KairuFlow respecte déjà 3/5. Il manque encore 2 verrous critiques.**
-
----
-
-## 🔴 CE QUI MANQUE ENCORE (ET QUI PEUT TOUT FAIRE ÉCHOUER)
-
-## 2️⃣ BUDGET COGNITIF GLOBAL (LE VRAI TUEUR SILENCIEUX)
-
-Tu l'as identifié. Maintenant on le rend exécutable.
-
-### 2.1 Structure finale
-
-```typescript
-DailyCognitiveBudget {
-  max: number        // ex: 10
-  used: number
-  remaining: number
-
-  warningThreshold: 0.4
-  lockThreshold: 0.2
-
-  history: BudgetEvent[]
-}
-```
-
-### 2.2 Invariants
-
-```
-if remaining < 0.4:
-  warn_user()
-
-if remaining < 0.2:
-  hard_block_heavy_tasks()
-  suggest_stop()
-```
-
-**Invariant II**
-
-```
-Aucune tâche HEAVY ne peut être créée si budget < 20%
-```
-
-Pas suggérée.
-Pas négociée.
-Pas "juste une".
-
----
-
-## 3️⃣ LIMITES D’APPRENTISSAGE (ANTI-DÉRIVE)
-
-### Problème
-
-Sans plafonds → le système apprend la pathologie.
-
-### 3.1 Guardrails définitifs
-
-```typescript
-LearningConstraints {
-  maxDailyAdjustment: 0.15
-  baselineResetDays: 7
-
-  forbiddenPatterns: [
-    "chronic_overwork",
-    "chronic_avoidance",
-    "always_override",
-    "sleep_stealing"
-  ]
-}
-```
-
-### 3.2 Règle clé
-
-```
-if forbidden_pattern_detected:
-  freeze_learning()
-  log_refusal()
-```
-
-**Invariant III**
-
-```
-Le système a le DROIT de refuser d'apprendre
-```
-
-C'est ce qui le rend éthique.
-
----
-
-## 4️⃣ MODE SILENCE LONG (ANTI-INTRUSION)
-
-### Décision claire
-
-```typescript
-SilentRecoveryMode {
-  trigger: {
-    noInteractionHours: 48
-    ignoredSuggestions: 5
-  }
-
-  behavior: {
-    suggestions: false
-    nudges: false
-    alerts: false
-    logging: passive
-  }
-}
-```
-
-
-Message unique :
-
-"Je suis là quand tu veux. Rien d'autre."
-
-**Invariant IV**
-
-```
-Un système qui ne peut pas se taire est un système toxique.
-```
-
----
-
-## 📋 CHECKLIST DE SORTIE (OBLIGATOIRE)
-
-Avant Phase 3, tu dois pouvoir dire OUI à tout :
-
-- [x] Contrat NLP bloquant
-- [x] Budget cognitif global actif
-- [x] Verrou apprentissage + reset
-- [x] Mode silence long fonctionnel
-- [x] Failure telemetry branchée
-- [x] Split conditionné à la cohésion
-- [x] Fatigue linguistique gérée
-- [x] Tous les invariants documentés (I-VII)
-
----
-
-## 🚀 FEUILLE DE ROUTE PHASE 3
-
-Une fois ces fondations solides établies, la Phase 3 pourra explorer :
-
-- **IA décisionnelle** : Suggestions fines basées sur l'historique
-- **Adaptation contextuelle** : Ajustement dynamique des poids
-- **Feedback loop** : Amélioration continue sans dérive
-- **Personnalisation avancée** : Profils d'utilisateur raffinés
-
-### ⚠️ CONDITIONS DE SUCCESS PHASE 3
-
-La progression vers la Phase 3 est conditionnée à :
-
-1. **Zéro violation des postulats NLP** sur 1000 entrées
-2. **< 5% de unknown_rate** avec failure telemetry actif
-3. **> 95% d'acceptation UX** sur cohortes test
-4. **Implémentation complète des 15 invariants** (I-XV)
-5. **Validation éthique** par panel d'utilisateurs
-
-### 💡 PRINCIPE DIRECTEUR
-
-> "Un système brillant qui échoue est juste un échec brillant."
-> Un système solide qui réussit est un succès durable.
-
-Nous avons choisi la voie de la robustesse sur la brillance, de l'éthique sur la performance perçue, de la protection sur l'optimisation aveugle.
-
-C'est cette approche qui fera la différence entre un outil abandonné et un compagnon de confiance.
-
----
-
-## 📚 DOCUMENTS LIÉS
-
-- [PHASE_1_CERVEAU_KAIRUFLOW.md](./PHASE_1_CERVEAU_KAIRUFLOW.md) - Architecture décisionnelle
-- [SPECIFICATION_SOTA.md](./SPECIFICATION_SOTA.md) - Spécifications techniques
-
----
-
 ## 📝 NOTES DE VERSION
 
-**Version 2.2** - Intégration complète Phase 3 verrouillage
-- Migration du contenu Phase 3 vers Phase 2
-- Implémentation des 3 failles critiques corrigées
-- Validation complète de l'approche SOTA
-- Préparation définitive pour Phase 3 responsable
+**Version 2.1** - Finalisation Phase 2 avec angles morts résolus
+- Ajout des 4 problèmes structurels critiques
+- Implémentation des garde-fous éthiques
+- Validation de l'approche capteur vs décideur
+- Préparation pour Phase 3 responsable

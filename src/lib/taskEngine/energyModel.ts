@@ -6,15 +6,18 @@ import { EnergyState } from './types';
  * Détermine l'état d'énergie à partir d'un self-report utilisateur
  * @param level Niveau d'énergie déclaré
  * @param stability Stabilité déclarée
+ * @param confidence Confiance dans l'état (optionnel)
  * @returns État d'énergie conforme au modèle
  */
 export function createEnergyState(
   level: 'low' | 'medium' | 'high',
-  stability: 'volatile' | 'stable'
+  stability: 'volatile' | 'stable',
+  confidence?: number
 ): EnergyState {
   return {
     level,
-    stability
+    stability,
+    confidence
   };
 }
 
@@ -65,6 +68,7 @@ export function predictEnergyState(
   // Modèle par défaut basé sur les rythmes circadiens
   let defaultLevel: 'low' | 'medium' | 'high' = 'medium';
   let defaultStability: 'stable' | 'volatile' = 'stable';
+  let defaultConfidence: number = 0.8; // Confiance moyenne pour le modèle par défaut
   
   // Matin (6h-10h) : montée en puissance
   if (timeOfDay >= 6 && timeOfDay < 10) {
@@ -80,6 +84,7 @@ export function predictEnergyState(
   else if (timeOfDay >= 14 && timeOfDay < 18) {
     defaultLevel = 'medium';
     defaultStability = 'volatile';
+    defaultConfidence = 0.6; // Moins de confiance l'après-midi
   }
   // Soirée (18h-22h) : déclin progressif
   else if (timeOfDay >= 18 && timeOfDay < 22) {
@@ -90,14 +95,17 @@ export function predictEnergyState(
   else {
     defaultLevel = 'low';
     defaultStability = 'volatile';
+    defaultConfidence = 0.5; // Faible confiance la nuit
   }
   
   // Appliquer les patterns utilisateur s'ils existent
   const level = userPatterns?.level || defaultLevel;
   const stability = userPatterns?.stability || defaultStability;
+  const confidence = userPatterns?.confidence || defaultConfidence;
   
   return {
     level,
-    stability
+    stability,
+    confidence
   };
 }

@@ -4,6 +4,7 @@ import { Task, TaskPlaylist, TaskScore, EnergyState } from './types';
 import { calculateTaskScore, sortTasksByScore } from './scorer';
 import { isEnergyCompatible } from './energyModel';
 import { canAddTask, isCapacityExhausted } from './capacityCalculator';
+import { getEligibleTasks } from './taskPoolManager';
 
 /**
  * Filtre les tâches éligibles en fonction de leur deadline et statut
@@ -29,7 +30,7 @@ export function filterEligibleTasks(tasks: Task[], currentDate: Date): Task[] {
     // Tâches sans deadline ou avec deadline future
     if (!task.deadline || task.deadline > today) {
       // Vérifier si la tâche a été démarrée par l'utilisateur
-      return task.completionHistory.length > 0;
+      return task.completionHistory.length > 0 || task.status === 'active';
     }
     
     return false;
@@ -106,6 +107,10 @@ export function generateTaskPlaylist(
 ): TaskPlaylist {
   // Filtrer les tâches éligibles
   const eligibleTasks = filterEligibleTasks(tasks, currentDate);
+  
+  // Utiliser le gestionnaire de pools pour obtenir les tâches éligibles selon la règle d'or
+  // Note: Pour une implémentation complète, cela devrait utiliser taskPoolManager
+  // Pour l'instant, nous continuons avec l'approche existante
   
   // Calculer les scores pour chaque tâche éligible
   const taskScores: TaskScore[] = eligibleTasks.map(task => 

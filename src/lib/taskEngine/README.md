@@ -16,15 +16,29 @@ src/lib/taskEngine/
 ├── invariantChecker.ts    # Vérificateur d'invariants
 ├── fallbackHandler.ts    # Gestionnaire de fallbacks
 ├── edgeCaseHandler.ts    # Gestionnaire de cas limites
+├── sessionManager.ts     # Gestionnaire de sessions
+├── taskPoolManager.ts    # Gestionnaire de pools de tâches
+├── taskAgeIndex.ts       # Calculateur du Task Age Index
+├── timeConstraintManager.ts # Gestionnaire de contraintes horaires
+├── energyStabilityDetector.ts # Détecteur de stabilité énergétique
+├── deadlineManager.ts    # Gestionnaire de deadlines impossibles
+├── activeWindowManager.ts # Gestionnaire de fenêtre active
 ├── index.ts              # Point d'entrée
 └── __tests__/            # Tests unitaires
-    ├── energyModel.test.ts
-    ├── capacityCalculator.test.ts
-    ├── scorer.test.ts
-    ├── selector.test.ts
-    ├── invariantChecker.test.ts
-    ├── fallbackHandler.test.ts
-    └── edgeCaseHandler.test.ts
+   ├── energyModel.test.ts
+   ├── capacityCalculator.test.ts
+   ├── scorer.test.ts
+   ├── selector.test.ts
+   ├── invariantChecker.test.ts
+   ├── fallbackHandler.test.ts
+   ├── edgeCaseHandler.test.ts
+   ├── sessionManager.test.ts
+   ├── taskPoolManager.test.ts
+   ├── taskAgeIndex.test.ts
+   ├── timeConstraintManager.test.ts
+   ├── energyStabilityDetector.test.ts
+   ├── deadlineManager.test.ts
+   └── activeWindowManager.test.ts
 ```
 
 ## 🧠 Concepts Clés
@@ -35,6 +49,7 @@ L'énergie est représentée par un état bivarié :
 interface EnergyState {
   level: 'low' | 'medium' | 'high';
   stability: 'volatile' | 'stable';
+  confidence?: number; // Confiance dans l'état (0.0-1.0)
 }
 ```
 
@@ -59,6 +74,29 @@ score =
 + 0.10 * behavioralPattern
 + 0.05 * diversity
 ```
+
+### Architecture Session-Based
+Au lieu d'une planification journalière, le système repose sur une planification par session :
+- Sessions de 2h chacune
+- Maximum 5 tâches par session
+- Énergie prévue par créneau
+- Contraintes horaires fixes respectées
+
+### Pools de Tâches
+Les tâches sont organisées en pools hiérarchisés :
+1. **OVERDUE** - Tâches en retard
+2. **TODAY** - Tâches du jour
+3. **SOON** - Tâches dans 2-7 jours (max 3)
+4. **AVAILABLE** - Tâches disponibles (max 10)
+
+Règle d'or : Si OVERDUE ou TODAY non vide, SOON & AVAILABLE invisibles.
+
+### Task Age Index (TAI) et Mode DETOX
+- **TAI** : Âge moyen du backlog
+- **Mode DETOX** : Activé si TAI > 2 pendant 3 jours consécutifs
+  - Gèle les tâches SOON
+  - Limite TODAY à 2 tâches
+  - Permet 1 tâche manuelle (coût triplé)
 
 ## 🛡️ Invariants Absolus
 
@@ -119,3 +157,24 @@ Gère les scénarios de repli lorsque les conditions normales ne sont pas rempli
 
 ### edgeCaseHandler.ts
 Traite les cas limites complexes identifiés dans la spécification.
+
+### sessionManager.ts
+Gère l'architecture session-based avec les créneaux horaires.
+
+### taskPoolManager.ts
+Organise les tâches dans les différents pools hiérarchisés.
+
+### taskAgeIndex.ts
+Calcule le Task Age Index et gère le mode DETOX.
+
+### timeConstraintManager.ts
+Gère les contraintes horaires fixes et la planification autour de celles-ci.
+
+### energyStabilityDetector.ts
+Détecte la stabilité énergétique à partir de l'historique et du contexte.
+
+### deadlineManager.ts
+Gère les situations de deadlines impossibles avec le mode TRIAGE.
+
+### activeWindowManager.ts
+Gère la fenêtre active avec plafond de 10 tâches actives.

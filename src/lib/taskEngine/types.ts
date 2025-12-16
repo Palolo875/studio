@@ -8,6 +8,8 @@ export interface EnergyState {
   level: 'low' | 'medium' | 'high';
   /** Stabilité de l'énergie : volatile ou stable */
   stability: 'volatile' | 'stable';
+  /** Confiance dans l'état d'énergie (0.0-1.0) */
+  confidence?: number;
 }
 
 /**
@@ -36,6 +38,12 @@ export interface Task {
   completionHistory: CompletionRecord[];
   /** Diversité cognitive (catégorie de la tâche) */
   category: string;
+  /** Statut de la tâche */
+  status?: 'todo' | 'active' | 'frozen' | 'done';
+  /** Nombre d'activations */
+  activationCount?: number;
+  /** Date de dernière activation */
+  lastActivated?: Date;
 }
 
 /**
