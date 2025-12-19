@@ -3,8 +3,12 @@
 import { Task, TaskPlaylist, TaskScore, EnergyState } from './types';
 import { calculateTaskScore, sortTasksByScore } from './scorer';
 import { isEnergyCompatible } from './energyModel';
-import { canAddTask, isCapacityExhausted } from './capacityCalculator';
-import { getEligibleTasks } from './taskPoolManager';
+import { calculateSessionCapacity } from './capacityCalculator';
+import { createTaskPoolManager, getEligibleTasks, updateTaskPools } from './taskPoolManager';
+import { validatePlaylist } from './invariantChecker';
+import { calculateTaskAgeIndex, getDetoxMode, applyDetoxActions } from './taskAgeIndex';
+import { applyFallback } from './selectorFallback';
+import { analyzeDeadlines, determineTriageMode, calculateOptimizedLoad, generateDeadlineSuggestions } from './deadlineManager';
 
 /**
  * Filtre les tâches éligibles en fonction de leur deadline et statut
@@ -97,35 +101,85 @@ export function checkDiversity(playlist: Task[], maxSameCategory: number = 2): b
  * @param userEnergy État d'énergie de l'utilisateur
  * @param maxTasks Nombre maximum de tâches dans la playlist (par défaut 5)
  * @param currentDate Date actuelle (pour le filtrage)
+ * @param options Options supplémentaires
  * @returns Playlist de tâches générée
  */
 export function generateTaskPlaylist(
   tasks: Task[],
   userEnergy: EnergyState,
   maxTasks: number = 5,
-  currentDate: Date = new Date()
+  currentDate: Date = new Date(),
+  options?: {
+    sessionDurationMinutes?: number;
+    detoxConsecutiveDays?: number;
+  }
 ): TaskPlaylist {
-  // Filtrer les tâches éligibles
-  const eligibleTasks = filterEligibleTasks(tasks, currentDate);
-  
-  // Utiliser le gestionnaire de pools pour obtenir les tâches éligibles selon la règle d'or
-  // Note: Pour une implémentation complète, cela devrait utiliser taskPoolManager
-  // Pour l'instant, nous continuons avec l'approche existante
-  
-  // Calculer les scores pour chaque tâche éligible
-  const taskScores: TaskScore[] = eligibleTasks.map(task => 
+  const sessionCapacity = options?.sessionDurationMinutes
+    ? calculateSessionCapacity(options.sessionDurationMinutes, userEnergy)
+    : Number.POSITIVE_INFINITY;
+
+  // 1. ANALYSE DES DEADLINES AVANT TOUTE SÉLECTION
+  const timeAvailable = options?.sessionDurationMinutes ?? 120; // Default 2h
+  const deadlineAnalysis = analyzeDeadlines(tasks, timeAvailable);
+  const triageMode = determineTriageMode(deadlineAnalysis);
+
+  // Si mode TRIAGE activé, générer une playlist spéciale
+  if (triageMode.active) {
+    const suggestions = generateDeadlineSuggestions(triageMode);
+    const optimizedLoad = calculateOptimizedLoad(
+      tasks,
+      triageMode.tasksToTriage,
+      timeAvailable
+    );
+
+    return {
+      tasks: optimizedLoad.selectedTasks.slice(0, maxTasks),
+      generatedAt: new Date(),
+      energyUsed: userEnergy,
+      explanation: `MODE TRIAGE ACTIVÉ - ${triageMode.alertMessage}`,
+      warnings: suggestions
+    };
+  }
+
+  // 2. GESTION DES POOLS AVEC RÈGLE D'OR
+  const poolManager = updateTaskPools(tasks, createTaskPoolManager(currentDate));
+
+  // 3. DETOX : calcul TAI + application des actions aux pools
+  const tai = calculateTaskAgeIndex(tasks, currentDate);
+  const detoxMode = getDetoxMode(tai, options?.detoxConsecutiveDays ?? 0);
+  const detoxActions = applyDetoxActions(tasks, detoxMode);
+
+  if (detoxMode === 'BLOCK' || detoxMode === 'SUGGESTION') {
+    // Geler SOON : retirer du pool SOON
+    poolManager.soon = poolManager.soon.filter(
+      t => !detoxActions.frozenSoonTasks.some(f => f.id === t.id)
+    );
+    // Limiter TODAY à 2 tâches en mode BLOCK
+    if (detoxMode === 'BLOCK') {
+      poolManager.today = poolManager.today.slice(0, 2);
+    }
+  }
+
+  // 4. RÈGLE D'OR POUR L'ÉLIGIBILITÉ
+  const eligibleTasks = getEligibleTasks(poolManager);
+
+  // 5. FILTRAGE PAR DEADLINES/PROGRAMMATION
+  const timeEligibleTasks = filterEligibleTasks(eligibleTasks, currentDate);
+
+  // 6. CALCUL DES SCORES
+  const taskScores: TaskScore[] = timeEligibleTasks.map(task => 
     calculateTaskScore(task, userEnergy, [])
   );
   
-  // Trier par score décroissant
+  // 7. TRI PAR SCORE DÉCROISSANT
   const sortedTaskScores = sortTasksByScore(taskScores);
   
-  // Construire la playlist
+  // 8. CONSTRUCTION DE LA PLAYLIST
   const playlist: Task[] = [];
   let remainingTasks = [...sortedTaskScores];
   
   // Injecter une tâche quick win si possible
-  const quickWin = injectQuickWin(eligibleTasks, playlist);
+  const quickWin = injectQuickWin(timeEligibleTasks, playlist);
   if (quickWin) {
     playlist.push(quickWin);
     // Retirer la quick win des tâches restantes
@@ -134,33 +188,79 @@ export function generateTaskPlaylist(
   
   // Ajouter les autres tâches jusqu'à atteindre la limite
   for (const taskScore of remainingTasks) {
-    // Vérifier si on a atteint le nombre maximum de tâches
     if (playlist.length >= maxTasks) {
       break;
     }
-    
-    // Vérifier la compatibilité énergétique
     if (!isEnergyCompatible(taskScore.task.effort, userEnergy)) {
       continue;
     }
-    
-    // Ajouter la tâche à la playlist
     playlist.push(taskScore.task);
   }
   
-  // Vérifier la diversité et retirer des tâches si nécessaire
+  // 9. VÉRIFICATION DE LA DIVERSITÉ
   while (!checkDiversity(playlist) && playlist.length > 1) {
-    // Retirer la dernière tâche ajoutée
     playlist.pop();
   }
+
+  // 10. CONSTRUCTION DE LA PLAYLIST FINALE AVEC EXPLICATIONS STRUCTURÉES
+  const explanationParts: string[] = [];
   
-  return {
+  // Invariants vérifiés
+  const invariantsChecked = [
+    `maxTasks=${playlist.length}/${maxTasks}`,
+    `totalLoad=${playlist.reduce((sum, t) => sum + t.duration, 0)}/${sessionCapacity.toFixed(0)}min`,
+    `energy=${userEnergy.level}/${userEnergy.stability}`,
+    `diversity=${checkDiversity(playlist) ? 'OK' : 'VIOLATED'}`
+  ];
+  explanationParts.push(`Invariants: ${invariantsChecked.join(', ')}`);
+  
+  // TAI et DETOX
+  explanationParts.push(`TAI=${tai.toFixed(2)} → DETOX=${detoxMode}`);
+  if (detoxActions.frozenSoonTasks.length > 0) {
+    explanationParts.push(`SOON gelées: ${detoxActions.frozenSoonTasks.length}`);
+  }
+  if (detoxActions.limitedTodayTasks && detoxMode === 'BLOCK') {
+    explanationParts.push(`TODAY limité à 2`);
+  }
+  
+  // Quick win
+  if (quickWin) {
+    explanationParts.push(`Quick win injecté: "${quickWin.title}"`);
+  }
+  
+  // Pools utilisés
+  const poolStats = {
+    overdue: poolManager.overdue.length,
+    today: poolManager.today.length,
+    soon: poolManager.soon.length,
+    available: poolManager.available.length
+  };
+  const activePools = Object.entries(poolStats)
+    .filter(([_, count]) => count > 0)
+    .map(([pool, count]) => `${pool.toUpperCase()}(${count})`);
+  explanationParts.push(`Pools: ${activePools.join(' ')}`);
+  
+  // Exclusions
+  const excludedCount = tasks.length - playlist.length;
+  if (excludedCount > 0) {
+    explanationParts.push(`Exclusions: ${excludedCount} tâches (énergie, deadlines, diversité)`);
+  }
+
+  const builtPlaylist: TaskPlaylist = {
     tasks: playlist,
     generatedAt: new Date(),
     energyUsed: userEnergy,
-    explanation: "Playlist générée selon l'algorithme de sélection du Cerveau de KairuFlow",
+    explanation: explanationParts.join(' | '),
     warnings: playlist.length === 0 ? ["Aucune tâche éligible trouvée"] : undefined
   };
+
+  // 11. VALIDATION DES INVARIANTS
+  const validation = validatePlaylist(builtPlaylist, userEnergy.level, sessionCapacity);
+  if ('error' in validation) {
+    return applyFallback(tasks, userEnergy, validation.invalidInvariants.join(', '));
+  }
+
+  return { ...validation };
 }
 
 /**
