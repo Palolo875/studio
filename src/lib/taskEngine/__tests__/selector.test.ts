@@ -81,10 +81,12 @@ describe('selector', () => {
       // - Tâche en retard (id: '1')
       // - Tâche d'aujourd'hui (id: '2')
       // - Tâche sans deadline mais avec historique (id: '4')
-      expect(eligibleTasks).toHaveLength(3);
+      // - Tâche "Quick Win" (id: '5')
+      expect(eligibleTasks).toHaveLength(4);
       expect(eligibleTasks.map(t => t.id)).toContain('1');
       expect(eligibleTasks.map(t => t.id)).toContain('2');
       expect(eligibleTasks.map(t => t.id)).toContain('4');
+      expect(eligibleTasks.map(t => t.id)).toContain('5');
     });
 
     it('should exclude future tasks without history', () => {
@@ -136,33 +138,53 @@ describe('selector', () => {
   describe('generateTaskPlaylist', () => {
     it('should generate a playlist with correct number of tasks', () => {
       const energy = { level: 'high', stability: 'stable' };
-      const playlist = generateTaskPlaylist(mockTasks, energy, 3, today);
+      const capacity = { maxLoad: 500, usedLoad: 0, remaining: 500, tasksToday: [] }; // Capacité suffisante
+      const playlist = generateTaskPlaylist(mockTasks, energy, capacity, 3, today);
       
       expect(playlist.tasks).toHaveLength(3);
       expect(playlist.generatedAt).toBeDefined();
       expect(playlist.energyUsed).toEqual(energy);
     });
 
-    it('should inject a quick win when available', () => {
+    it('should inject a quick win when available and capacity allows', () => {
       const energy = { level: 'high', stability: 'stable' };
-      const playlist = generateTaskPlaylist(mockTasks, energy, 5, today);
+      // Capacité suffisante pour au moins le quick win
+      const capacity = { maxLoad: 500, usedLoad: 0, remaining: 500, tasksToday: [] };
       
-      // Vérifier qu'une tâche quick win est présente
-      const hasQuickWin = playlist.tasks.some(task => 
-        task.duration <= 15 && task.effort === 'low'
-      );
+      const playlist = generateTaskPlaylist(mockTasks, energy, capacity, 5, today);
+
+      // Le quick win (id: 5) devrait être dans la playlist car il est prioritaire
+      const hasQuickWin = playlist.tasks.some(task => task.id === '5');
       expect(hasQuickWin).toBe(true);
     });
 
     it('should respect energy compatibility', () => {
       const energy = { level: 'low', stability: 'stable' };
-      const playlist = generateTaskPlaylist(mockTasks, energy, 5, today);
+      const capacity = { maxLoad: 500, usedLoad: 0, remaining: 500, tasksToday: [] };
+      const playlist = generateTaskPlaylist(mockTasks, energy, capacity, 5, today);
       
       // Vérifier que toutes les tâches sont compatibles avec l'énergie faible
       const allCompatible = playlist.tasks.every(task => 
         task.effort === 'low'
       );
       expect(allCompatible).toBe(true);
+    });
+
+    it('should not exceed cognitive capacity', () => {
+      const energy = { level: 'high', stability: 'stable' };
+      // Définir une capacité très limitée
+      const capacity = { maxLoad: 60, usedLoad: 0, remaining: 60, tasksToday: [] };
+
+      const playlist = generateTaskPlaylist(mockTasks, energy, capacity, 5, today);
+
+      // Le quick win (id '5', duration 10, effort low) coûte 10 * 1.0 * 1 = 10.
+      // La tâche en retard (id '1', duration 30, effort medium) coûte 30 * 1.5 * 1 = 45.
+      // Le coût total est de 10 + 45 = 55, ce qui est inférieur à la capacité de 60.
+      // La tâche suivante (id '2') a un coût de 112.5 et sera exclue.
+      // La playlist devrait donc contenir les tâches '5' et '1'.
+      expect(playlist.tasks).toHaveLength(2);
+      expect(playlist.tasks.map(t => t.id)).toContain('1');
+      expect(playlist.tasks.map(t => t.id)).toContain('5');
     });
   });
 

@@ -1,9 +1,9 @@
 // Algorithme de sélection des tâches pour le Cerveau de KairuFlow - Phase 1
 
-import { Task, TaskPlaylist, TaskScore, EnergyState } from './types';
+import { Task, TaskPlaylist, TaskScore, EnergyState, DailyCapacity } from './types';
 import { calculateTaskScore, sortTasksByScore } from './scorer';
 import { isEnergyCompatible } from './energyModel';
-import { canAddTask, isCapacityExhausted } from './capacityCalculator';
+import { canAddTask, calculateTaskCost, updateDailyCapacity } from './capacityCalculator';
 import { getEligibleTasks } from './taskPoolManager';
 
 /**
@@ -23,13 +23,21 @@ export function filterEligibleTasks(tasks: Task[], currentDate: Date): Task[] {
     }
     
     // Tâches d'aujourd'hui
-    if (task.deadline && task.deadline.getTime() === today.getTime()) {
-      return true;
+    if (task.deadline) {
+      const taskDay = new Date(task.deadline);
+      taskDay.setHours(0, 0, 0, 0);
+      if (taskDay.getTime() === today.getTime()) {
+        return true;
+      }
     }
     
-    // Tâches sans deadline ou avec deadline future
-    if (!task.deadline || task.deadline > today) {
-      // Vérifier si la tâche a été démarrée par l'utilisateur
+    // Tâches sans deadline sont toujours éligibles
+    if (!task.deadline) {
+      return true;
+    }
+
+    // Tâches futures, seulement si elles ont été démarrées
+    if (task.deadline > today) {
       return task.completionHistory.length > 0 || task.status === 'active';
     }
     
@@ -95,6 +103,7 @@ export function checkDiversity(playlist: Task[], maxSameCategory: number = 2): b
  * Génère une playlist de tâches en appliquant l'algorithme de sélection
  * @param tasks Ensemble des tâches disponibles
  * @param userEnergy État d'énergie de l'utilisateur
+ * @param capacity Capacité cognitive actuelle de l'utilisateur
  * @param maxTasks Nombre maximum de tâches dans la playlist (par défaut 5)
  * @param currentDate Date actuelle (pour le filtrage)
  * @returns Playlist de tâches générée
@@ -102,6 +111,7 @@ export function checkDiversity(playlist: Task[], maxSameCategory: number = 2): b
 export function generateTaskPlaylist(
   tasks: Task[],
   userEnergy: EnergyState,
+  capacity: DailyCapacity,
   maxTasks: number = 5,
   currentDate: Date = new Date()
 ): TaskPlaylist {
@@ -121,17 +131,26 @@ export function generateTaskPlaylist(
   const sortedTaskScores = sortTasksByScore(taskScores);
   
   // Construire la playlist
+  let currentCapacity = { ...capacity };
   const playlist: Task[] = [];
-  let remainingTasks = [...sortedTaskScores];
   
-  // Injecter une tâche quick win si possible
-  const quickWin = injectQuickWin(eligibleTasks, playlist);
+  // Prioriser l'injection d'un "quick win"
+  const quickWin = injectQuickWin(eligibleTasks, []);
   if (quickWin) {
-    playlist.push(quickWin);
-    // Retirer la quick win des tâches restantes
-    remainingTasks = remainingTasks.filter(ts => ts.task.id !== quickWin.id);
+    const quickWinCost = calculateTaskCost(quickWin, userEnergy);
+    if (canAddTask(currentCapacity, quickWinCost)) {
+      playlist.push(quickWin);
+      currentCapacity = updateDailyCapacity(currentCapacity, quickWin, quickWinCost, 'planned');
+    }
   }
   
+  // Filtrer les tâches restantes (sans le quick win s'il a été ajouté)
+  const remainingSortedScores = sortedTaskScores.filter(
+    ts => !playlist.some(p => p.id === ts.task.id)
+  );
+
+  let remainingTasks = remainingSortedScores;
+
   // Ajouter les autres tâches jusqu'à atteindre la limite
   for (const taskScore of remainingTasks) {
     // Vérifier si on a atteint le nombre maximum de tâches
@@ -144,8 +163,15 @@ export function generateTaskPlaylist(
       continue;
     }
     
-    // Ajouter la tâche à la playlist
+    // Vérifier si la tâche peut être ajoutée sans dépasser la capacité
+    const taskCost = calculateTaskCost(taskScore.task, userEnergy);
+    if (!canAddTask(currentCapacity, taskCost)) {
+      continue; // Tâche trop coûteuse, on passe à la suivante
+    }
+
+    // Ajouter la tâche à la playlist et mettre à jour la capacité
     playlist.push(taskScore.task);
+    currentCapacity = updateDailyCapacity(currentCapacity, taskScore.task, taskCost, 'planned');
   }
   
   // Vérifier la diversité et retirer des tâches si nécessaire
