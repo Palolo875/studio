@@ -1,8 +1,9 @@
 // Gestionnaire de sessions pour le Cerveau de KairuFlow - Phase 1
-import { Task, EnergyState } from './types';
+import { Task, EnergyState, DailyCapacity } from './types';
 import { predictEnergyState } from './energyModel';
 import { generateTaskPlaylist } from './selector';
 import { checkAllInvariants } from './invariantChecker';
+import { initializeDailyCapacity } from './capacityCalculator';
 
 /**
  * État d'une session
@@ -133,10 +134,14 @@ export function createSession(
   const hour = parseInt(timeSlot.startTime.split(':')[0]);
   const predictedEnergy = predictEnergyState(hour);
   
+  // Initialiser une capacité par défaut pour la session
+  const capacity: DailyCapacity = initializeDailyCapacity(100); // Valeur arbitraire élevée pour le moment
+
   // Générer la playlist pour cette session
   const playlist = generateTaskPlaylist(
     tasks,
     predictedEnergy,
+    capacity,
     5, // Max 5 tâches par session
     baseDate
   ).tasks;
