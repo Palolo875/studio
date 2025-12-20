@@ -3,6 +3,8 @@ import { Task, EnergyState } from './types';
 import { predictEnergyState } from './energyModel';
 import { generateTaskPlaylist } from './selector';
 import { checkAllInvariants } from './invariantChecker';
+import { calculateSessionCapacity } from './capacityCalculator';
+import { applyFallback as applySelectorFallback } from './selectorFallback';
 
 /**
  * État d'une session
@@ -133,19 +135,50 @@ export function createSession(
   const hour = parseInt(timeSlot.startTime.split(':')[0]);
   const predictedEnergy = predictEnergyState(hour);
   
+  // Calculer la capacité de session
+  const sessionCapacity = calculateSessionCapacity(duration, predictedEnergy);
+  
   // Générer la playlist pour cette session
-  const playlist = generateTaskPlaylist(
+  const playlistResult = generateTaskPlaylist(
     tasks,
     predictedEnergy,
     5, // Max 5 tâches par session
-    baseDate
-  ).tasks;
+    baseDate,
+    { sessionDurationMinutes: duration }
+  );
+  
+  // Vérifier les invariants de la session
+  const invariantResults = checkAllInvariants(
+    playlistResult.tasks,
+    predictedEnergy.level,
+    sessionCapacity
+  );
+  
+  // Si les invariants ne sont pas respectés, appliquer un fallback
+  if (!invariantResults.allValid) {
+    const fallbackPlaylist = applySelectorFallback(
+      tasks,
+      predictedEnergy,
+      "Violations d'invariants détectées dans la session"
+    );
+    
+    return {
+      id: `session_${start.getTime()}`,
+      timeSlot: { start, end },
+      state: 'PLANNED',
+      playlist: fallbackPlaylist.tasks,
+      predictedEnergy,
+      fixedTasks: [],
+      duration,
+      timeLabel: timeSlot.label
+    };
+  }
   
   return {
     id: `session_${start.getTime()}`,
     timeSlot: { start, end },
     state: 'PLANNED',
-    playlist,
+    playlist: playlistResult.tasks,
     predictedEnergy,
     fixedTasks: [], // À implémenter avec la gestion des contraintes horaires
     duration,

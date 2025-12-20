@@ -5,10 +5,13 @@
 import { useCallback, useState } from 'react';
 import { useSettingsStore } from '@/hooks/useSettingsStore';
 import { LanguageDetector } from '@/lib/nlp/LanguageDetector';
-import { extractTasks, type RawTask } from '@/lib/nlp/TaskExtractor';
+import { extractTasks } from '@/lib/nlp/TaskExtractor';
 import { classifyTask, type TaskClassification } from '@/lib/nlp/TaskClassifier';
 import { createFullTask } from '@/lib/nlp/TaskFactory';
 import { NlpTaskStorage } from '@/lib/nlp/TaskStorage';
+import { nlpTelemetryService } from '@/lib/nlp/TelemetryService';
+import { createNLPContractResult } from '@/lib/nlp/NLPContract';
+import { basicRawCapture } from '@/lib/nlp/basicRawCapture';
 
 // Type pour les tâches créées
 interface CreatedTask {
@@ -78,8 +81,13 @@ export function useNLP() {
         ? LanguageDetector.detect(text)
         : settings.language;
       
-      // ÉTAPE 2 : Extraction
+      // ÉTAPE 2 : Extraction avec mesure du temps
+      const extractionStartTime = performance.now();
       const rawTasks = extractTasks(text, detectedLang as 'fr' | 'en' | 'es');
+      const extractionTime = performance.now() - extractionStartTime;
+      
+      // Enregistrer les métriques de télémétrie
+      nlpTelemetryService.recordTask(rawTasks[0] || {}, extractionTime);
       
       // ÉTAPE 3 : Classification
       const classifiedTasks = await Promise.all(
@@ -94,6 +102,9 @@ export function useNLP() {
         createFullTask(raw, classification)
       );
       
+      // Créer le résultat avec contrat NLP
+      const contractResult = createNLPContractResult(rawTasks, nlpTelemetryService.getMode());
+      
       // Stockage optimisé
       const storage = new NlpTaskStorage(db);
       await storage.bulkStoreTasks(fullTasks as any);
@@ -106,12 +117,24 @@ export function useNLP() {
       return { 
         tasks: fullTasks, 
         detectedLang, 
-        success: true 
+        success: true,
+        contractResult
       };
       
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Extraction échouée, mode manuel activé';
       setError(errorMessage);
+      
+      // Enregistrer l'erreur dans la télémétrie
+      nlpTelemetryService.recordProcessingError();
+      
+      // Vérifier si le mode RAW_CAPTURE_ONLY doit être activé
+      if (nlpTelemetryService.getMode() === 'RAW_CAPTURE_ONLY') {
+        // Mode capture brute uniquement
+        const rawCaptureTasks = basicRawCapture(text);
+        console.log('Mode RAW_CAPTURE_ONLY activé:', rawCaptureTasks);
+        return { tasks: rawCaptureTasks, success: true, detectedLang: settings.language, mode: 'RAW_CAPTURE_ONLY' };
+      }
       
       // Fallbacks multiples
       const fallbackTasks = basicRegexFallback(text);

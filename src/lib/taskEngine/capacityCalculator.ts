@@ -34,6 +34,25 @@ export function calculateTaskCost(task: Task, userEnergy: EnergyState): number {
 }
 
 /**
+ * Calcule la capacité de session en fonction de sa durée et de l'énergie de l'utilisateur
+ * @param durationMinutes Durée de la session en minutes
+ * @param energyState État d'énergie de l'utilisateur
+ * @returns Capacité de la session
+ */
+export function calculateSessionCapacity(durationMinutes: number, energyState: EnergyState): number {
+  // Barème fixe basé sur la durée de session
+  // Pour une session de 30 min : capacité de 5
+  // Pour une session de 60 min : capacité de 10
+  // Pour une session de 120 min : capacité de 20
+  const baseCapacity = Math.round(durationMinutes / 6);
+  
+  // Appliquer une pénalité si l'énergie est instable
+  const stabilityPenalty = getStabilityPenalty(energyState.stability);
+  
+  return baseCapacity / stabilityPenalty;
+}
+
+/**
  * Initialise la capacité cognitive journalière
  * @param maxLoad Charge maximale autorisée (par défaut 10)
  * @returns Capacité cognitive journalière initialisée

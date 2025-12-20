@@ -44,6 +44,8 @@ export interface Task {
   activationCount?: number;
   /** Date de dernière activation */
   lastActivated?: Date;
+  /** Date de création de la tâche */
+  createdAt: Date;
 }
 
 /**

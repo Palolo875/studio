@@ -14,6 +14,7 @@ Cette implémentation utilise des techniques avancées de traitement du langage 
 - **Robustesse** : Traitement des mélanges de langues
 - **Performance optimisée** : Moins de 1ms par détection
 - **Fallback intelligent** : Français par défaut pour le public cible principal
+- **Contrat de sortie strict** : Garanties explicites sur ce qui a été fait et ce qui n'a pas été fait
 
 ## Extracteur de Tâches Structurel SOTA (winkNLP)
 
@@ -31,6 +32,8 @@ Transforme le texte brut en tâches structurées grâce à une analyse linguisti
 - **Limitation intelligente** : Maximum 5 tâches par bloc de texte
 - **Performance optimisée** : Traitement <200ms
 - **Tri par pertinence** : Tâches triées par score de confiance
+- **Détection de fatigue linguistique** : Adaptation des seuils selon l'état de l'utilisateur
+- **Analyse de cohésion** : Préservation de l'unité cognitive des tâches
 
 ## Classificateur mmBERT-small (Intelligence Avancée)
 
@@ -47,6 +50,8 @@ Classifie les tâches selon leur type d'énergie, niveau d'effort, sentiment et 
 - **Performance** : <800ms par classification
 - **Support multilingue** : FR/EN/ES
 - **Fallback robuste** : Gestion des erreurs
+- **Télémétrie avancée** : Suivi des performances et des échecs
+- **Mode RAW_CAPTURE_ONLY** : Désactivation intelligente en cas de taux d'échec élevé
 
 ## Hooks React Intégrés SOTA
 
@@ -62,6 +67,8 @@ Intégration complète avec l'écosystème React et Zustand pour une expérience
 - **Détection de langue intégrée** : Transparence totale pour l'utilisateur
 - **Filtrage par confiance** : Tâches filtrées par seuil de confiance
 - **Métadonnées enrichies** : Scores de confiance, entités et classification dans les tâches
+- **Suivi des métriques** : Télémétrie avancée intégrée
+- **Mode dégradé intelligent** : Adaptation automatique en cas de fatigue ou d'échecs répétés
 
 ### Implémentation
 
@@ -70,11 +77,21 @@ Intégration complète avec l'écosystème React et Zustand pour une expérience
 1. `LanguageDetector.ts` - Classe principale de détection SOTA
 2. `TaskExtractor.ts` - Extracteur de tâches structurel SOTA
 3. `TaskClassifier.ts` - Classificateur mmBERT-small
-4. `useNLP.ts` - Hook React complet SOTA
-5. `testLanguageDetector.ts` - Tests unitaires complets avec mesures de précision
-6. `testTaskExtractor.ts` - Tests de l'extracteur de tâches
-7. `testTaskClassifier.ts` - Tests du classificateur mmBERT
-8. `Capture.tsx` - Composant React d'exemple SOTA
+4. `TaskFactory.ts` - Fabrique de tâches complètes
+5. `useNLP.ts` - Hook React complet SOTA
+6. `NLPContract.ts` - Contrat de sortie NLP strict
+7. `TelemetryService.ts` - Service de télémétrie avancée
+8. `CohesionAnalyzer.ts` - Analyseur de cohésion des tâches
+9. `LinguisticFatigueDetector.ts` - Détecteur de fatigue linguistique
+10. `basicRawCapture.ts` - Capture brute pour le mode dégradé
+11. `testLanguageDetector.ts` - Tests unitaires complets avec mesures de précision
+12. `testTaskExtractor.ts` - Tests de l'extracteur de tâches
+13. `testTaskClassifier.ts` - Tests du classificateur mmBERT
+14. `Capture.tsx` - Composant React d'exemple SOTA
+15. `__tests__/NLPContract.test.ts` - Tests du contrat NLP
+16. `__tests__/TelemetryService.test.ts` - Tests de télémétrie
+17. `__tests__/CohesionAnalyzer.test.ts` - Tests d'analyse de cohésion
+18. `__tests__/LinguisticFatigueDetector.test.ts` - Tests de détection de fatigue
 
 #### Techniques avancées
 
@@ -102,6 +119,8 @@ Intégration complète avec l'écosystème React et Zustand pour une expérience
    - Estimation de l'effort requis avec pondération
    - Extraction d'entités nommées
    - Tri par pertinence
+   - Analyse de cohésion pour préserver l'unité cognitive
+   - Détection de fatigue linguistique pour adapter les seuils
 
 5. **Classification mmBERT** :
    - Modèle zero-shot multilingue
@@ -109,6 +128,11 @@ Intégration complète avec l'écosystème React et Zustand pour une expérience
    - Quantification INT8 pour performance
    - Génération automatique de tags
    - Calcul d'urgence contextuel
+
+6. **Télémétrie et surveillance** :
+   - Suivi des performances et des échecs
+   - Mode dégradé intelligent (RAW_CAPTURE_ONLY)
+   - Contrat de sortie strict avec garanties explicites
 
 #### Utilisation
 
@@ -129,6 +153,14 @@ const classification = await classifyTask(rawTask);
 import { useNLP } from '@/hooks/useNLP';
 const { processText, isProcessing, error } = useNLP();
 const result = await processText("Écrire rapport Q4 2h lundi");
+
+// Utilisation du contrat NLP
+import { createTaskWithContract } from '@/lib/nlp/NLPContract';
+const taskWithContract = createTaskWithContract(baseTask, guarantees);
+
+// Utilisation de la télémétrie
+import { nlpTelemetryService } from '@/lib/nlp/TelemetryService';
+nlpTelemetryService.recordTask(task, processingTime);
 ```
 
 ### Intégration
@@ -139,6 +171,9 @@ Les composants sont intégrés dans :
 2. **Hook NLP** : `useNLP` comme point d'entrée central
 3. **Store de tâches** : Intégration automatique avec `useTaskStore`
 4. **Composants UI** : `Capture.tsx` comme exemple d'implémentation
+5. **Service de télémétrie** : `nlpTelemetryService` pour le suivi des performances
+6. **Analyseur de cohésion** : `cohesionAnalyzer` pour préserver l'unité cognitive
+7. **Détecteur de fatigue** : `linguisticFatigueDetector` pour adapter les seuils
 
 ### Modèles de langue
 
@@ -205,6 +240,7 @@ Pour ajouter de nouvelles fonctionnalités :
 - Mémoire : Utilisation minimale
 - Optimisé pour mobile
 - Précision >95% sur corpus de test
+- Télémétrie en temps réel avec impact minimal sur les performances
 
 ### Paramètres avancés
 
@@ -232,6 +268,11 @@ function Capture() {
 Confiance moyenne: ${(avgConfidence * 100).toFixed(1)}%
 Types d'énergie: ${energyTypes || 'non spécifiés'}`);
     }
+    
+    // Gestion du mode dégradé
+    if (result.mode === 'RAW_CAPTURE_ONLY') {
+      toast.info('Mode capture brute activé - enregistrement sans traitement avancé');
+    }
   };
 
   return (
@@ -251,6 +292,10 @@ Types d'énergie: ${energyTypes || 'non spécifiés'}`);
       >
         {isProcessing ? '🤖 Analyse SOTA mmBERT...' : '✨ Créer mes tâches (SOTA mmBERT)'}
       </button>
+      
+      <div className="mt-4 text-sm text-gray-500">
+        {isProcessing && <span>🔍 Détection de fatigue linguistique en cours...</span>}
+      </div>
     </div>
   );
 }
@@ -262,7 +307,7 @@ Types d'énergie: ${energyTypes || 'non spécifiés'}`);
 Input: "Appeler Marc demain 15h urgent, écrire rapport Q4 complexe"
 
 ↓ Étape 1 : Langue = 'fr'
-↓ Étape 2 : 2 RawTasks extraites
+↓ Étape 2 : 2 RawTasks extraites avec contrat NLP
 ↓ Étape 3 : mmBERT classification
 
 Output tâches finales :
@@ -274,7 +319,15 @@ Output tâches finales :
     priority: "high",
     urgency: 0.85,
     tags: ["appeler", "relationnel", "deadline"],
-    confidence: 0.95
+    confidence: 0.95,
+    contract: {
+      version: "1.0.0",
+      guarantees: {
+        inferred: false,
+        decided: false,
+        corrected: false
+      }
+    }
   }
 2. {
     content: "Écrire rapport Q4",
@@ -282,14 +335,28 @@ Output tâches finales :
     energyConfidence: 0.88,
     effort: "L",
     tags: ["écrire", "focus", "rapport Q4"],
-    confidence: 0.87
+    confidence: 0.87,
+    contract: {
+      version: "1.0.0",
+      guarantees: {
+        inferred: false,
+        decided: false,
+        corrected: false
+      }
+    }
   }
 
 Performance :
     Langue : 50ms
     Extraction : 100ms
     mmBERT : 800ms
+    Télémétrie : <1ms
     Total : ~1s (mobile OK)
+
+Surveillance :
+    - Taux d'unknown : 0%
+    - Taux d'ambiguous : 0%
+    - Mode actuel : NORMAL
 ```
 
 Ce pipeline est déjà production-ready :

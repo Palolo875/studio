@@ -2,12 +2,12 @@
  * Fabrique de tâches complètes
  * Fusionne les données brutes et la classification pour créer des objets Task complets
  */
-import type { RawTask } from './TaskExtractor';
+import type { RawTaskWithContract } from '@/lib/nlp/NLPContract';
 import type { TaskClassification } from './TaskClassifier';
 import type { Task } from '@/lib/types';
 
 export function createFullTask(
-  rawTask: RawTask, 
+  rawTask: RawTaskWithContract, 
   classification: TaskClassification
 ): Task {
   const baseContent = `${rawTask.action} ${rawTask.object}`.trim();

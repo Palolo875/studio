@@ -241,6 +241,20 @@ export function scheduleAroundConstraints(
 }
 
 /**
+ * Vérifie les contraintes horaires pour un ensemble de tâches
+ * @param tasks Tâches à vérifier
+ * @param currentDate Date de référence
+ * @returns Tâches sans contraintes horaires conflictuelles
+ */
+export function checkTimeConstraints(tasks: Task[], currentDate: Date): Task[] {
+  // Identifier les contraintes horaires
+  const constraints = identifyTimeConstraints(tasks, currentDate);
+  
+  // Résoudre les conflits
+  return resolveTimeConflicts(tasks, constraints, currentDate);
+}
+
+/**
  * Résout les conflits entre tâches et contraintes horaires
  * @param tasks Tâches à planifier
  * @param constraints Contraintes horaires existantes

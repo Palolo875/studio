@@ -13,9 +13,10 @@ export function calculateTaskAgeIndex(tasks: Task[], referenceDate: Date = new D
   }
   
   // Filtrer les tâches qui ont une date de création
-  const tasksWithCreationDate = tasks.filter(task => 
-    task.completionHistory.length > 0
-  );
+  const tasksWithCreationDate = tasks.filter(task => {
+    // Utiliser la date de création si elle existe, sinon utiliser la première entrée de l'historique
+    return task.createdAt || (task.completionHistory.length > 0);
+  });
   
   if (tasksWithCreationDate.length === 0) {
     return 0;
@@ -23,8 +24,8 @@ export function calculateTaskAgeIndex(tasks: Task[], referenceDate: Date = new D
   
   // Calculer l'âge total de toutes les tâches
   const totalAgeInDays = tasksWithCreationDate.reduce((sum, task) => {
-    // Utiliser la date de la première entrée dans l'historique comme date de création
-    const creationDate = task.completionHistory[0].date;
+    // Utiliser la date de création si elle existe, sinon utiliser la première entrée de l'historique
+    const creationDate = task.createdAt || task.completionHistory[0].date;
     const ageInMs = referenceDate.getTime() - creationDate.getTime();
     const ageInDays = ageInMs / (1000 * 60 * 60 * 24);
     return sum + Math.max(0, ageInDays); // Ne pas compter les âges négatifs

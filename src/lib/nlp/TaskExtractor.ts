@@ -3,6 +3,9 @@
  * Transforme le texte brut en tâches structurées avec une approche state-of-the-art
  */
 import { LanguageDetector } from '@/lib/nlp/LanguageDetector';
+import { RawTaskWithContract, createTaskWithContract } from '@/lib/nlp/NLPContract';
+import { cohesionAnalyzer } from '@/lib/nlp/CohesionAnalyzer';
+import { linguisticFatigueDetector } from '@/lib/nlp/LinguisticFatigueDetector';
 
 // Interface pour les tâches brutes extraites
 export interface RawTask {
@@ -141,7 +144,13 @@ interface EffortResult {
  * @param lang La langue du texte
  * @returns Liste de tâches brutes avec scores de confiance
  */
-export function extractTasks(text: string, lang: 'fr' | 'en' | 'es'): RawTask[] {
+export function extractTasks(text: string, lang: 'fr' | 'en' | 'es'): RawTaskWithContract[] {
+  // Détecter la fatigue linguistique
+  const fatigueState = linguisticFatigueDetector.detectFatigue(text);
+  
+  // Ajuster les seuils selon la fatigue
+  const confidenceThreshold = fatigueState.processingThreshold;
+  
   // Normaliser le texte
   const normalizedText = text.trim();
   if (!normalizedText) return [];
@@ -157,8 +166,8 @@ export function extractTasks(text: string, lang: 'fr' | 'en' | 'es'): RawTask[] 
     
     // Pour chaque verbe, créer une tâche
     for (const [verb, score] of potentialVerbs) {
-      if (score > 0.6) { // Seuil de confiance minimum
-        const task: RawTask = {
+      if (score > confidenceThreshold) { // Seuil de confiance ajusté selon la fatigue
+        const task = createTaskWithContract({
           id: generateId(),
           action: verb,
           object: extractObject(sentence, verb),
@@ -168,7 +177,14 @@ export function extractTasks(text: string, lang: 'fr' | 'en' | 'es'): RawTask[] 
           sentence: sentence,
           confidence: score,
           entities: extractEntities(sentence, lang)
-        };
+        }, {
+          inferred: false,
+          decided: false,
+          corrected: false,
+          extracted: true,
+          classified: false,
+          confidence: score
+        });
         
         tasks.push(task);
       }

@@ -2,7 +2,7 @@
  * Classificateur de tâches avec mmBERT-small
  * Classification énergie/effort/sentiment avec modèle quantifié INT8
  */
-import { RawTask } from './TaskExtractor';
+import { RawTaskWithContract } from '@/lib/nlp/NLPContract';
 
 // Définitions des classes multilingues
 const CLASS_DEFINITIONS = {
@@ -104,7 +104,7 @@ export async function initClassifier() {
 /**
  * Classification complète d'une tâche
  */
-export async function classifyTask(rawTask: RawTask): Promise<TaskClassification> {
+export async function classifyTask(rawTask: RawTaskWithContract): Promise<TaskClassification> {
   const classifier = await initClassifier();
   
   // 1. Classification énergie

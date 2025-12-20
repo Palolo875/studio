@@ -9,6 +9,7 @@ import { validatePlaylist } from './invariantChecker';
 import { calculateTaskAgeIndex, getDetoxMode, applyDetoxActions } from './taskAgeIndex';
 import { applyFallback } from './selectorFallback';
 import { analyzeDeadlines, determineTriageMode, calculateOptimizedLoad, generateDeadlineSuggestions } from './deadlineManager';
+import { checkTimeConstraints } from './timeConstraintManager';
 
 /**
  * Filtre les tâches éligibles en fonction de leur deadline et statut
@@ -39,6 +40,22 @@ export function filterEligibleTasks(tasks: Task[], currentDate: Date): Task[] {
     
     return false;
   });
+}
+
+/**
+ * Filtre les tâches en fonction de la stabilité énergétique
+ * @param tasks Tâches à filtrer
+ * @param energyState État d'énergie de l'utilisateur
+ * @returns Tâches filtrées
+ */
+export function filterByStability(tasks: Task[], energyState: EnergyState): Task[] {
+  // Si l'énergie est stable, toutes les tâches sont acceptées
+  if (energyState.stability === 'stable') {
+    return tasks;
+  }
+  
+  // Si l'énergie est volatile, exclure les tâches à effort élevé
+  return tasks.filter(task => task.effort !== 'high');
 }
 
 /**
@@ -142,7 +159,7 @@ export function generateTaskPlaylist(
   }
 
   // 2. GESTION DES POOLS AVEC RÈGLE D'OR
-  const poolManager = updateTaskPools(tasks, createTaskPoolManager(currentDate));
+  let poolManager = updateTaskPools(tasks, createTaskPoolManager(currentDate));
 
   // 3. DETOX : calcul TAI + application des actions aux pools
   const tai = calculateTaskAgeIndex(tasks, currentDate);
@@ -151,12 +168,18 @@ export function generateTaskPlaylist(
 
   if (detoxMode === 'BLOCK' || detoxMode === 'SUGGESTION') {
     // Geler SOON : retirer du pool SOON
-    poolManager.soon = poolManager.soon.filter(
-      t => !detoxActions.frozenSoonTasks.some(f => f.id === t.id)
-    );
+    poolManager = {
+      ...poolManager,
+      soon: poolManager.soon.filter(
+        t => !detoxActions.frozenSoonTasks.some(f => f.id === t.id)
+      )
+    };
     // Limiter TODAY à 2 tâches en mode BLOCK
     if (detoxMode === 'BLOCK') {
-      poolManager.today = poolManager.today.slice(0, 2);
+      poolManager = {
+        ...poolManager,
+        today: poolManager.today.slice(0, 2)
+      };
     }
   }
 
@@ -166,20 +189,26 @@ export function generateTaskPlaylist(
   // 5. FILTRAGE PAR DEADLINES/PROGRAMMATION
   const timeEligibleTasks = filterEligibleTasks(eligibleTasks, currentDate);
 
-  // 6. CALCUL DES SCORES
-  const taskScores: TaskScore[] = timeEligibleTasks.map(task => 
+  // 6. FILTRAGE PAR CONTRAINTES HORAIRE
+  const constraintFilteredTasks = checkTimeConstraints(timeEligibleTasks, currentDate);
+
+  // 7. FILTRAGE PAR STABILITÉ ÉNERGÉTIQUE
+  const stabilityFilteredTasks = filterByStability(constraintFilteredTasks, userEnergy);
+
+  // 8. CALCUL DES SCORES
+  const taskScores: TaskScore[] = stabilityFilteredTasks.map(task => 
     calculateTaskScore(task, userEnergy, [])
   );
   
-  // 7. TRI PAR SCORE DÉCROISSANT
+  // 9. TRI PAR SCORE DÉCROISSANT
   const sortedTaskScores = sortTasksByScore(taskScores);
   
-  // 8. CONSTRUCTION DE LA PLAYLIST
+  // 10. CONSTRUCTION DE LA PLAYLIST
   const playlist: Task[] = [];
   let remainingTasks = [...sortedTaskScores];
   
   // Injecter une tâche quick win si possible
-  const quickWin = injectQuickWin(timeEligibleTasks, playlist);
+  const quickWin = injectQuickWin(stabilityFilteredTasks, playlist);
   if (quickWin) {
     playlist.push(quickWin);
     // Retirer la quick win des tâches restantes
@@ -197,12 +226,12 @@ export function generateTaskPlaylist(
     playlist.push(taskScore.task);
   }
   
-  // 9. VÉRIFICATION DE LA DIVERSITÉ
+  // 11. VÉRIFICATION DE LA DIVERSITÉ
   while (!checkDiversity(playlist) && playlist.length > 1) {
     playlist.pop();
   }
 
-  // 10. CONSTRUCTION DE LA PLAYLIST FINALE AVEC EXPLICATIONS STRUCTURÉES
+  // 12. CONSTRUCTION DE LA PLAYLIST FINALE AVEC EXPLICATIONS STRUCTURÉES
   const explanationParts: string[] = [];
   
   // Invariants vérifiés
@@ -254,7 +283,7 @@ export function generateTaskPlaylist(
     warnings: playlist.length === 0 ? ["Aucune tâche éligible trouvée"] : undefined
   };
 
-  // 11. VALIDATION DES INVARIANTS
+  // 13. VALIDATION DES INVARIANTS
   const validation = validatePlaylist(builtPlaylist, userEnergy.level, sessionCapacity);
   if ('error' in validation) {
     return applyFallback(tasks, userEnergy, validation.invalidInvariants.join(', '));
