@@ -8,6 +8,9 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { generateMagicalPlaylist, type TaskScore } from "@/lib/magical-playlist-algorithm";
 
+// Import du cerveau décisionnel Phase 3
+import { decideSessionWithTrace, BrainInput } from "@/lib/taskEngine";
+
 const generatePlaylistSchema = z.object({
   goals: z.string().min(3, "Goals must be at least 3 characters long."),
   priorities: z.string().min(3, "Priorities must be at least 3 characters long."),
@@ -162,18 +165,44 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
       }
     ];
 
-    // Générer la playlist magique
-    const magicalPlaylist: TaskScore[] = generateMagicalPlaylist(sampleTasks, {
-      energyLevel,
-      intention,
-      currentTime: new Date()
-    });
+    // Créer les entrées du cerveau décisionnel
+    const brainInput: BrainInput = {
+      tasks: sampleTasks,
+      userState: {
+        energy: energyLevel,
+        stability: "stable", // Valeur par défaut, pourrait être dynamique
+        linguisticFatigue: false // Valeur par défaut
+      },
+      temporal: {
+        currentTime: new Date(),
+        availableTime: 120, // 2 heures par défaut
+        timeOfDay: "morning" // Valeur par défaut, pourrait être dynamique
+      },
+      budget: {
+        daily: {
+          maxLoad: 100,
+          usedLoad: 30,
+          remaining: 70,
+          lockThreshold: 20
+        },
+        session: {
+          maxDuration: 120,
+          maxTasks: 5,
+          maxComplexity: 10
+        }
+      },
+      constraints: [],
+      history: []
+    };
 
-    // Convertir les résultats en tâches avec les raisons
-    const tasks: Task[] = magicalPlaylist.map((scoredTask: TaskScore, index: number) => ({
-      ...scoredTask.task,
-      id: `magical-${scoredTask.task.id}-${Date.now()}-${index}`,
-      selectionReason: scoredTask.reason
+    // Utiliser le cerveau décisionnel Phase 3
+    const brainDecision = decideSessionWithTrace(brainInput);
+
+    // Convertir les résultats en tâches
+    const tasks: Task[] = brainDecision.outputs.session.allowedTasks.map((task, index) => ({
+      ...task,
+      id: `brain-${task.id}-${Date.now()}-${index}`,
+      selectionReason: `Sélectionnée par le cerveau décisionnel`
     }));
 
     return {
