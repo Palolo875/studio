@@ -24,3 +24,28 @@ export * from './decisionLogger';
 export * from './decisionExplanation';
 export * from './userChallenge';
 export * from './brainEngine';
+
+// Phase 3.5 - Sécurité cognitive
+export * from './cognitiveSecurity';
+export * from './cognitiveProtection';
+export * from './userControl';
+
+// Phase 3.6 - Productivité tangible
+export * from './taskOutcome';
+export * from './productivityMetrics';
+
+// Phase 3.7 - Apprentissage contrôlé
+export * from './passiveLearning';
+export * from './learnApplySeparation';
+export * from './explicitFeedback';
+
+// Phase 3.8 - Anti-abandon
+export * from './abandonmentDetection';
+export * from './zeroPunishmentReturn';
+export * from './immediateReentry';
+
+// Phase 3.9 - Sécurité comportementale
+export * from './abuseDetection';
+export * from './cognitiveCost';
+export * from './delegationDetection';
+export * from './softLimitation';
