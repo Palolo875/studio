@@ -80,35 +80,43 @@ export class AbuseProtectionManager {
   }
   
   // Gérer un abus potentiel
-  private handlePotentialAbuse(): void {
+  private handlePotentialAbuse(userCognitiveStatus: 'NORMAL' | 'DEPLETED' = 'NORMAL'): void {
     console.log("POTENTIAL_ABUSE_DETECTED");
     
-    // Afficher un message bienveillant à l'utilisateur
-    this.showImprovedMessage({
-      tone: "concern",  // Pas accusateur
-      title: "Pattern détecté",
-      body: `J'ai remarqué que tu forces la plupart des décisions depuis 2 semaines.
+    // Principe de Protection Asymétrique
+    if (userCognitiveStatus === 'DEPLETED') {
+      // En état de fatigue cognitive : protection automatique + notification simple
+      this.applyProtectiveChanges();
+      this.showSimpleNotification("Mode protecteur activé. Reposez-vous.");
+    } else {
+      // En état normal : consentement explicite
+      // Afficher un message bienveillant à l'utilisateur
+      this.showBenevolentMessage({
+        tone: "concern",  // Pas accusateur
+        title: "Pattern détecté",
+        body: `J'ai remarqué que tu forces beaucoup de décisions depuis 2 semaines.
 
-Deux possibilités :
+**Deux possibilités :**
 1. Les règles par défaut ne te correspondent pas
 2. Tu traverses une période exceptionnelle
 
-Que préfères-tu ?`,
-      actions: [
-        {
-          label: "Ajuster les règles de base",
-          action: () => this.openParametersWizard()
-        },
-        {
-          label: "Garder tel quel (période temporaire)",
-          action: () => this.acknowledgeTemporaryPeriod()
-        },
-        {
-          label: "Passer en mode manuel",
-          action: () => this.switchToManualMode()
-        }
-      ]
-    });
+Qu'est-ce qui correspond le mieux ?`,
+        actions: [
+          {
+            label: "Ajuster les règles",
+            action: () => this.openParametersWizard()
+          },
+          {
+            label: "Période temporaire",
+            action: () => this.acknowledgeTemporaryPeriod()
+          },
+          {
+            label: "Passer en mode manuel",
+            action: () => this.switchToManualMode()
+          }
+        ]
+      });
+    }
     
     // Geler les adaptations si configuré
     if (this.config.adaptationFreeze) {
@@ -121,8 +129,8 @@ Que préfères-tu ?`,
     }
   }
   
-  // Afficher un message amélioré à l'utilisateur
-  private showImprovedMessage(message: {
+  // Afficher un message bienveillant à l'utilisateur
+  private showBenevolentMessage(message: {
     tone: string;
     title: string;
     body: string;
@@ -135,6 +143,20 @@ Que préfères-tu ?`,
       console.log(`${index + 1}. ${action.label}`);
     });
     // Dans une implémentation réelle, cela afficherait une notification dans l'UI avec des boutons d'action
+  }
+  
+  // Appliquer les changements protecteurs automatiquement
+  private applyProtectiveChanges(): void {
+    console.log("PROTECTIVE_CHANGES_APPLIED: Mode protecteur activé");
+    // Dans une implémentation réelle, cela appliquerait des changements
+    // spécifiques pour protéger l'utilisateur (réduction de charge, etc.)
+  }
+  
+  // Afficher une notification simple en mode protecteur
+  private showSimpleNotification(message: string): void {
+    console.log(`NOTIFICATION: ${message}`);
+    // Dans une implémentation réelle, cela afficherait une notification
+    // simple dans l'interface utilisateur
   }
   
   // Geler les adaptations

@@ -82,63 +82,85 @@ export class LifeChangeDetector {
   
 // Fonction pour comparer les modèles de comportement
 export function compareBehaviorPatterns(
-  currentUserData: UserBehavior,
-  baselineData: HistoricalBehaviorData
+  current: UserBehavior,
+  baseline: HistoricalBehaviorData
 ): number {
+  // 1. Comparer la distribution des types de tâches avec la divergence de Kullback-Leibler
+  const taskShift = klDivergence(
+    current.taskTypesDistribution || new Map(),
+    new Map(Object.entries(baseline.baselineTaskTypes || {}))
+  );
   
-  // 1. Comparer la distribution des types de tâches
-  let taskTypeSimilarity = 1.0;
-  if (currentUserData.taskTypesDistribution && baselineData.baselineTaskTypes) {
-    taskTypeSimilarity = calculateStringMapSimilarity(
-      currentUserData.taskTypesDistribution,
-      new Map(Object.entries(baselineData.baselineTaskTypes))
-    );
-  }
+  // 2. Comparer les patterns d'énergie avec la corrélation inverse
+  const energyShift = 1 - correlation(
+    current.energyPatterns || [],
+    baseline.baselineEnergyLevels || []
+  );
   
-  // 2. Comparer les patterns d'énergie
-  let energyPatternSimilarity = 1.0;
-  if (currentUserData.energyPatterns && baselineData.baselineEnergyLevels) {
-    energyPatternSimilarity = calculateArraySimilarity(
-      currentUserData.energyPatterns,
-      baselineData.baselineEnergyLevels
-    );
-  }
-  
-  // 3. Comparer les heures préférées
-  let scheduleSimilarity = 1.0;
-  if (currentUserData.scheduledTimes && baselineData.baselineDailySchedule) {
-    scheduleSimilarity = calculateArraySimilarity(
-      currentUserData.scheduledTimes,
-      baselineData.baselineDailySchedule
-    );
-  }
+  // 3. Comparer les horaires préférés
+  const scheduleShift = 1 - calculateArraySimilarity(
+    current.scheduledTimes || [],
+    baseline.baselineDailySchedule || []
+  );
   
   // 4. Comparer les taux de complétion
-  let completionRateSimilarity = 1.0;
-  if (currentUserData.completionRates && baselineData.baselineTaskCompletionRate) {
-    // Convertir le taux de complétion en tableau pour la comparaison
-    const currentCompletionArray = [currentUserData.completionRates.reduce((a, b) => a + b, 0) / currentUserData.completionRates.length];
-    const baselineCompletionArray = [baselineData.baselineTaskCompletionRate];
-    completionRateSimilarity = calculateArraySimilarity(currentCompletionArray, baselineCompletionArray);
+  const completionShift = Math.abs(
+    (current.completionRates?.reduce((a, b) => a + b, 0) / (current.completionRates?.length || 1) || 0) - 
+    (baseline.baselineTaskCompletionRate || 0)
+  );
+  
+  // Pondérer les différentes mesures de changement (0-1)
+  return 0.3 * normalize(taskShift, 0, 5) + 
+         0.3 * normalize(energyShift, 0, 1) + 
+         0.2 * normalize(scheduleShift, 0, 1) + 
+         0.2 * normalize(completionShift, 0, 1);
+}
+
+// Fonction pour calculer la divergence de Kullback-Leibler
+function klDivergence(p: Map<string, number>, q: Map<string, number>): number {
+  let sum = 0;
+  const keys = new Set([...p.keys(), ...q.keys()]);
+  
+  for (const key of keys) {
+    const pVal = p.get(key) || 0;
+    const qVal = q.get(key) || 0;
+    
+    // Ajouter un epsilon pour éviter log(0)
+    const eps = 1e-10;
+    if (pVal > 0) {
+      sum += pVal * Math.log((pVal + eps) / (qVal + eps));
+    }
   }
   
-  // Pondérer les différentes similarités
-  const weights = {
-    taskTypes: 0.3,
-    energyPatterns: 0.3,
-    schedule: 0.2,
-    completion: 0.2
-  };
+  return sum;
+}
+
+// Fonction pour calculer la corrélation de Pearson
+function correlation(x: number[], y: number[]): number {
+  if (x.length !== y.length || x.length === 0) return 0;
   
-  const weightedSimilarity =
-    (taskTypeSimilarity * weights.taskTypes) +
-    (energyPatternSimilarity * weights.energyPatterns) +
-    (scheduleSimilarity * weights.schedule) +
-    (completionRateSimilarity * weights.completion);
+  const meanX = x.reduce((a, b) => a + b, 0) / x.length;
+  const meanY = y.reduce((a, b) => a + b, 0) / y.length;
   
-  // Retourner l'inverse de la similarité comme mesure de changement
-  // (plus la similarité est faible, plus le changement est important)
-  return 1 - weightedSimilarity;
+  let numerator = 0;
+  let denomX = 0;
+  let denomY = 0;
+  
+  for (let i = 0; i < x.length; i++) {
+    numerator += (x[i] - meanX) * (y[i] - meanY);
+    denomX += (x[i] - meanX) ** 2;
+    denomY += (y[i] - meanY) ** 2;
+  }
+  
+  if (denomX === 0 || denomY === 0) return 0;
+  
+  return numerator / Math.sqrt(denomX * denomY);
+}
+
+// Fonction pour normaliser une valeur entre 0 et 1
+function normalize(value: number, min: number, max: number): number {
+  if (max === min) return 0;
+  return Math.max(0, Math.min(1, (value - min) / (max - min)));
 }
   
   // Calculer la similarité entre deux tableaux

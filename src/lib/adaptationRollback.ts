@@ -113,7 +113,7 @@ export class AdaptationRollbackManager {
     }
   }
   
-  // Appliquer les paramètres avec validation (simulation)
+  // Appliquer les paramètres avec validation
   async applyParametersWithValidation(deltas: InvertedDelta[]): Promise<void> {
     // Dans une implémentation réelle, cela appliquerait les changements aux paramètres du système
     // avec des validations appropriées
@@ -122,10 +122,45 @@ export class AdaptationRollbackManager {
     // Simulation d'un délai asynchrone
     await new Promise(resolve => setTimeout(resolve, 100));
     
-    // Simulation de validation
+    // Validation des paramètres
     for (const delta of deltas) {
+      // Vérifier que le paramètre a un nom valide
+      if (!delta.parameterName || typeof delta.parameterName !== 'string') {
+        throw new Error(`Invalid parameter name: ${delta.parameterName}`);
+      }
+      
+      // Vérifier que la nouvelle valeur n'est pas undefined
       if (delta.newValue === undefined) {
         throw new Error(`Invalid value for parameter ${delta.parameterName}`);
+      }
+      
+      // Vérifier que l'ancienne valeur n'est pas undefined
+      if (delta.oldValue === undefined) {
+        throw new Error(`Invalid old value for parameter ${delta.parameterName}`);
+      }
+      
+      // Validation spécifique selon le nom du paramètre
+      switch (delta.parameterName) {
+        case 'maxTasks':
+          if (typeof delta.newValue !== 'number' || delta.newValue < 1 || delta.newValue > 100) {
+            throw new Error(`Invalid maxTasks value: ${delta.newValue}. Must be between 1 and 100.`);
+          }
+          break;
+        case 'dailyLoad':
+          if (typeof delta.newValue !== 'number' || delta.newValue < 0 || delta.newValue > 5) {
+            throw new Error(`Invalid dailyLoad value: ${delta.newValue}. Must be between 0 and 5.`);
+          }
+          break;
+        case 'recoveryTime':
+          if (typeof delta.newValue !== 'number' || delta.newValue < 1 || delta.newValue > 24) {
+            throw new Error(`Invalid recoveryTime value: ${delta.newValue}. Must be between 1 and 24 hours.`);
+          }
+          break;
+        default:
+          // Pour d'autres paramètres, juste vérifier qu'ils ne sont pas null
+          if (delta.newValue === null) {
+            throw new Error(`Null value not allowed for parameter ${delta.parameterName}`);
+          }
       }
     }
   }

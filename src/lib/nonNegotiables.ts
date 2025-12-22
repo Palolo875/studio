@@ -1,39 +1,80 @@
 // Non-Negotiables - Lignes rouges non-négociables du système
 // Implémentation des limites de sécurité du système
 
-// Constantes pour les lignes rouges non-négociables avec justifications
-export const NON_NEGOTIABLES = {
+// Configuration de base pour les lignes rouges non-négociables avec justifications
+export const BASE_NON_NEGOTIABLES = {
   maxDailyLoad: {
     value: 1.3,
     unit: "× charge soutenable",
-    rationale: "Cognitive Load Theory (Sweller) - surcharge >30% = dégradation",
-    source: "https://doi.org/10.1007/BF02504799",
+    rationale: "Surcharge >30% = dégradation cognitive mesurable",
+    source: "Cognitive Load Theory (Sweller, 1988)",
+    url: "https://doi.org/10.1007/BF02504799",
+    adjustable: false
+  },
+  
+  burnoutSignalsLimit: {
+    value: 3,
+    unit: "signaux cumulés",
+    rationale: "3+ dimensions = burnout clinique",
+    source: "Maslach Burnout Inventory (MBI)",
+    url: "https://doi.org/10.1002/job.4030020205",
     adjustable: false
   },
   
   minRecoveryTime: {
     value: 8,
-    unit: "hours",
-    rationale: "Sleep Foundation - minimum sommeil adulte",
-    source: "https://www.sleepfoundation.org/how-sleep-works/how-much-sleep-do-we-really-need",
-    adjustable: true,  // User peut ajuster 7-9h
+    unit: "heures",
+    rationale: "Minimum sommeil adulte recommandé",
+    source: "Sleep Foundation",
+    url: "https://www.sleepfoundation.org/how-sleep-works/how-much-sleep-do-we-really-need",
+    adjustable: true,  // User peut choisir 7-9h
     range: [7, 9]
-  },
-  
-  burnoutSignalsLimit: {
-    value: 3,
-    unit: "signals cumulés",
-    rationale: "Maslach Burnout Inventory - 3+ dimensions = burnout clinique",
-    source: "https://doi.org/10.1002/job.4030020205",
-    adjustable: false
   },
   
   ethicalRefusal: {
     value: true,
     rationale: "Système refuse d'aider à l'auto-destruction",
+    source: "Principes éthiques de l'IA",
+    url: "https://doi.org/10.1038/s4159 machine-intelligence-021-00023-3",
     adjustable: false
   }
 };
+
+// Facteurs de contexte pour les seuils dynamiques
+export interface ContextFactors {
+  lifeEventImpact: number; // 0-1, impact d'événements de vie (maladie, vacances, etc.)
+  projectIntensity: number; // 0-1, intensité du projet actuel
+  seasonalVariation: number; // 0-1, variation saisonnière
+  personalBaseline: number; // 0-1, baseline personnel historique
+}
+
+// Fonction pour calculer les seuils dynamiques
+export function calculateDynamicThresholds(baseValues: typeof BASE_NON_NEGOTIABLES, context: ContextFactors) {
+  // Ajuster maxDailyLoad selon le contexte
+  const contextualMaxDailyLoad = baseValues.maxDailyLoad.value * (1 + 0.5 * context.lifeEventImpact + 0.3 * context.projectIntensity);
+  
+  // Ajuster burnoutSignalsLimit selon le contexte
+  const contextualBurnoutLimit = Math.max(2, baseValues.burnoutSignalsLimit.value - Math.floor(1 * context.seasonalVariation));
+  
+  // Ajuster minRecoveryTime selon le contexte
+  const contextualMinRecovery = Math.max(6, baseValues.minRecoveryTime.value - 1 * context.personalBaseline);
+  
+  return {
+    maxDailyLoad: {
+      ...baseValues.maxDailyLoad,
+      value: contextualMaxDailyLoad
+    },
+    burnoutSignalsLimit: {
+      ...baseValues.burnoutSignalsLimit,
+      value: contextualBurnoutLimit
+    },
+    minRecoveryTime: {
+      ...baseValues.minRecoveryTime,
+      value: contextualMinRecovery
+    },
+    ethicalRefusal: baseValues.ethicalRefusal
+  };
+}
 
 // Interface pour les signaux de burnout
 export interface BurnoutSignals {
@@ -82,8 +123,15 @@ export interface BurnoutSignals {
 
   // Classe pour gérer les lignes rouges non-négociables
   export class NonNegotiablesManager {
-    private nonNegotiables = NON_NEGOTIABLES;
+    private baseNonNegotiables = BASE_NON_NEGOTIABLES;
+    private nonNegotiables = BASE_NON_NEGOTIABLES;
     private burnoutSignals: BurnoutSignals;
+    private contextFactors: ContextFactors = {
+      lifeEventImpact: 0,
+      projectIntensity: 0,
+      seasonalVariation: 0,
+      personalBaseline: 0
+    };
     
     constructor() {
       // Initialiser les signaux de burnout
@@ -127,11 +175,25 @@ export interface BurnoutSignals {
     }
     
     // Mettre à jour les lignes rouges non-négociables
-    updateNonNegotiables(newValues: Partial<typeof NON_NEGOTIABLES>) {
-      this.nonNegotiables = {
-        ...this.nonNegotiables,
+    updateNonNegotiables(newValues: Partial<typeof BASE_NON_NEGOTIABLES>) {
+      this.baseNonNegotiables = {
+        ...this.baseNonNegotiables,
         ...newValues
       };
+      // Recalculer les seuils dynamiques
+      this.recalculateDynamicThresholds();
+    }
+    
+    // Définir les facteurs de contexte
+    setContextFactors(context: ContextFactors) {
+      this.contextFactors = context;
+      // Recalculer les seuils dynamiques
+      this.recalculateDynamicThresholds();
+    }
+    
+    // Recalculer les seuils dynamiques
+    private recalculateDynamicThresholds() {
+      this.nonNegotiables = calculateDynamicThresholds(this.baseNonNegotiables, this.contextFactors);
     }
     
     // Obtenir les signaux de burnout
