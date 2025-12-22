@@ -8,7 +8,7 @@ import {Recommendations} from './recommendations';
 import {TaskList} from './task-list';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Input} from '@/components/ui/input';
-import {RefreshCw, Search, Siren, CalendarClock} from 'lucide-react';
+import {RefreshCw, Search, Siren, CalendarClock, Shield} from 'lucide-react';
 import {PlaylistGenerator} from './playlist-generator';
 import {Button} from '../ui/button';
 import {DailyGreeting} from './daily-greeting';
@@ -40,6 +40,7 @@ import { TimelineView } from './timeline-view';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { EnergyCheckIn } from './energy-check-in';
+import { GovernancePanel } from './governance-panel';
 
 type EnergyState =
   | 'energized'
@@ -437,6 +438,9 @@ export function DashboardClient() {
             </TabsContent>
           </Tabs>
 
+          {/* Panneau de gouvernance */}
+          <GovernancePanel />
+
           <AlertDialog open={showBonusCard} onOpenChange={setShowBonusCard}>
             <AlertDialogContent>
               <AlertDialogHeader>
@@ -492,13 +496,23 @@ export function DashboardClient() {
             </AlertDialogContent>
           </AlertDialog>
 
+          <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-20">
           <Button 
             onClick={() => setIsPanicModalOpen(true)}
-            className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-2xl z-20"
+            className="h-16 w-16 rounded-full shadow-2xl"
             size="icon"
           >
             <Siren className="h-8 w-8" />
           </Button>
+          
+          <Button 
+            onClick={() => console.log("Ouvrir le panneau de gouvernance")}
+            className="h-12 w-12 rounded-full shadow-2xl bg-purple-600 hover:bg-purple-700"
+            size="icon"
+          >
+            <Shield className="h-5 w-5" />
+          </Button>
+        </div>
 
           <Card className="hidden">
             <CardHeader>
