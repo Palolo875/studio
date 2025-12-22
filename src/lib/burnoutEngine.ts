@@ -17,33 +17,58 @@ export interface BurnoutDetectionResult {
 }
 
 // Fonction pour calculer la charge quotidienne
-export function calculateDailyLoad(sessions: Session[], date: Date): number {
-  // Filtrer les sessions pour la date donnée
-  const daySessions = sessions.filter(session => {
-    const sessionDate = new Date(session.timestamp);
-    return sessionDate.toDateString() === date.toDateString();
-  });
+export async function calculateDailyLoad(userId: string, date: Date): Promise<number> {
+  // Dans une implémentation réelle, cela viendrait de la base de données
+  // Pour l'instant, nous simulons l'accès à la base de données
   
-  if (daySessions.length === 0) return 0;
-  
-  // Calculer la charge totale pour la journée
-  const totalLoad = daySessions.reduce((sum, session) => {
-    // Simuler le budget consommé (dans une implémentation réelle, cela viendrait des données)
-    const budgetConsumed = session.completedTasks * 0.5; // Exemple arbitraire
-    const budgetAtStart = session.plannedTasks * 0.5; // Exemple arbitraire
+  try {
+    // Simuler la récupération des sessions pour la date donnée
+    // Dans une vraie implémentation, ce serait quelque chose comme :
+    // const daySessions = await db.sessions
+    //   .where('userId').equals(userId)
+    //   .and(session => {
+    //     const sessionDate = new Date(session.timestamp);
+    //     return sessionDate.toDateString() === date.toDateString();
+    //   })
+    //   .toArray();
     
-    if (budgetAtStart === 0) return sum;
-    return sum + (budgetConsumed / budgetAtStart);
-  }, 0);
-  
-  return totalLoad / daySessions.length; // Moyenne de la charge quotidienne
+    // Pour la simulation, créons quelques données de session
+    const daySessions = [
+      {
+        timestamp: date.getTime(),
+        completedTasks: 3,
+        plannedTasks: 5,
+        // Autres propriétés de session...
+      },
+      {
+        timestamp: date.getTime() + 3600000, // 1 heure plus tard
+        completedTasks: 2,
+        plannedTasks: 3,
+        // Autres propriétés de session...
+      }
+    ];
+    
+    if (daySessions.length === 0) return 0;
+    
+    // Calculer la charge totale pour la journée
+    const totalLoad = daySessions.reduce((sum, session) => {
+      // Simuler le budget consommé (dans une implémentation réelle, cela viendrait des données)
+      const budgetConsumed = session.completedTasks * 0.5; // Exemple arbitraire
+      const budgetAtStart = session.plannedTasks * 0.5; // Exemple arbitraire
+      
+      if (budgetAtStart === 0) return sum;
+      return sum + (budgetConsumed / budgetAtStart);
+    }, 0);
+    
+    return totalLoad / daySessions.length; // Moyenne de la charge quotidienne
+  } catch (error) {
+    console.error('Erreur lors du calcul de la charge quotidienne:', error);
+    return 0;
+  }
 }
 
 // Fonction pour détecter la surcharge chronique
-export async function detectChronicOverload(
-  sessions: Session[],
-  userId: string
-): Promise<boolean> {
+export async function detectChronicOverload(userId: string): Promise<boolean> {
   const now = new Date();
   let overloadCount = 0;
   
@@ -52,7 +77,7 @@ export async function detectChronicOverload(
     const date = new Date(now);
     date.setDate(date.getDate() - i);
     
-    const dailyLoad = calculateDailyLoad(sessions, date);
+    const dailyLoad = await calculateDailyLoad(userId, date);
     if (dailyLoad > 1.2) {
       overloadCount++;
     }
@@ -217,7 +242,7 @@ export async function calculateBurnoutScore(
   sleepData: { date: Date; hours: number }[]
 ): Promise<BurnoutDetectionResult> {
   // Détecter chaque signal
-  const chronicOverload = await detectChronicOverload(sessions, userId);
+  const chronicOverload = await detectChronicOverload(userId);
   const sleepDebt = await detectSleepDebt(userId, sleepData);
   const overrideAbuse = await detectOverrideAbuse(overrides, decisions);
   const completionCollapse = await detectCompletionCollapse(sessions);
