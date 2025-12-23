@@ -1,0 +1,88 @@
+/**
+ * Morning Ritual Dialog - Composant pour le rituel matinal
+ */
+'use client';
+
+import { useState } from 'react';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { EnergyCheckIn } from './energy-check-in';
+import { useToast } from '@/hooks/use-toast';
+
+export type EnergyState =
+    | 'energized'
+    | 'normal'
+    | 'slow'
+    | 'focused'
+    | 'creative'
+    | null;
+
+interface MorningRitualDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onComplete: (energyLevel: EnergyState, intention: string) => void;
+}
+
+export function MorningRitualDialog({
+    open,
+    onOpenChange,
+    onComplete,
+}: MorningRitualDialogProps) {
+    const [energyLevel, setEnergyLevel] = useState<EnergyState>(null);
+    const [intention, setIntention] = useState('');
+    const { toast } = useToast();
+
+    const handleSubmit = () => {
+        if (!energyLevel) {
+            toast({
+                variant: 'destructive',
+                title: 'Oups !',
+                description: "Veuillez sélectionner votre niveau d'énergie.",
+            });
+            return;
+        }
+
+        // Sauvegarder dans localStorage
+        const today = new Date().toISOString().split('T')[0];
+        localStorage.setItem('lastMorningCheckin', today);
+        localStorage.setItem('todayEnergyLevel', energyLevel);
+        if (intention) localStorage.setItem('todayIntention', intention);
+
+        onComplete(energyLevel, intention);
+        onOpenChange(false);
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-[480px] p-8">
+                <DialogHeader>
+                    <DialogTitle className="text-2xl text-center">
+                        Comment tu te sens ce matin ?
+                    </DialogTitle>
+                </DialogHeader>
+
+                <EnergyCheckIn
+                    onEnergyChange={setEnergyLevel}
+                    onIntentionChange={setIntention}
+                />
+
+                <DialogFooter className="!justify-center pt-4">
+                    <Button
+                        size="lg"
+                        className="h-12 rounded-full px-8"
+                        onClick={handleSubmit}
+                        disabled={!energyLevel}
+                    >
+                        Valider
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}

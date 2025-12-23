@@ -10,6 +10,32 @@ export interface EnergyState {
   stability: 'volatile' | 'stable';
   /** Confiance dans l'état d'énergie (0.0-1.0) */
   confidence?: number;
+  /** Date de dernière mise à jour */
+  lastUpdated?: Date;
+}
+
+/**
+ * Session de travail
+ */
+export interface Session {
+  /** Identifiant unique de la session */
+  id: string;
+  /** Timestamp de création */
+  timestamp: number;
+  /** Heure de début (ms) */
+  startTime: number;
+  /** Heure de fin (ms) - optionnel si session en cours */
+  endTime?: number;
+  /** Nombre de tâches planifiées */
+  plannedTasks: number;
+  /** Nombre de tâches complétées */
+  completedTasks: number;
+  /** État de la session */
+  state: 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'EXHAUSTED' | 'BLOCKED';
+  /** Tâches fixes (avec horaire) */
+  fixedTasks?: Task[];
+  /** Énergie de l'utilisateur au début */
+  energyAtStart?: EnergyState;
 }
 
 /**
