@@ -20,24 +20,24 @@ import { checkTimeConstraints } from './timeConstraintManager';
 export function filterEligibleTasks(tasks: Task[], currentDate: Date): Task[] {
   const today = new Date(currentDate);
   today.setHours(0, 0, 0, 0);
-  
+
   return tasks.filter(task => {
     // Tâches en retard (deadline passée et non terminées)
     if (task.deadline && task.deadline < today) {
       return true;
     }
-    
+
     // Tâches d'aujourd'hui
     if (task.deadline && task.deadline.getTime() === today.getTime()) {
       return true;
     }
-    
+
     // Tâches sans deadline ou avec deadline future
     if (!task.deadline || task.deadline > today) {
       // Vérifier si la tâche a été démarrée par l'utilisateur
       return task.completionHistory.length > 0 || task.status === 'active';
     }
-    
+
     return false;
   });
 }
@@ -53,7 +53,7 @@ export function filterByStability(tasks: Task[], energyState: EnergyState): Task
   if (energyState.stability === 'stable') {
     return tasks;
   }
-  
+
   // Si l'énergie est volatile, exclure les tâches à effort élevé
   return tasks.filter(task => task.effort !== 'high');
 }
@@ -71,22 +71,22 @@ export function injectQuickWin(
   maxQuickWins: number = 1
 ): Task | null {
   // Compter les quick wins déjà dans la playlist
-  const quickWinsInPlaylist = playlist.filter(task => 
+  const quickWinsInPlaylist = playlist.filter(task =>
     task.duration <= 15 && task.effort === 'low'
   ).length;
-  
+
   // Si on a déjà atteint le maximum, ne pas en ajouter d'autres
   if (quickWinsInPlaylist >= maxQuickWins) {
     return null;
   }
-  
+
   // Trouver une tâche quick win parmi les tâches disponibles
-  const quickWin = tasks.find(task => 
-    task.duration <= 15 && 
+  const quickWin = tasks.find(task =>
+    task.duration <= 15 &&
     task.effort === 'low' &&
     !playlist.includes(task)
   );
-  
+
   return quickWin || null;
 }
 
@@ -99,16 +99,16 @@ export function injectQuickWin(
 export function checkDiversity(playlist: Task[], maxSameCategory: number = 2): boolean {
   // Compter les tâches par catégorie
   const categoryCount: Record<string, number> = {};
-  
+
   for (const task of playlist) {
     categoryCount[task.category] = (categoryCount[task.category] || 0) + 1;
-    
+
     // Si une catégorie dépasse le maximum, la diversité n'est pas suffisante
     if (categoryCount[task.category] > maxSameCategory) {
       return false;
     }
   }
-  
+
   return true;
 }
 
@@ -196,17 +196,17 @@ export function generateTaskPlaylist(
   const stabilityFilteredTasks = filterByStability(constraintFilteredTasks, userEnergy);
 
   // 8. CALCUL DES SCORES
-  const taskScores: TaskScore[] = stabilityFilteredTasks.map(task => 
+  const taskScores: TaskScore[] = stabilityFilteredTasks.map(task =>
     calculateTaskScore(task, userEnergy, [])
   );
-  
+
   // 9. TRI PAR SCORE DÉCROISSANT
   const sortedTaskScores = sortTasksByScore(taskScores);
-  
+
   // 10. CONSTRUCTION DE LA PLAYLIST
   const playlist: Task[] = [];
   let remainingTasks = [...sortedTaskScores];
-  
+
   // Injecter une tâche quick win si possible
   const quickWin = injectQuickWin(stabilityFilteredTasks, playlist);
   if (quickWin) {
@@ -214,7 +214,7 @@ export function generateTaskPlaylist(
     // Retirer la quick win des tâches restantes
     remainingTasks = remainingTasks.filter(ts => ts.task.id !== quickWin.id);
   }
-  
+
   // Ajouter les autres tâches jusqu'à atteindre la limite
   for (const taskScore of remainingTasks) {
     if (playlist.length >= maxTasks) {
@@ -225,7 +225,7 @@ export function generateTaskPlaylist(
     }
     playlist.push(taskScore.task);
   }
-  
+
   // 11. VÉRIFICATION DE LA DIVERSITÉ
   while (!checkDiversity(playlist) && playlist.length > 1) {
     playlist.pop();
@@ -233,7 +233,7 @@ export function generateTaskPlaylist(
 
   // 12. CONSTRUCTION DE LA PLAYLIST FINALE AVEC EXPLICATIONS STRUCTURÉES
   const explanationParts: string[] = [];
-  
+
   // Invariants vérifiés
   const invariantsChecked = [
     `maxTasks=${playlist.length}/${maxTasks}`,
@@ -242,7 +242,7 @@ export function generateTaskPlaylist(
     `diversity=${checkDiversity(playlist) ? 'OK' : 'VIOLATED'}`
   ];
   explanationParts.push(`Invariants: ${invariantsChecked.join(', ')}`);
-  
+
   // TAI et DETOX
   explanationParts.push(`TAI=${tai.toFixed(2)} → DETOX=${detoxMode}`);
   if (detoxActions.frozenSoonTasks.length > 0) {
@@ -251,12 +251,12 @@ export function generateTaskPlaylist(
   if (detoxActions.limitedTodayTasks && detoxMode === 'BLOCK') {
     explanationParts.push(`TODAY limité à 2`);
   }
-  
+
   // Quick win
   if (quickWin) {
     explanationParts.push(`Quick win injecté: "${quickWin.title}"`);
   }
-  
+
   // Pools utilisés
   const poolStats = {
     overdue: poolManager.overdue.length,
@@ -268,7 +268,7 @@ export function generateTaskPlaylist(
     .filter(([_, count]) => count > 0)
     .map(([pool, count]) => `${pool.toUpperCase()}(${count})`);
   explanationParts.push(`Pools: ${activePools.join(' ')}`);
-  
+
   // Exclusions
   const excludedCount = tasks.length - playlist.length;
   if (excludedCount > 0) {
@@ -284,7 +284,7 @@ export function generateTaskPlaylist(
   };
 
   // 13. VALIDATION DES INVARIANTS
-  const validation = validatePlaylist(builtPlaylist, userEnergy.level, sessionCapacity);
+  const validation = validatePlaylist(builtPlaylist, userEnergy, sessionCapacity);
   if ('error' in validation) {
     return applyFallback(tasks, userEnergy, validation.invalidInvariants.join(', '));
   }
@@ -306,11 +306,11 @@ export function applyFallback(
 ): TaskPlaylist {
   // Fallback 1 : Si énergie trop basse, proposer une seule tâche facile + repos
   if (userEnergy.level === 'low') {
-    const easyTask = tasks.find(task => 
-      task.effort === 'low' && 
+    const easyTask = tasks.find(task =>
+      task.effort === 'low' &&
       task.duration <= 15
     );
-    
+
     if (easyTask) {
       return {
         tasks: [easyTask],
@@ -321,12 +321,12 @@ export function applyFallback(
       };
     }
   }
-  
+
   // Fallback 2 : Mode survie - tâches les plus urgentes
   const urgentTasks = tasks
     .filter(task => task.urgency === 'urgent')
     .slice(0, 3);
-    
+
   if (urgentTasks.length > 0) {
     return {
       tasks: urgentTasks,
@@ -336,7 +336,7 @@ export function applyFallback(
       warnings: [`Mode survie activé : ${reason}`]
     };
   }
-  
+
   // Fallback 3 : Playlist vide avec message d'explication
   return {
     tasks: [],

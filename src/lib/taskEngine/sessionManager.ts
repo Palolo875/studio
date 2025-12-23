@@ -9,7 +9,7 @@ import { applyFallback as applySelectorFallback } from './selectorFallback';
 /**
  * État d'une session
  */
-export type SessionState = 
+export type SessionState =
   | 'PLANNED'      // Session prévue
   | 'IN_PROGRESS'  // Session en cours
   | 'COMPLETED'    // Session terminée par l'utilisateur
@@ -127,17 +127,17 @@ export function createSession(
 ): Session {
   const start = timeStringToDate(timeSlot.startTime, baseDate);
   const end = timeStringToDate(timeSlot.endTime, baseDate);
-  
+
   // Calculer la durée en minutes
   const duration = (end.getTime() - start.getTime()) / (1000 * 60);
-  
+
   // Prédire l'énergie pour ce créneau
   const hour = parseInt(timeSlot.startTime.split(':')[0]);
   const predictedEnergy = predictEnergyState(hour);
-  
+
   // Calculer la capacité de session
   const sessionCapacity = calculateSessionCapacity(duration, predictedEnergy);
-  
+
   // Générer la playlist pour cette session
   const playlistResult = generateTaskPlaylist(
     tasks,
@@ -146,14 +146,14 @@ export function createSession(
     baseDate,
     { sessionDurationMinutes: duration }
   );
-  
+
   // Vérifier les invariants de la session
   const invariantResults = checkAllInvariants(
     playlistResult.tasks,
-    predictedEnergy.level,
+    predictedEnergy,
     sessionCapacity
   );
-  
+
   // Si les invariants ne sont pas respectés, appliquer un fallback
   if (!invariantResults.allValid) {
     const fallbackPlaylist = applySelectorFallback(
@@ -161,7 +161,7 @@ export function createSession(
       predictedEnergy,
       "Violations d'invariants détectées dans la session"
     );
-    
+
     return {
       id: `session_${start.getTime()}`,
       timeSlot: { start, end },
@@ -173,7 +173,7 @@ export function createSession(
       timeLabel: timeSlot.label
     };
   }
-  
+
   return {
     id: `session_${start.getTime()}`,
     timeSlot: { start, end },
@@ -243,9 +243,9 @@ export function startSession(session: Session): Session {
 export function isSessionValid(session: Session, maxLoad: number): boolean {
   const invariantResults = checkAllInvariants(
     session.playlist,
-    session.predictedEnergy.level,
+    session.predictedEnergy,
     maxLoad
   );
-  
+
   return invariantResults.allValid;
 }

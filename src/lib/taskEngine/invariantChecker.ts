@@ -1,8 +1,8 @@
 // Vérificateur d'invariants pour le Cerveau de KairuFlow - Phase 1
 
-import { Task, TaskPlaylist } from './types';
+import { Task, TaskPlaylist, EnergyState } from './types';
 import { isEnergyCompatible } from './energyModel';
-import { isCapacityExhausted } from './capacityCalculator';
+import { isCapacityExhausted, calculateTaskCost } from './capacityCalculator';
 
 /**
  * Vérifie l'invariant : jamais plus de 5 tâches
@@ -27,17 +27,19 @@ export function checkMinQuickWinInvariant(playlist: Task[]): boolean {
 }
 
 /**
- * Vérifie l'invariant : charge totale ≤ capacité énergétique du jour
+ * Vérifie l'invariant : charge totale (coût cognitif) ≤ capacité énergétique
  * @param playlist Playlist à vérifier
- * @param maxLoad Charge maximale autorisée
+ * @param maxLoad Charge maximale autorisée (coût cumulé)
+ * @param userEnergy État d'énergie de l'utilisateur
  * @returns Booléen indiquant si l'invariant est respecté
  */
 export function checkTotalLoadInvariant(
   playlist: Task[],
-  maxLoad: number
+  maxLoad: number,
+  userEnergy: EnergyState
 ): boolean {
-  // Calculer la charge totale de la playlist
-  const totalLoad = playlist.reduce((sum, task) => sum + task.duration, 0);
+  // Calculer la charge totale de la playlist en utilisant le coût cognitif pondéré
+  const totalLoad = playlist.reduce((sum, task) => sum + calculateTaskCost(task, userEnergy), 0);
   return totalLoad <= maxLoad;
 }
 
@@ -55,12 +57,12 @@ export function checkEnergyMismatchInvariant(
   if (userEnergyLevel === 'high') {
     return true;
   }
-  
+
   // Si l'énergie est moyenne, seules les tâches légères et moyennes sont autorisées
   if (userEnergyLevel === 'medium') {
     return playlist.every(task => task.effort === 'low' || task.effort === 'medium');
   }
-  
+
   // Si l'énergie est faible, seules les tâches légères sont autorisées
   return playlist.every(task => task.effort === 'low');
 }
@@ -74,15 +76,15 @@ export function checkCompletionRateInvariant(playlist: Task[]): boolean {
   if (playlist.length === 0) {
     return true; // Une playlist vide respecte l'invariant
   }
-  
+
   // Compter combien de tâches ont un historique de complétion
   const tasksWithHistory = playlist.filter(task => task.completionHistory.length > 0);
-  
+
   if (tasksWithHistory.length === 0) {
     // Si aucune tâche n'a d'historique, on considère qu'elle est terminable
     return true;
   }
-  
+
   // Calculer le taux de complétion moyen
   const completionRates = tasksWithHistory.map(task => {
     const completedCount = task.completionHistory.length;
@@ -90,9 +92,9 @@ export function checkCompletionRateInvariant(playlist: Task[]): boolean {
     const proposedCount = Math.max(1, completedCount);
     return completedCount / proposedCount;
   });
-  
+
   const averageCompletionRate = completionRates.reduce((sum, rate) => sum + rate, 0) / completionRates.length;
-  
+
   // L'invariant est respecté si le taux de complétion moyen est d'au moins 70%
   return averageCompletionRate >= 0.7;
 }
@@ -100,13 +102,13 @@ export function checkCompletionRateInvariant(playlist: Task[]): boolean {
 /**
  * Vérifie tous les invariants absolus
  * @param playlist Playlist à vérifier
- * @param userEnergyLevel Niveau d'énergie de l'utilisateur
+ * @param userEnergy État d'énergie de l'utilisateur
  * @param maxLoad Charge maximale autorisée
  * @returns Objet contenant le résultat de chaque invariant
  */
 export function checkAllInvariants(
   playlist: Task[],
-  userEnergyLevel: 'low' | 'medium' | 'high',
+  userEnergy: EnergyState,
   maxLoad: number
 ): {
   maxTasks: boolean;
@@ -118,13 +120,13 @@ export function checkAllInvariants(
 } {
   const maxTasks = checkMaxTasksInvariant(playlist);
   const minQuickWin = checkMinQuickWinInvariant(playlist);
-  const totalLoad = checkTotalLoadInvariant(playlist, maxLoad);
-  const energyMismatch = checkEnergyMismatchInvariant(playlist, userEnergyLevel);
+  const totalLoad = checkTotalLoadInvariant(playlist, maxLoad, userEnergy);
+  const energyMismatch = checkEnergyMismatchInvariant(playlist, userEnergy.level);
   const completionRate = checkCompletionRateInvariant(playlist);
-  
+
   // Tous les invariants doivent être respectés
   const allValid = maxTasks && minQuickWin && totalLoad && energyMismatch && completionRate;
-  
+
   return {
     maxTasks,
     minQuickWin,
@@ -144,39 +146,39 @@ export function checkAllInvariants(
  */
 export function validatePlaylist(
   playlist: TaskPlaylist,
-  userEnergyLevel: 'low' | 'medium' | 'high',
+  userEnergy: EnergyState,
   maxLoad: number
 ): TaskPlaylist | { error: string; invalidInvariants: string[] } {
-  const invariantResults = checkAllInvariants(playlist.tasks, userEnergyLevel, maxLoad);
-  
+  const invariantResults = checkAllInvariants(playlist.tasks, userEnergy, maxLoad);
+
   // Si tous les invariants sont respectés, retourner la playlist
   if (invariantResults.allValid) {
     return playlist;
   }
-  
+
   // Identifier les invariants non respectés
   const invalidInvariants: string[] = [];
-  
+
   if (!invariantResults.maxTasks) {
     invalidInvariants.push("Nombre maximum de tâches dépassé");
   }
-  
+
   if (!invariantResults.minQuickWin) {
     invalidInvariants.push("Aucune tâche quick win (<15 min) trouvée");
   }
-  
+
   if (!invariantResults.totalLoad) {
     invalidInvariants.push("Charge totale supérieure à la capacité énergétique");
   }
-  
+
   if (!invariantResults.energyMismatch) {
     invalidInvariants.push("Tâche incompatible avec le niveau d'énergie utilisateur");
   }
-  
+
   if (!invariantResults.completionRate) {
     invalidInvariants.push("Taux de complétion inférieur à 70%");
   }
-  
+
   // Retourner une erreur avec les invariants non respectés
   return {
     error: "Violations d'invariants détectées",

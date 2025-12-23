@@ -1,6 +1,6 @@
 // Tests pour le vérificateur d'invariants du Cerveau de KairuFlow - Phase 1
 
-import { 
+import {
   checkMaxTasksInvariant,
   checkMinQuickWinInvariant,
   checkTotalLoadInvariant,
@@ -9,9 +9,10 @@ import {
   checkAllInvariants,
   validatePlaylist
 } from '../invariantChecker';
-import { Task, TaskPlaylist } from '../types';
+import { Task, TaskPlaylist, EnergyState } from '../types';
 
 describe('invariantChecker', () => {
+  const mockEnergy: EnergyState = { level: 'high', stability: 'stable' };
   const mockTasks: Task[] = [
     {
       id: '1',
@@ -65,7 +66,7 @@ describe('invariantChecker', () => {
     });
 
     it('should return false when no quick win is present', () => {
-      const noQuickWinTasks = mockTasks.filter(task => 
+      const noQuickWinTasks = mockTasks.filter(task =>
         !(task.duration <= 15 && task.effort === 'low')
       );
       const result = checkMinQuickWinInvariant(noQuickWinTasks);
@@ -75,14 +76,12 @@ describe('invariantChecker', () => {
 
   describe('checkTotalLoadInvariant', () => {
     it('should return true when total load is within limit', () => {
-      const totalDuration = mockTasks.reduce((sum, task) => sum + task.duration, 0); // 85
-      const result = checkTotalLoadInvariant(mockTasks, 100);
+      const result = checkTotalLoadInvariant(mockTasks, 500, mockEnergy);
       expect(result).toBe(true);
     });
 
     it('should return false when total load exceeds limit', () => {
-      const totalDuration = mockTasks.reduce((sum, task) => sum + task.duration, 0); // 85
-      const result = checkTotalLoadInvariant(mockTasks, 50);
+      const result = checkTotalLoadInvariant(mockTasks, 10, mockEnergy);
       expect(result).toBe(false);
     });
   });
@@ -142,8 +141,8 @@ describe('invariantChecker', () => {
 
   describe('checkAllInvariants', () => {
     it('should return all valid when all invariants are satisfied', () => {
-      const result = checkAllInvariants(mockTasks, 'high', 100);
-      
+      const result = checkAllInvariants(mockTasks, mockEnergy, 500);
+
       expect(result.maxTasks).toBe(true);
       expect(result.minQuickWin).toBe(true);
       expect(result.totalLoad).toBe(true);
@@ -153,15 +152,16 @@ describe('invariantChecker', () => {
     });
 
     it('should return not all valid when some invariants are violated', () => {
-      const result = checkAllInvariants(mockTasks, 'low', 50);
-      
+      const lowEnergy: EnergyState = { level: 'low', stability: 'stable' };
+      const result = checkAllInvariants(mockTasks, lowEnergy, 10);
+
       expect(result.allValid).toBe(false);
       // Au moins une des vérifications doit être fausse
       expect(
-        result.maxTasks && 
-        result.minQuickWin && 
-        result.totalLoad && 
-        result.energyMismatch && 
+        result.maxTasks &&
+        result.minQuickWin &&
+        result.totalLoad &&
+        result.energyMismatch &&
         result.completionRate
       ).toBe(false);
     });
@@ -171,27 +171,29 @@ describe('invariantChecker', () => {
     const mockPlaylist: TaskPlaylist = {
       tasks: mockTasks,
       generatedAt: new Date(),
-      energyUsed: { level: 'high', stability: 'stable' },
+      energyUsed: mockEnergy,
       explanation: 'Test playlist'
     };
 
     it('should return the playlist when all invariants are valid', () => {
-      const result = validatePlaylist(mockPlaylist, 'high', 100);
-      
+      const result = validatePlaylist(mockPlaylist, mockEnergy, 500);
+
       expect(result).toEqual(mockPlaylist);
     });
 
     it('should return error object when invariants are violated', () => {
-      const result = validatePlaylist(mockPlaylist, 'low', 50);
-      
+      const lowEnergy: EnergyState = { level: 'low', stability: 'stable' };
+      const result = validatePlaylist(mockPlaylist, lowEnergy, 10);
+
       expect(result).toHaveProperty('error');
       expect(result).toHaveProperty('invalidInvariants');
       expect((result as any).invalidInvariants).toBeInstanceOf(Array);
     });
 
     it('should list specific invariant violations', () => {
-      const result = validatePlaylist(mockPlaylist, 'low', 50) as { error: string; invalidInvariants: string[] };
-      
+      const lowEnergy: EnergyState = { level: 'low', stability: 'stable' };
+      const result = validatePlaylist(mockPlaylist, lowEnergy, 10) as { error: string; invalidInvariants: string[] };
+
       expect(result.invalidInvariants.length).toBeGreaterThan(0);
       // Devrait contenir des messages spécifiques
       expect(result.invalidInvariants.some(inv => inv.includes('énergie'))).toBe(true);
