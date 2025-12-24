@@ -65,7 +65,7 @@ export class LifeChangeDetector {
     }
     
     // Comparer les comportements
-    const changeMagnitude = this.compareBehaviorPatterns(userBehaviorData, baselineData);
+    const changeMagnitude = compareBehaviorPatterns(userBehaviorData, baselineData);
     
     // Si le changement est significatif, notifier l'utilisateur
     if (changeMagnitude > this.changeThreshold) {
@@ -80,50 +80,88 @@ export class LifeChangeDetector {
     return false;
   }
   
-  // Fonction pour comparer les modèles de comportement
-  private compareBehaviorPatterns(
-    current: UserBehavior,
-    baseline: HistoricalBehaviorData
-  ): number {
-    // 1. Comparer la distribution des types de tâches avec la divergence de Kullback-Leibler
-    const taskShift = klDivergence(
-      current.taskTypesDistribution || new Map(),
-      this.convertStringArrayToMap(baseline.baselineTaskTypes)
-    );
+// Fonction pour comparer les modèles de comportement
+export function compareBehaviorPatterns(
+  current: UserBehavior,
+  baseline: HistoricalBehaviorData
+): number {
+  // 1. Comparer la distribution des types de tâches avec la divergence de Kullback-Leibler
+  const taskShift = klDivergence(
+    current.taskTypesDistribution || new Map(),
+    new Map(Object.entries(baseline.baselineTaskTypes || {}))
+  );
+  
+  // 2. Comparer les patterns d'énergie avec la corrélation inverse
+  const energyShift = 1 - correlation(
+    current.energyPatterns || [],
+    baseline.baselineEnergyLevels || []
+  );
+  
+  // 3. Comparer les horaires préférés
+  const scheduleShift = 1 - calculateArraySimilarity(
+    current.scheduledTimes || [],
+    baseline.baselineDailySchedule || []
+  );
+  
+  // 4. Comparer les taux de complétion
+  const completionShift = Math.abs(
+    (current.completionRates?.reduce((a, b) => a + b, 0) / (current.completionRates?.length || 1) || 0) - 
+    (baseline.baselineTaskCompletionRate || 0)
+  );
+  
+  // Pondérer les différentes mesures de changement (0-1)
+  return 0.3 * normalize(taskShift, 0, 5) + 
+         0.3 * normalize(energyShift, 0, 1) + 
+         0.2 * normalize(scheduleShift, 0, 1) + 
+         0.2 * normalize(completionShift, 0, 1);
+}
+
+// Fonction pour calculer la divergence de Kullback-Leibler
+function klDivergence(p: Map<string, number>, q: Map<string, number>): number {
+  let sum = 0;
+  const keys = new Set([...p.keys(), ...q.keys()]);
+  
+  for (const key of keys) {
+    const pVal = p.get(key) || 0;
+    const qVal = q.get(key) || 0;
     
-    // 2. Comparer les patterns d'énergie avec la corrélation inverse
-    const energyShift = 1 - correlation(
-      current.energyPatterns || [],
-      baseline.baselineEnergyLevels || []
-    );
-    
-    // 3. Comparer les horaires préférés
-    const scheduleShift = 1 - this.calculateArraySimilarity(
-      current.scheduledTimes || [],
-      baseline.baselineDailySchedule || []
-    );
-    
-    // 4. Comparer les taux de complétion
-    const completionShift = Math.abs(
-      (current.completionRates?.reduce((a, b) => a + b, 0) / (current.completionRates?.length || 1) || 0) - 
-      (baseline.baselineTaskCompletionRate || 0)
-    );
-    
-    // Pondérer les différentes mesures de changement (0-1)
-    return 0.3 * normalize(taskShift, 0, 5) + 
-           0.3 * normalize(energyShift, 0, 1) + 
-           0.2 * normalize(scheduleShift, 0, 1) + 
-           0.2 * normalize(completionShift, 0, 1);
+    // Ajouter un epsilon pour éviter log(0)
+    const eps = 1e-10;
+    if (pVal > 0) {
+      sum += pVal * Math.log((pVal + eps) / (qVal + eps));
+    }
   }
   
-  // Convertir un tableau de strings en Map pour la compatibilité
-  private convertStringArrayToMap(arr: string[]): Map<string, number> {
-    const map = new Map<string, number>();
-    arr.forEach(item => {
-      map.set(item, (map.get(item) || 0) + 1);
-    });
-    return map;
+  return sum;
+}
+
+// Fonction pour calculer la corrélation de Pearson
+function correlation(x: number[], y: number[]): number {
+  if (x.length !== y.length || x.length === 0) return 0;
+  
+  const meanX = x.reduce((a, b) => a + b, 0) / x.length;
+  const meanY = y.reduce((a, b) => a + b, 0) / y.length;
+  
+  let numerator = 0;
+  let denomX = 0;
+  let denomY = 0;
+  
+  for (let i = 0; i < x.length; i++) {
+    numerator += (x[i] - meanX) * (y[i] - meanY);
+    denomX += (x[i] - meanX) ** 2;
+    denomY += (y[i] - meanY) ** 2;
   }
+  
+  if (denomX === 0 || denomY === 0) return 0;
+  
+  return numerator / Math.sqrt(denomX * denomY);
+}
+
+// Fonction pour normaliser une valeur entre 0 et 1
+function normalize(value: number, min: number, max: number): number {
+  if (max === min) return 0;
+  return Math.max(0, Math.min(1, (value - min) / (max - min)));
+}
   
   // Calculer la similarité entre deux tableaux
   private calculateArraySimilarity(arr1: number[], arr2: number[]): number {
@@ -185,35 +223,51 @@ export class LifeChangeDetector {
     return weightedSimilarity;
   }
   
-  // Calculer la similarité entre deux tableaux de strings
-  private calculateStringArraySimilarity(arr1: string[], arr2: string[]): number {
-    if (arr1.length === 0 && arr2.length === 0) {
-      return 1;
-    }
-    
-    // Calculer l'intersection et l'union
-    const set1 = new Set(arr1);
-    const set2 = new Set(arr2);
-    
-    const intersection = new Set([...set1].filter(x => set2.has(x)));
-    const union = new Set([...set1, ...set2]);
-    
-    if (union.size === 0) {
-      return 1;
-    }
-    
-    // Similarité de Jaccard
-    return intersection.size / union.size;
+  // Calculer la similarité entre deux Maps de chaînes
+function calculateStringMapSimilarity(map1: Map<string, number>, map2: Map<string, number>): number {
+  if (map1.size === 0 && map2.size === 0) {
+    return 1;
   }
   
+  // Calculer l'intersection et l'union des clés
+  const keys1 = new Set(map1.keys());
+  const keys2 = new Set(map2.keys());
+  
+  const intersection = new Set([...keys1].filter(x => keys2.has(x)));
+  const union = new Set([...keys1, ...keys2]);
+  
+  if (union.size === 0) {
+    return 1;
+  }
+  
+  // Calculer la similarité de Jaccard pour les clés
+  const jaccardSimilarity = intersection.size / union.size;
+  
+  // Calculer la similarité des valeurs pour les clés communes
+  let valueSimilarity = 0;
+  if (intersection.size > 0) {
+    let sum = 0;
+    for (const key of intersection) {
+      const val1 = map1.get(key) || 0;
+      const val2 = map2.get(key) || 0;
+      // Similarité basée sur la distance absolue normalisée
+      sum += 1 - Math.abs(val1 - val2) / Math.max(val1, val2, 1);
+    }
+    valueSimilarity = sum / intersection.size;
+  }
+  
+  // Combiner les deux similarités
+  return (jaccardSimilarity + valueSimilarity) / 2;
+}
+  
   // Journaliser un événement
-  private log(event: string, data: any): void {
+  log(event: string, data: any): void {
     console.log(`EVENT: ${event}`, data);
     // Dans une implémentation réelle, cela enregistrerait l'événement dans un système de journalisation
   }
   
   // Notifier l'utilisateur d'un changement
-  private notifyUser(message: string, userId: string): void {
+  notifyUser(message: string, userId: string): void {
     console.log(`NOTIFICATION to user ${userId}: ${message}`);
     // Dans une implémentation réelle, cela afficherait une notification dans l'UI
     
@@ -255,53 +309,4 @@ export class LifeChangeDetector {
       console.log(`Creating historical data for user ${userId}`);
     }
   }
-}
-
-// Fonctions utilitaires externes à la classe
-
-// Fonction pour calculer la divergence de Kullback-Leibler
-function klDivergence(p: Map<string, number>, q: Map<string, number>): number {
-  let sum = 0;
-  const keys = new Set([...p.keys(), ...q.keys()]);
-  
-  for (const key of keys) {
-    const pVal = p.get(key) || 0;
-    const qVal = q.get(key) || 0;
-    
-    // Ajouter un epsilon pour éviter log(0)
-    const eps = 1e-10;
-    if (pVal > 0) {
-      sum += pVal * Math.log((pVal + eps) / (qVal + eps));
-    }
-  }
-  
-  return sum;
-}
-
-// Fonction pour calculer la corrélation de Pearson
-function correlation(x: number[], y: number[]): number {
-  if (x.length !== y.length || x.length === 0) return 0;
-  
-  const meanX = x.reduce((a, b) => a + b, 0) / x.length;
-  const meanY = y.reduce((a, b) => a + b, 0) / y.length;
-  
-  let numerator = 0;
-  let denomX = 0;
-  let denomY = 0;
-  
-  for (let i = 0; i < x.length; i++) {
-    numerator += (x[i] - meanX) * (y[i] - meanY);
-    denomX += (x[i] - meanX) ** 2;
-    denomY += (y[i] - meanY) ** 2;
-  }
-  
-  if (denomX === 0 || denomY === 0) return 0;
-  
-  return numerator / Math.sqrt(denomX * denomY);
-}
-
-// Fonction pour normaliser une valeur entre 0 et 1
-function normalize(value: number, min: number, max: number): number {
-  if (max === min) return 0;
-  return Math.max(0, Math.min(1, (value - min) / (max - min)));
 }

@@ -1,6 +1,6 @@
 import { generatePlaylist } from "./playlistGenerator";
 import type { Task } from "@/lib/types";
-import { getUserPatternsFromDB } from "./taskDatabase"; // Import correct
+import { getUserPatternsFromDB } from "./database/index"; // Import correct
 
 /**
  * Exemple d'utilisation de l'algorithme de génération de playlist

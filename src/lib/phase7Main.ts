@@ -2,7 +2,7 @@
 // Intègre tous les composants de la Phase 7 et connecte les moteurs
 
 import { AuthorityContract, AuthorityContext, NON_NEGOTIABLES } from './phase7Implementation';
-import { calculateBurnoutScore, BurnoutDetectionResult } from './burnoutEngine';
+import { calculateBurnoutScore, type BurnoutDetectionResult } from './burnout/BurnoutEngine';
 import { SovereigntyManager, SovereigntyMode } from './modeEngine';
 import { computeOverrideCost, UserContext } from './costEngine';
 import { VoteEngine, ConsensusMode } from './voteEngine';
@@ -10,7 +10,7 @@ import { GovernanceDashboard } from './governanceDashboard';
 import { ConflictResolver } from './conflictResolution';
 import { ProtectiveModeManager } from './protectiveMode';
 import { Task } from './types';
-import { getSessionsByDate, getOverridesByPeriod } from './database';
+import { getSessionsByDate, getOverridesByPeriod } from './database/index';
 
 // Classe principale pour la Phase 7
 export class Phase7Manager {

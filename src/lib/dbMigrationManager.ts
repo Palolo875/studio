@@ -1,4 +1,5 @@
 import { validateDataIntegrity } from './dataIntegrityValidator';
+import { DatabaseSnapshotManager } from './databaseSnapshot';
 /**
  * Gestionnaire de migrations de base de données - Phase 5
  * Implémente les migrations avec rollback atomique et validation
@@ -25,7 +26,7 @@ export interface MigrationResult {
 export async function exportEncryptedBackup(): Promise<string> {
   // Dans une implémentation réelle, cela chiffrerait l'export de la base
   // Pour cette implémentation, nous simulons simplement
-  console.log('[DBMigration] Création d'un backup chiffré...');
+  console.log('[DBMigration] Création d’un backup chiffré...');
   return "encrypted_backup_data_" + Date.now();
 }
 
@@ -56,8 +57,9 @@ export async function migrateWithRollback(db: any, migration: Migration): Promis
   console.log(`[DBMigration] Préparation migration V${migration.version}...`);
 
   // 1. Snapshot complet (Pre-migration)
-  const snapshot = await db.createSnapshot();
-  const hashVal = hash(snapshot);
+  const snapshot = await DatabaseSnapshotManager.createSnapshot();
+  const snapshotString = DatabaseSnapshotManager.exportSnapshot(snapshot);
+  const hashVal = hash(snapshotString);
 
   try {
     // 2. Application migration
@@ -81,7 +83,7 @@ export async function migrateWithRollback(db: any, migration: Migration): Promis
     console.error(`[DBMigration] Échec V${migration.version}. Rollback immédiat.`, error);
 
     // 5. Rollback Atomique
-    await db.restoreSnapshot(snapshot);
+    await DatabaseSnapshotManager.restoreSnapshot(snapshot);
 
     return {
       success: false,

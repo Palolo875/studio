@@ -7,7 +7,7 @@ import {
   isQuickWin,
   calculateHistoryScore as calculateHistoryScoreFromRules
 } from "./scoringRules";
-import { getTodoTasksBulk, getTaskHistoryBulk, getUserPatternsFromDB } from "./taskDatabase";
+import { getTodoTasksBulk, getTaskHistoryBulk, getUserPatternsFromDB } from "./database/index";
 import { LanguageDetector } from "@/lib/nlp/LanguageDetector";
 
 // Importer les nouveaux services SOTA

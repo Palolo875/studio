@@ -4,12 +4,12 @@
 export * from './types';
 export * from './energyModel';
 export * from './capacityCalculator';
-export * from './scorer';
+export { calculateImpactScore } from './scorer';
 export * from './selector';
 export * from './invariantChecker';
 export * from './fallbackHandler';
 export * from './edgeCaseHandler';
-export * from './sessionManager';
+export { Session } from './sessionManager';
 export * from './taskPoolManager';
 export * from './taskAgeIndex';
 export * from './timeConstraintManager';
@@ -20,7 +20,7 @@ export * from './activeWindowManager';
 // Phase 3 - Nouveaux composants
 export * from './brainContracts';
 export * from './decisionPolicyManager';
-export * from './decisionLogger';
+export { replayDecision } from './decisionLogger';
 export * from './decisionExplanation';
 export * from './userChallenge';
 export * from './brainEngine';
@@ -35,9 +35,14 @@ export * from './taskOutcome';
 export * from './productivityMetrics';
 
 // Phase 3.7 - Apprentissage contrôlé
-export * from './passiveLearning';
 export * from './learnApplySeparation';
 export * from './explicitFeedback';
+
+// Phase 4 - Apprentissage passif
+export { AppliedChange } from './passiveLearning';
+
+// Phase 5 - Détection d'abus
+export { CognitiveCost } from './abuseDetection';
 
 // Phase 3.8 - Anti-abandon
 export * from './abandonmentDetection';

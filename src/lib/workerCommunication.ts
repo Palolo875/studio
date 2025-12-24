@@ -21,7 +21,7 @@ export type WorkerMessageType =
 
 export class WorkerCommunication {
   private worker: Worker;
-  private pendingMessages: Map<string, { resolve: Function, reject: Function, timeoutId: NodeJS.Timeout }>;
+  private pendingMessages: Map<string, { resolve: Function, reject: Function, timeoutId: ReturnType<typeof setTimeout> }>;
   private encoder = new TextEncoder();
   private decoder = new TextDecoder();
 

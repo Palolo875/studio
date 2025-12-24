@@ -12,7 +12,7 @@ const DB_SIZE_MAXIMUM = 50 * 1024 * 1024; // 50 MB
  * Surveille la croissance de la base de données
  */
 export class DbGrowthMonitor {
-  private monitoringInterval: NodeJS.Timeout | null = null;
+  private monitoringInterval: ReturnType<typeof setInterval> | null = null;
   private isMonitoring: boolean = false;
   
   /**
@@ -119,7 +119,7 @@ export class DbGrowthMonitor {
    * Active l'auto-pruning des données anciennes
    */
   private enableAutoPrune(): void {
-    console.log('[DbGrowthMonitor] Activation de l'auto-pruning...');
+    console.log('[DbGrowthMonitor] Activation de l\'auto-pruning...');
     
     // Dans une implémentation réelle, cela déclencherait le pruning
     // des données de plus de 7 jours par exemple

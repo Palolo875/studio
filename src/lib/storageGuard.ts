@@ -1,4 +1,4 @@
-import { db } from './taskDatabase';
+import { db } from './database/index';
 /**
  * Storage Guard pour IndexedDB - Phase 4
  * Implémente la surveillance active des quotas de stockage
@@ -35,7 +35,7 @@ export interface StorageStats {
  */
 export class StorageGuard {
   private config: StorageGuardConfig;
-  private intervalId: NodeJS.Timeout | null = null;
+  private intervalId: ReturnType<typeof setInterval> | null = null;
   private isActive: boolean = false;
 
   constructor(config?: Partial<StorageGuardConfig>) {

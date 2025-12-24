@@ -10,12 +10,12 @@
  */
 export async function openDbWithCorruptionRecovery(db: any): Promise<any> {
   try {
-    console.log('[DBRecovery] Tentative d'ouverture de la base de données...');
+    console.log('[DBRecovery] Tentative d\'ouverture de la base de données...');
     const openedDb = await db.open();
     console.log('[DBRecovery] Base de données ouverte avec succès');
     return openedDb;
   } catch (error: any) {
-    console.error('[DBRecovery] Erreur lors de l'ouverture de la base de données:', error);
+    console.error('[DBRecovery] Erreur lors de l\'ouverture de la base de données:', error);
     
     // Vérifier si c'est une erreur de corruption
     if (error.name === "UnknownError" || 
@@ -41,11 +41,11 @@ async function handleDbCorruption(db: any): Promise<any> {
   try {
     const restoredDb = await attemptBackupRestoration(db);
     if (restoredDb) {
-      console.log('[DBRecovery] Base de données restaurée à partir d'un backup');
+      console.log('[DBRecovery] Base de données restaurée à partir d\'un backup');
       return restoredDb;
     }
   } catch (restoreError) {
-    console.error('[DBRecovery] Échec de la restauration à partir d'un backup:', restoreError);
+    console.error('[DBRecovery] Échec de la restauration à partir d\'un backup:', restoreError);
   }
   
   // Étape 2 : Réinitialiser complètement la base de données (dernier recours)
@@ -106,7 +106,7 @@ async function attemptBackupRestoration(db: any): Promise<any | null> {
     console.log('[DBRecovery] Base de données restaurée et ouverte');
     
     // Afficher un message à l'utilisateur
-    showUserMessage("La base de données a été restaurée à partir d'une sauvegarde.");
+    showUserMessage("La base de données a été restaurée à partir d\'une sauvegarde.");
     
     return restoredDb;
   } catch (error) {

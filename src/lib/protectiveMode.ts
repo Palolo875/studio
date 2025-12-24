@@ -2,7 +2,7 @@
 // Implémentation des protections contre le burnout et la surcharge
 
 import { SovereigntyManager, SovereigntyMode } from './modeEngine';
-import { BurnoutDetectionResult } from './burnoutEngine';
+import { type BurnoutDetectionResult } from './burnout/BurnoutEngine';
 
 // Interface pour les paramètres du mode protectif
 export interface ProtectiveModeSettings {

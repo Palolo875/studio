@@ -147,7 +147,7 @@ export async function repairIntegrityErrors(db: any, report: IntegrityReport): P
  * @param db Instance de la base de données
  */
 export async function performStartupIntegrityCheck(db: any): Promise<void> {
-  console.log('[DataIntegrity] Démarrage de la vérification d'intégrité...');
+  console.log('[DataIntegrity] Démarrage de la vérification d\'intégrité...');
   
   const report = await validateDataIntegrity(db);
   
@@ -168,6 +168,6 @@ export async function performStartupIntegrityCheck(db: any): Promise<void> {
       console.error(`[DataIntegrity] ${newReport.errors.length} erreurs persistent après réparation`);
     }
   } else {
-    console.log('[DataIntegrity] Aucune erreur d'intégrité détectée');
+    console.log('[DataIntegrity] Aucune erreur d\'intégrité détectée');
   }
 }
