@@ -51,6 +51,17 @@ export interface UserCognitiveSettings {
 }
 
 /**
+ * Paramètres cognitifs par défaut
+ */
+export const DEFAULT_COGNITIVE_SETTINGS: UserCognitiveSettings = {
+  nudgeLevel: 2,
+  allowSuggestions: true,
+  allowOptimization: true,
+  showInfluenceReports: false,
+};
+
+
+/**
  * Invariants anti-manipulation (Loi 4)
  */
 export const COGNITIVE_INVARIANTS: CognitiveInvariants = {
@@ -70,7 +81,7 @@ export function detectCognitiveRisk(
   const now = new Date();
   const inactivityHours = (now.getTime() - lastActionAt.getTime()) / (1000 * 60 * 60);
 
-  // Phase 3.5.3 : Silence Recovery Mode trigger (48h)
+  // Phase 3.5.3 : Silent Recovery Mode trigger (48h)
   const isSilentRecoveryNeeded = inactivityHours >= 48;
 
   // Compteur d'overrides récents (7 jours)
