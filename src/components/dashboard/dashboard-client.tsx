@@ -46,6 +46,13 @@ import { SovereigntyMode } from '@/lib/phase7Implementation';
 import { ConflictResolutionModal } from './conflict-resolution-modal';
 import { OverrideConfirmation } from './override-confirmation';
 import { ProtectiveModeNotification } from './protective-mode-notification';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+
 
 type EnergyState =
   | 'energized'
@@ -572,21 +579,39 @@ export function DashboardClient() {
           </AlertDialog>
 
           <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-20">
-            <Button
-              onClick={() => setIsPanicModalOpen(true)}
-              className="h-16 w-16 rounded-full shadow-2xl"
-              size="icon"
-            >
-              <Siren className="h-8 w-8" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => setIsPanicModalOpen(true)}
+                    className="h-16 w-16 rounded-full shadow-2xl"
+                    size="icon"
+                  >
+                    <Siren className="h-8 w-8" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>Gérer un imprévu</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-            <Button
-              onClick={() => router.push('/dashboard/stats')}
-              className="h-12 w-12 rounded-full shadow-2xl bg-purple-600 hover:bg-purple-700"
-              size="icon"
-            >
-              <Shield className="h-5 w-5" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => router.push('/dashboard/stats')}
+                    className="h-12 w-12 rounded-full shadow-2xl bg-purple-600 hover:bg-purple-700"
+                    size="icon"
+                  >
+                    <Shield className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>Statistiques & Gouvernance</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           {/* Modaux Phase 7 */}
