@@ -59,7 +59,7 @@ export function FocusMode({
     });
     
     // Fermer le mode focus
-    router.back();
+    handleBack();
   };
 
   return (

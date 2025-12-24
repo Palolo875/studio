@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -193,9 +194,9 @@ export function EveningCelebration({
             strokeWidth="12"
             strokeLinecap="round"
             transform="rotate(-90 100 100)"
-            initial={{ strokeDasharray: 0 }}
+            initial={{ strokeDasharray: `0 ${circumference}` }}
             animate={{ 
-              strokeDasharray: `${progress} ${circumference - progress}`,
+              strokeDasharray: `${progress} ${circumference}`
             }}
             transition={{ duration: 1.5, ease: "easeOut" }}
           />
@@ -396,6 +397,8 @@ export function EveningCelebration({
                 // Call the onComplete callback
                 if (onCelebrationComplete) {
                   setTimeout(onCelebrationComplete, 3000);
+                } else {
+                  setTimeout(() => window.location.href = '/dashboard', 3000);
                 }
               }}
             >
