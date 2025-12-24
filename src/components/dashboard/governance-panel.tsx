@@ -48,21 +48,33 @@ export function GovernancePanel({
   const [protectiveModeActive, setProtectiveModeActive] = useState<boolean>(false);
   const [unresolvedConflicts, setUnresolvedConflicts] = useState<number>(0);
 
-  // Note: Dans une implémentation complète, cet effet utiliserait le vrai gestionnaire de Phase 7
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    await phase7Manager.checkBurnoutAndProtect();
+    setIsLoading(false);
+  };
+
   useEffect(() => {
     const dashboard = phase7Manager.getGovernanceDashboard();
 
-    // Simuler une mise à jour initiale
-    const metrics = dashboard.getMetrics();
-    setMetrics(metrics);
-    setIsLoading(false);
+    // S'abonner aux mises à jour (Pattern Observer)
+    const unsubscribe = dashboard.subscribe((newMetrics) => {
+      setMetrics(newMetrics);
+      setIsLoading(false);
+    });
 
-    // S'abonner aux changements si possible (simulé ici par un intervalle pour la démo)
+    // Lancer une première vérification immédiate
+    phase7Manager.checkBurnoutAndProtect();
+
+    // Vérifier périodiquement (toutes les minutes)
     const interval = setInterval(() => {
-      setMetrics(dashboard.getMetrics());
-    }, 5000);
+      phase7Manager.checkBurnoutAndProtect();
+    }, 60000);
 
-    return () => clearInterval(interval);
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, []);
 
   const handleModeChange = (newMode: SovereigntyMode) => {
@@ -184,13 +196,24 @@ export function GovernancePanel({
             <Shield className="h-5 w-5" />
             Panneau de Gouvernance
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowDetails(!showDetails)}
-          >
-            {showDetails ? "Moins" : "Plus"}
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={isLoading}
+              title="Rafraîchir les métriques"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDetails(!showDetails)}
+            >
+              {showDetails ? "Moins" : "Plus"}
+            </Button>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">

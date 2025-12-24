@@ -1,31 +1,16 @@
 // Point d'entrée principal pour la Phase 7
-// Intègre tous les composants de la Phase 7
+// Intègre tous les composants de la Phase 7 et connecte les moteurs
 
 import { AuthorityContract, AuthorityContext, NON_NEGOTIABLES } from './phase7Implementation';
 import { calculateBurnoutScore, BurnoutDetectionResult } from './burnoutEngine';
 import { SovereigntyManager, SovereigntyMode } from './modeEngine';
-import { computeOverrideCost } from './costEngine';
+import { computeOverrideCost, UserContext } from './costEngine';
 import { VoteEngine, ConsensusMode } from './voteEngine';
 import { GovernanceDashboard } from './governanceDashboard';
 import { ConflictResolver } from './conflictResolution';
 import { ProtectiveModeManager } from './protectiveMode';
-import { Session, Task } from './types';
-
-// Interface pour l'état utilisateur
-export interface UserState {
-  energy: "HIGH" | "MEDIUM" | "LOW";
-  dailyBudget: {
-    remaining: number;
-    total: number;
-  };
-  burnoutScore: number;
-  overridesLast2h: number;
-  sessions: Session[];
-  tasks: Task[];
-  overrides: { timestamp: number }[];
-  decisions: number;
-  sleepData: { date: Date; hours: number }[];
-}
+import { Task } from './types';
+import { getSessionsByDate, getOverridesByPeriod } from './database';
 
 // Classe principale pour la Phase 7
 export class Phase7Manager {
@@ -96,52 +81,67 @@ export class Phase7Manager {
   }
 
   // Vérifier les signaux de burnout et activer le mode protectif si nécessaire
-  async checkBurnoutAndProtect(userState: UserState): Promise<void> {
-  // Calculer le score de burnout
-    const burnoutResult = await calculateBurnoutScore(
-      "user-id", // À remplacer par l'ID utilisateur réel
-      userState.sessions,
-      userState.tasks,
-      userState.overrides,
-      userState.decisions,
-      userState.sleepData
-    );
+  async checkBurnoutAndProtect(): Promise<void> {
+    try {
+      // Calculer le score de burnout via le moteur connecté à la DB
+      const burnoutResult = await calculateBurnoutScore();
 
-    // Mettre à jour le risque de burnout dans le tableau de bord
-    this.governanceDashboard.updateBurnoutRisk(burnoutResult.score);
+      // Mettre à jour le risque de burnout dans le tableau de bord
+      this.governanceDashboard.updateBurnoutRisk(burnoutResult.score);
 
-    // Vérifier si le mode protectif doit être activé
-    if (burnoutResult.score > 0.75) {
-      // Générer une notification
-      const notification = this.protectiveModeManager.generateNotification(burnoutResult);
-      console.log(notification);
+      // Vérifier si le mode protectif doit être activé
+      if (burnoutResult.score > 0.75) {
+        // Générer une notification
+        const notification = this.protectiveModeManager.generateNotification(burnoutResult);
+        console.log("Burnout Alert:", notification);
 
-      // Activer le mode protectif
-      this.protectiveModeManager.activate("Signaux de burnout détectés");
-    }
+        // Activer le mode protectif
+        this.protectiveModeManager.activate("Signaux de burnout détectés");
+      }
 
-    // Appliquer les restrictions du mode protectif si actif
-    if (this.protectiveModeManager.isActive()) {
-      this.protectiveModeManager.applyRestrictions();
+      // Appliquer les restrictions du mode protectif si actif
+      if (this.protectiveModeManager.isActive()) {
+        this.protectiveModeManager.applyRestrictions();
+      }
+    } catch (error) {
+      console.error("Erreur lors de la vérification du burnout:", error);
     }
   }
 
-// Calculer le coût d'un override
-  calculateOverrideCost(task: Task, userState: UserState) {
-    return computeOverrideCost(task, {
-      energy: userState.energy,
-      dailyBudget: userState.dailyBudget,
-      burnoutScore: userState.burnoutScore,
-      overridesLast2h: userState.overridesLast2h
-    });
+  // Calculer le coût d'un override en récupérant le contexte actuel
+  async calculateOverrideCost(task: Task) {
+    // Récupérer les données pour le contexte
+    const burnoutResult = await calculateBurnoutScore();
+
+    // Récupérer la dernière session pour l'énergie
+    const today = new Date();
+    const sessions = await getSessionsByDate(today);
+    const lastSession = sessions[sessions.length - 1];
+
+    // Récupérer les overrides récents (2h)
+    const twoHoursAgo = Date.now() - (2 * 60 * 60 * 1000);
+    const recentOverrides = await getOverridesByPeriod(twoHoursAgo);
+
+    // Construire le contexte utilisateur
+    const userContext: UserContext = {
+      energy: (lastSession?.energyLevel as any) || "MEDIUM",
+      dailyBudget: {
+        remaining: 10, // TODO: Connecter au système de budget réel
+        total: 20
+      },
+      burnoutScore: burnoutResult.score,
+      overridesLast2h: recentOverrides.length
+    };
+
+    return computeOverrideCost(task, userContext);
   }
 
-// Trouver un consensus en cas de conflit
+  // Trouver un consensus en cas de conflit
   findConsensus(userWants: Task, systemRefuses: any) {
     return this.voteEngine.findConsensus(userWants, systemRefuses);
   }
 
-// Enregistrer un conflit
+  // Enregistrer un conflit
   registerConflict(userRequest: Task, systemRejection: any) {
     return this.conflictResolver.registerConflict(userRequest, systemRejection);
   }
@@ -155,7 +155,7 @@ export class Phase7Manager {
   updateSovereigntyMode(newMode: SovereigntyMode) {
     // Vérifier si la transition est autorisée
     const currentMode = this.sovereigntyManager.currentMode;
-    
+
     // Certains changements de mode nécessitent une confirmation
     if (currentMode === SovereigntyMode.PROTECTIVE) {
       if (!this.protectiveModeManager.canExit()) {
@@ -163,7 +163,7 @@ export class Phase7Manager {
         return false;
       }
     }
-    
+
     // Effectuer la transition
     try {
       // Pour cet exemple, nous simulons une transition utilisateur
@@ -171,7 +171,7 @@ export class Phase7Manager {
       this.sovereigntyManager.currentMode = newMode;
       this.sovereigntyManager.lastActivityTimestamp = Date.now();
       this.governanceDashboard.updateCurrentMode(newMode);
-      
+
       console.log(`Mode changé: ${SovereigntyMode[currentMode]} → ${SovereigntyMode[newMode]}`);
       return true;
     } catch (error) {
@@ -205,22 +205,40 @@ export class Phase7Manager {
     return this.governanceDashboard.generateReport();
   }
 
-  // Vérifier les contraintes non négociables
-  checkNonNegotiables(userState: UserState): string[] {
+  // Vérifier les contraintes non négociables avec les données réelles
+  async checkNonNegotiables(): Promise<string[]> {
     const violations: string[] = [];
 
-    // Vérifier la charge quotidienne maximale
-    // (Simulation - dans une implémentation réelle, cela utiliserait les données réelles)
-    const dailyLoad = 1.0; // Valeur simulée
-    if (dailyLoad > NON_NEGOTIABLES.maxDailyLoad) {
-      violations.push("Charge quotidienne maximale dépassée");
-    }
+    try {
+      // 1. Vérifier la charge quotidienne maximale
+      const today = new Date();
+      // On utilise la fonction real de burnoutEngine (qui est maintenant exportée)
+      // Note: Je dois m'assurer d'importer calculateDailyLoad si je veux l'utiliser ici
+      // Ou utiliser calculateBurnoutScore qui me donne déjà des signaux
 
-    // Vérifier le temps de récupération minimum
-    // (Simulation - dans une implémentation réelle, cela utiliserait les données réelles)
-    const recoveryTime = 7 * 60 * 60 * 1000; // 7 heures en ms (valeur simulée)
-    if (recoveryTime < NON_NEGOTIABLES.minRecoveryTime) {
-      violations.push("Temps de récupération minimum non respecté");
+      const burnoutResult = await calculateBurnoutScore();
+
+      // Si signal de surcharge chronique, c'est une violation
+      if (burnoutResult.signals.chronicOverload) {
+        violations.push("Surcharge chronique détectée (limite système atteinte)");
+      }
+
+      // 2. Vérifier le temps de récupération minimum
+      // On récupère la dernière donnée de sommeil
+      // Note: getSleepDataByPeriod est dispo dans database
+      // Mais burnoutResult a déjà analysé sleepDebt
+
+      if (burnoutResult.signals.sleepDebt) {
+        violations.push("Dette de sommeil critique (récupération insuffisante)");
+      }
+
+      // 3. Vérifier les signaux éthiques (refus système)
+      if (burnoutResult.signals.overrideAbuse) {
+        violations.push("Abus du mécanisme de contournement (autorité système compromise)");
+      }
+
+    } catch (error) {
+      console.error("Erreur lors de la vérification des non-négociables:", error);
     }
 
     return violations;

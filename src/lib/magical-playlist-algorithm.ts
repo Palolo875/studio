@@ -207,6 +207,41 @@ function calculateHistoryScore(task: Task): number {
 }
 
 /**
+ * Calcule l'alignement entre une tâche et l'intention de l'utilisateur
+ * @param task La tâche à évaluer
+ * @param intention L'intention actuelle
+ * @returns Un score entre 0 et 1
+ */
+function calculateIntentionAlignmentScore(task: Task, intention: Intention): number {
+  if (!intention) return 0.5;
+
+  const taskContent = `${task.name} ${task.description || ""} ${task.tags?.join(" ") || ""}`.toLowerCase();
+  
+  const keywords: Record<Intention, string[]> = {
+    focus: ["urgent", "important", "finish", "complete", "deadline", "projet", "dev", "fix", "terminer"],
+    learning: ["read", "study", "learn", "course", "watch", "article", "research", "documentation", "apprendre", "lire", "tuto"],
+    creativity: ["design", "draw", "write", "brainstorm", "create", "idea", "concept", "imaginer", "créer", "dessiner", "écrire"],
+    planning: ["plan", "organize", "schedule", "todo", "list", "meeting", "calendar", "préparer", "organiser", "réunion"]
+  };
+
+  const relevantKeywords = keywords[intention] || [];
+  let matches = 0;
+
+  for (const word of relevantKeywords) {
+    if (taskContent.includes(word.toLowerCase())) {
+      matches++;
+    }
+  }
+
+  // Score de base si correspondances trouvées, plafonné à 1
+  if (matches > 0) {
+    return Math.min(0.5 + (matches * 0.1), 1.0);
+  }
+
+  return 0.3; // Faible alignement par défaut si aucune correspondance
+}
+
+/**
  * Détermine si une tâche est un "Quick Win"
  * Tâche facile avec faible énergie requise et/ou faible priorité
  */

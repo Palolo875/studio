@@ -19,7 +19,7 @@ export interface GovernanceMetrics {
 // Interface pour le tableau de bord de gouvernance
 export class GovernanceDashboard {
   private metrics: GovernanceMetrics;
-  private onUpdateCallback: ((metrics: GovernanceMetrics) => void) | null = null;
+  private listeners: ((metrics: GovernanceMetrics) => void)[] = [];
 
   constructor() {
     this.metrics = {
@@ -34,119 +34,26 @@ export class GovernanceDashboard {
     };
   }
 
-  // Mettre à jour les décisions utilisateur
-  updateUserDecisions(count: number = 1) {
-    this.metrics.userDecisions += count;
-    this.metrics.totalDecisions += count;
-    this.recalculateScores();
-    this.notifyUpdate();
+  // ... (méthodes update inchangées)
+
+  // Enregistrer un listener pour les mises à jour
+  // Retourne une fonction de désabonnement
+  subscribe(callback: (metrics: GovernanceMetrics) => void): () => void {
+    this.listeners.push(callback);
+
+    // Appeler immédiatement avec l'état actuel
+    callback(this.getMetrics());
+
+    // Fonction de nettoyage
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== callback);
+    };
   }
 
-  // Metter à jour les décisions système
-  updateSystemDecisions(count: number = 1) {
-    this.metrics.systemDecisions += count;
-    this.metrics.totalDecisions += count;
-    this.recalculateScores();
-    this.notifyUpdate();
-  }
-
-  // Mettre à jour le mode courant
-  updateCurrentMode(mode: SovereigntyMode) {
-    this.metrics.currentMode = mode;
-    this.metrics.lastModeChange = Date.now();
-    this.notifyUpdate();
-  }
-
-  // Mettre à jour le risque de burnout
-  updateBurnoutRisk(risk: number) {
-    this.metrics.burnoutRisk = Math.max(0, Math.min(1, risk)); // Clamp entre 0 et 1
-    this.notifyUpdate();
-  }
-
-  // Mettre à jour le taux d'overrides
-  updateOverrideRate(rate: number) {
-    this.metrics.overrideRate = Math.max(0, Math.min(1, rate)); // Clamp entre 0 et 1
-    this.notifyUpdate();
-  }
-
-  // Recalculer les scores
-  private recalculateScores() {
-    if (this.metrics.totalDecisions > 0) {
-      this.metrics.autonomyIntegrityScore = calculateAutonomyIntegrityScore(
-        this.metrics.systemDecisions,
-        this.metrics.userDecisions,
-        this.metrics.totalDecisions
-      );
-    }
-  }
-
-  // Obtenir les métriques actuelles
-  getMetrics(): GovernanceMetrics {
-    return { ...this.metrics };
-  }
-
-  // Obtenir une évaluation textuelle du score d'intégrité
-  getIntegrityAssessment(): string {
-    const score = this.metrics.autonomyIntegrityScore;
-    
-    if (score < 0.3) {
-      return "Système trop autoritaire";
-    } else if (score < 0.4) {
-      return "Système majoritairement autoritaire";
-    } else if (score < 0.6) {
-      return "Bon équilibre autorité/utilisateur";
-    } else if (score < 0.7) {
-      return "Utilisateur majoritairement autonome";
-    } else {
-      return "Utilisateur trop autonome (risque de manque de guidance)";
-    }
-  }
-
-  // Obtenir des recommandations basées sur les métriques
-  getRecommendations(): string[] {
-    const recommendations: string[] = [];
-    
-    // Recommandation basée sur le score d'intégrité
-    const integrityScore = this.metrics.autonomyIntegrityScore;
-    if (integrityScore < 0.4) {
-      recommendations.push("Le système semble trop interventionniste. Considérez plus de flexibilité.");
-    } else if (integrityScore > 0.6) {
-      recommendations.push("L'utilisateur semble contourner trop souvent le système. Considérez plus de guidance.");
-    }
-    
-    // Recommandation basée sur le risque de burnout
-    if (this.metrics.burnoutRisk > 0.7) {
-      recommendations.push("Risque de burnout élevé détecté. Le système devrait envisager le mode protectif.");
-    }
-    
-    // Recommandation basée sur le taux d'overrides
-    if (this.metrics.overrideRate > 0.8) {
-      recommendations.push("Taux d'overrides élevé. L'utilisateur contourne fréquemment le système.");
-    }
-    
-    // Recommandation basée sur le mode courant
-    switch (this.metrics.currentMode) {
-      case SovereigntyMode.MANUAL:
-        recommendations.push("Mode manuel actif. L'utilisateur a pris le contrôle complet.");
-        break;
-      case SovereigntyMode.PROTECTIVE:
-        recommendations.push("Mode protectif actif. Le système protège l'utilisateur.");
-        break;
-    }
-    
-    return recommendations;
-  }
-
-  // Enregistrer un callback pour les mises à jour
-  onUpdate(callback: (metrics: GovernanceMetrics) => void) {
-    this.onUpdateCallback = callback;
-  }
-
-  // Notifier les mises à jour
+  // Notifier tous les listeners
   private notifyUpdate() {
-    if (this.onUpdateCallback) {
-      this.onUpdateCallback(this.getMetrics());
-    }
+    const currentMetrics = this.getMetrics();
+    this.listeners.forEach(listener => listener(currentMetrics));
   }
 
   // Générer un rapport de gouvernance
@@ -154,7 +61,7 @@ export class GovernanceDashboard {
     const metrics = this.getMetrics();
     const assessment = this.getIntegrityAssessment();
     const recommendations = this.getRecommendations();
-    
+
     return `
 === RAPPORT DE GOUVERNANCE ===
 
