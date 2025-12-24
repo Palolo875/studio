@@ -1,5 +1,7 @@
-import GoToDashboard from './go-to-dashboard';
+'use client';
+import { redirect } from 'next/navigation';
 
 export default function Home() {
-  return <GoToDashboard />;
+  redirect('/dashboard');
+  return null;
 }
