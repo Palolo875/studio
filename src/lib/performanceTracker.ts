@@ -1,3 +1,4 @@
+import { progressiveFallback } from './progressiveFallback';
 /**
  * Agrégateur de métriques de performance - Phase 4
  * Implémente le suivi et l'analyse des performances avec détection de dégradations
@@ -44,7 +45,7 @@ export class PerformanceTracker {
   private intervalId: NodeJS.Timeout | null = null;
   private isActive: boolean = false;
   private onDegradationCallback: ((report: PerformanceReport[]) => void) | null = null;
-  
+
   /**
    * Enregistre une mesure de performance
    * @param name Nom de la métrique
@@ -54,16 +55,16 @@ export class PerformanceTracker {
     if (!this.metrics.has(name)) {
       this.metrics.set(name, []);
     }
-    
+
     const values = this.metrics.get(name)!;
     values.push(duration);
-    
+
     // Garder seulement les 100 derniers échantillons
     if (values.length > 100) {
       values.shift();
     }
   }
-  
+
   /**
    * Calcule les statistiques pour une métrique
    * @param name Nom de la métrique
@@ -72,10 +73,10 @@ export class PerformanceTracker {
   getStats(name: string): PerformanceStats | null {
     const values = this.metrics.get(name) || [];
     if (values.length === 0) return null;
-    
+
     // Trier les valeurs pour les calculs de percentiles
     const sortedValues = [...values].sort((a, b) => a - b);
-    
+
     return {
       avg: this.mean(sortedValues),
       p50: this.percentile(sortedValues, 50),
@@ -86,7 +87,7 @@ export class PerformanceTracker {
       count: sortedValues.length
     };
   }
-  
+
   /**
    * Génère un rapport complet de performance
    * @returns Rapport de performance
@@ -97,7 +98,7 @@ export class PerformanceTracker {
       stats: this.getStats(name)
     }));
   }
-  
+
   /**
    * Calcule la moyenne d'un tableau de nombres
    * @param values Tableau de valeurs
@@ -107,7 +108,7 @@ export class PerformanceTracker {
     if (values.length === 0) return 0;
     return values.reduce((sum, value) => sum + value, 0) / values.length;
   }
-  
+
   /**
    * Calcule un percentile d'un tableau de nombres
    * @param values Tableau de valeurs triées
@@ -116,19 +117,19 @@ export class PerformanceTracker {
    */
   private percentile(values: number[], percentile: number): number {
     if (values.length === 0) return 0;
-    
+
     const index = (percentile / 100) * (values.length - 1);
     const lower = Math.floor(index);
     const upper = Math.ceil(index);
-    
+
     if (lower === upper) {
       return values[lower];
     }
-    
+
     const weight = index - lower;
     return values[lower] * (1 - weight) + values[upper] * weight;
   }
-  
+
   /**
    * Compte le nombre de violations de seuil pour une métrique
    * @param name Nom de la métrique
@@ -138,10 +139,10 @@ export class PerformanceTracker {
   private countViolations(name: string, values: number[]): number {
     const threshold = THRESHOLDS[name] || PERF_BASELINES[name as keyof typeof PERF_BASELINES];
     if (!threshold) return 0;
-    
+
     return values.filter(value => value > threshold).length;
   }
-  
+
   /**
    * Vérifie s'il y a une dégradation de performance
    * @returns Rapport de dégradation ou null si aucune dégradation
@@ -149,37 +150,46 @@ export class PerformanceTracker {
   checkDegradation(): PerformanceReport[] | null {
     const report = this.report();
     const degradedMetrics: PerformanceReport[] = [];
-    
+
     for (const { name, stats } of report) {
       if (stats && stats.p95 > (THRESHOLDS[name] || PERF_BASELINES[name as keyof typeof PERF_BASELINES] || 0)) {
         degradedMetrics.push({ name, stats });
       }
     }
-    
+
     return degradedMetrics.length > 0 ? degradedMetrics : null;
   }
-  
+
   /**
    * Démarre le monitoring périodique des performances
-   * @param interval Intervalle en millisecondes (par défaut 60000ms = 1 minute)
    */
   startMonitoring(interval: number = 60000): void {
-    if (this.intervalId) {
-      console.warn('[PerformanceTracker] Monitoring déjà actif');
-      return;
-    }
-    
+    if (this.intervalId) return;
+
     this.isActive = true;
     this.intervalId = setInterval(() => {
+      const stats = this.report();
+
+      // Construis l'objet pour le fallback
+      const perfMetrics = {
+        brain_avg: this.getStats('brain_decision')?.avg || 0,
+        brain_p95: this.getStats('brain_decision')?.p95 || 0,
+        memory_percent: 0, // Sera mis à jour par le MemoryMonitor
+        ui_lag_count: this.getStats('ui_render')?.violations || 0
+      };
+
+      // Informe le système de fallback (Phase 4.5.2)
+      progressiveFallback.updatePerformance(perfMetrics);
+
       const degradedMetrics = this.checkDegradation();
       if (degradedMetrics && this.onDegradationCallback) {
         this.onDegradationCallback(degradedMetrics);
       }
     }, interval);
-    
-    console.log('[PerformanceTracker] Monitoring démarré');
+
+    console.log('[PerformanceTracker] Monitoring démarré (Phase 4)');
   }
-  
+
   /**
    * Arrête le monitoring périodique
    */
@@ -191,7 +201,7 @@ export class PerformanceTracker {
       console.log('[PerformanceTracker] Monitoring arrêté');
     }
   }
-  
+
   /**
    * Définit le callback pour les dégradations de performance
    * @param callback Fonction de rappel
@@ -199,7 +209,7 @@ export class PerformanceTracker {
   onDegradation(callback: (report: PerformanceReport[]) => void): void {
     this.onDegradationCallback = callback;
   }
-  
+
   /**
    * Met à jour un seuil de performance
    * @param name Nom de la métrique
@@ -208,7 +218,7 @@ export class PerformanceTracker {
   updateThreshold(name: string, threshold: number): void {
     THRESHOLDS[name] = threshold;
   }
-  
+
   /**
    * Obtient tous les seuils de performance
    * @returns Seuils de performance
@@ -216,7 +226,7 @@ export class PerformanceTracker {
   getThresholds(): Record<string, number> {
     return { ...THRESHOLDS };
   }
-  
+
   /**
    * Réinitialise toutes les métriques
    */
@@ -224,7 +234,7 @@ export class PerformanceTracker {
     this.metrics.clear();
     console.log('[PerformanceTracker] Métriques réinitialisées');
   }
-  
+
   /**
    * Vérifie si le monitoring est actif
    * @returns true si le monitoring est actif, false sinon

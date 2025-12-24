@@ -7,61 +7,57 @@ import type { TaskClassification } from './TaskClassifier';
 import type { Task } from '@/lib/types';
 
 export function createFullTask(
-  rawTask: RawTaskWithContract, 
-  classification: TaskClassification
+  rawTask: RawTaskWithContract,
+  classification: TaskClassification & { isUncertain: boolean; unknown?: boolean }
 ): Task {
   const baseContent = `${rawTask.action} ${rawTask.object}`.trim();
-  
+
   return {
     id: rawTask.id,
-    name: baseContent, // Utiliser "name" au lieu de "content"
-    
-    // Provenance NLP
-    sourceType: 'nlp_full',
-    
-    // Classification ML → Champs Task
-    effort: classification.effort,
-    energyRequired: classification.energyType as "low" | "medium" | "high", // Adapter le type
-    priority: getPriorityFromUrgency(classification.urgency),
-    
-    // Métadonnées intelligentes
-    tags: classification.autoTags,
-    description: buildNlpNotes(rawTask, classification), // Utiliser "description" au lieu de "notes"
-    
-    // Dates
-    deadlineDisplay: rawTask.deadline || undefined, // Utiliser "deadlineDisplay"
-    
-    // État initial
-    completed: false,
-    subtasks: [],
-    lastAccessed: new Date().toISOString(),
-    completionRate: 0,
-    
-    // Estimation de durée
-    estimatedDuration: effortToMinutes(classification.effort),
-    
-    // NLP Metadata (pour debug/insights)
+    title: baseContent,
+
+    // Propriétés de base
+    createdAt: new Date(),
+    duration: effortToMinutes(classification.effort),
+    effort: mapEffort(classification.effort),
+    urgency: mapUrgency(classification.urgency),
+    impact: 'medium', // Défaut Phase 1
+    category: classification.energyType,
+    status: 'todo',
+    completionHistory: [],
+
+    // Métadonnées NLP (Phase 2 - Zone de Quarantaine)
     nlpMetadata: {
-      detectedLang: (rawTask as any).lang || 'unknown', // À ajouter dans RawTask
-      energyConfidence: classification.energyConfidence,
-      urgency: classification.urgency,
-      rawAction: rawTask.action,
-      rawSentence: rawTask.sentence
-    }
-  } as Task; // Cast pour contourner les problèmes de typage
+      detectedLang: rawTask.metadata.detectedLang,
+      energySuggestion: classification.energyType,
+      effortSuggestion: classification.effort,
+      confidence: Math.min(rawTask.confidence, classification.energyConfidence),
+      isUncertain: classification.isUncertain || (classification.unknown ?? false),
+      rawText: rawTask.rawText
+    },
+
+    description: buildNlpNotes(rawTask, classification),
+  };
 }
 
-function getPriorityFromUrgency(urgency: number): 'low' | 'medium' | 'high' {
-  if (urgency >= 0.8) return 'high';
-  if (urgency >= 0.5) return 'medium';
+function mapEffort(effort: 'S' | 'M' | 'L'): 'low' | 'medium' | 'high' {
+  const map = { S: 'low', M: 'medium', L: 'high' };
+  return map[effort] as any;
+}
+
+function mapUrgency(score: number): 'low' | 'medium' | 'high' | 'urgent' {
+  if (score >= 0.9) return 'urgent';
+  if (score >= 0.7) return 'high';
+  if (score >= 0.4) return 'medium';
   return 'low';
 }
 
-function buildNlpNotes(raw: RawTask, classif: TaskClassification): string {
-  return `NLP: Énergie=${classif.energyType} (${classif.energyConfidence.toFixed(2)}) | Effort=${classif.effort} | Urgence=${(classif.urgency*100).toFixed(0)}%`;
+function buildNlpNotes(raw: RawTaskWithContract, classif: any): string {
+  const status = classif.isUncertain ? '⚠️ INCERTAIN' : '✅ FIABLE';
+  return `[NLP ${status}] Énergie: ${classif.energyType} | Effort: ${classif.effort} | Confiance: ${(classif.energyConfidence * 100).toFixed(0)}%`;
 }
 
-function effortToMinutes(effort: 'S'|'M'|'L'): number {
+function effortToMinutes(effort: 'S' | 'M' | 'L'): number {
   const mapping = { S: 15, M: 90, L: 240 };
   return mapping[effort];
 }

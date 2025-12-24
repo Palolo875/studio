@@ -3,6 +3,7 @@
  * Implémente les invariants requis pour garantir la qualité et la robustesse
  */
 
+import { performanceTracker } from './performanceTracker';
 import { memoryMonitor } from './memoryMonitor';
 import { WorkerCommunication } from './workerCommunication';
 import { progressiveFallback } from './progressiveFallback';
@@ -29,7 +30,7 @@ export const PHASE4_INVARIANTS: Invariant[] = [
       // Vérifier l'utilisation mémoire actuelle
       const memoryStats = memoryMonitor.check();
       if (!memoryStats) return true; // Si l'API n'est pas disponible, on considère que c'est ok
-      
+
       // Vérifier que l'utilisation totale ne dépasse pas 120MB
       return memoryStats.used <= 120 * MB;
     },
@@ -39,9 +40,10 @@ export const PHASE4_INVARIANTS: Invariant[] = [
     id: "XXXIV",
     description: "Worker Timeout",
     check: (): boolean => {
-      // Cette vérification nécessite un worker actif
-      // Dans une implémentation réelle, nous aurions un système de monitoring des workers
-      return true; // Pour l'instant, nous considérons que c'est ok
+      const stats = performanceTracker.getStats('worker_communication');
+      if (!stats) return true;
+      // Invariant : p95 doit être < 500ms
+      return stats.p95 <= 500;
     },
     message: "Worker response timeout = 500ms max"
   },
@@ -49,9 +51,10 @@ export const PHASE4_INVARIANTS: Invariant[] = [
     id: "XXXV",
     description: "UI Frame Budget",
     check: (): boolean => {
-      // Cette vérification nécessite un monitoring du thread UI
-      // Dans une implémentation réelle, nous aurions un système de monitoring des performances UI
-      return true; // Pour l'instant, nous considérons que c'est ok
+      const stats = performanceTracker.getStats('ui_render');
+      if (!stats) return true;
+      // Invariant : Pas de frame bloquée > 16ms sur le thread UI
+      return stats.violations === 0;
     },
     message: "Main thread tasks NEVER exceed 16ms"
   },
@@ -59,10 +62,7 @@ export const PHASE4_INVARIANTS: Invariant[] = [
     id: "XXXVI",
     description: "Progressive Degradation",
     check: (): boolean => {
-      // Vérifier que le système de fallback progressif est en place
       const currentLevel = progressiveFallback.getCurrentLevel();
-      
-      // Le système doit toujours offrir une fonctionnalité réduite plutôt que de planter
       return currentLevel !== null;
     },
     message: "System MUST degrade gracefully under load"
@@ -71,16 +71,10 @@ export const PHASE4_INVARIANTS: Invariant[] = [
     id: "XXXVII",
     description: "Battery Awareness",
     check: (): boolean => {
-      // Vérifier que le système de conscience batterie est en place
-      const powerSaveState = batteryAwareness.getPowerSaveState();
-      
-      // Si le mode économie d'énergie est activé, vérifier les adaptations
-      if (powerSaveState.enabled) {
-        // Vérifier que la fréquence de rafraîchissement a été réduite
-        const refreshRate = batteryAwareness.getCurrentRefreshRate();
-        return refreshRate >= 60; // Au moins 1 minute
-      }
-      
+      const state = batteryAwareness.getPowerSaveState();
+      const refreshRate = batteryAwareness.getCurrentRefreshRate();
+      // Invariant : Si économie activée, rafraîchissement réduit
+      if (state.enabled) return refreshRate >= 60;
       return true;
     },
     message: "On battery saver → reduce refresh to 1/min"
@@ -89,10 +83,8 @@ export const PHASE4_INVARIANTS: Invariant[] = [
     id: "XXXVIII",
     description: "Quota Management",
     check: (): boolean => {
-      // Vérifier que le Storage Guard est en place
+      // Vérifier que le Storage Guard est actif et sous le seuil
       const config = storageGuard.getConfig();
-      
-      // Vérifier que le seuil d'avertissement est à 80% ou moins
       return config.warnThreshold <= 0.8;
     },
     message: "IndexedDB usage MUST stay < 80% quota"
@@ -105,23 +97,23 @@ export const PHASE4_INVARIANTS: Invariant[] = [
 export class Phase4Invariants {
   private invariants: Invariant[];
   private onViolationCallback: ((invariant: Invariant) => void) | null = null;
-  
+
   constructor() {
     this.invariants = [...PHASE4_INVARIANTS];
   }
-  
+
   /**
    * Vérifie tous les invariants
    * @returns Liste des invariants violés
    */
   checkAll(): Invariant[] {
     const violatedInvariants: Invariant[] = [];
-    
+
     for (const invariant of this.invariants) {
       try {
         if (!invariant.check()) {
           violatedInvariants.push(invariant);
-          
+
           // Appeler le callback si défini
           if (this.onViolationCallback) {
             this.onViolationCallback(invariant);
@@ -133,10 +125,10 @@ export class Phase4Invariants {
         violatedInvariants.push(invariant);
       }
     }
-    
+
     return violatedInvariants;
   }
-  
+
   /**
    * Vérifie un invariant spécifique
    * @param invariantId ID de l'invariant à vérifier
@@ -147,7 +139,7 @@ export class Phase4Invariants {
     if (!invariant) {
       throw new Error(`Invariant ${invariantId} non trouvé`);
     }
-    
+
     try {
       return invariant.check();
     } catch (error) {
@@ -155,7 +147,7 @@ export class Phase4Invariants {
       return false;
     }
   }
-  
+
   /**
    * Ajoute un nouvel invariant
    * @param invariant Invariant à ajouter
@@ -164,7 +156,7 @@ export class Phase4Invariants {
     this.invariants.push(invariant);
     console.log(`[Phase4Invariants] Invariant ${invariant.id} ajouté`);
   }
-  
+
   /**
    * Supprime un invariant
    * @param invariantId ID de l'invariant à supprimer
@@ -176,7 +168,7 @@ export class Phase4Invariants {
       console.log(`[Phase4Invariants] Invariant ${invariantId} supprimé`);
     }
   }
-  
+
   /**
    * Obtient tous les invariants
    * @returns Liste des invariants
@@ -184,7 +176,7 @@ export class Phase4Invariants {
   getInvariants(): Invariant[] {
     return [...this.invariants];
   }
-  
+
   /**
    * Définit le callback pour les violations d'invariants
    * @param callback Fonction de rappel
@@ -192,7 +184,7 @@ export class Phase4Invariants {
   onViolation(callback: (invariant: Invariant) => void): void {
     this.onViolationCallback = callback;
   }
-  
+
   /**
    * Force l'application des actions correctives pour un invariant violé
    * @param invariantId ID de l'invariant violé
@@ -202,9 +194,9 @@ export class Phase4Invariants {
     if (!invariant) {
       throw new Error(`Invariant ${invariantId} non trouvé`);
     }
-    
+
     console.log(`[Phase4Invariants] Application des actions correctives pour l'invariant ${invariantId}`);
-    
+
     // Appliquer des actions spécifiques selon l'invariant
     switch (invariantId) {
       case "XXXIII": // Memory Ceiling
@@ -216,24 +208,24 @@ export class Phase4Invariants {
           ui_lag_count: 0
         }));
         break;
-        
+
       case "XXXIV": // Worker Timeout
         // Pour l'instant, rien à faire de spécifique
         break;
-        
+
       case "XXXV": // UI Frame Budget
         // Pour l'instant, rien à faire de spécifique
         break;
-        
+
       case "XXXVI": // Progressive Degradation
         // Le système de fallback progressif s'occupe déjà de cela
         break;
-        
+
       case "XXXVII": // Battery Awareness
         // Forcer le mode économie d'énergie
         batteryAwareness.forcePowerSaveMode(true, 'high');
         break;
-        
+
       case "XXXVIII": // Quota Management
         // Déclencher le pruning
         storageGuard.pruneOldData(7); // Archiver les données de plus de 7 jours

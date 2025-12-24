@@ -1,5 +1,5 @@
 // Système de sécurité cognitive et anti-manipulation - Phase 3.5
-import { BrainDecision, OverrideEvent } from './brainContracts';
+import { OverrideEvent } from './brainContracts';
 
 /**
  * Invariants anti-manipulation
@@ -29,7 +29,7 @@ export interface CognitiveRiskSnapshot {
 /**
  * Mécanismes de protection active
  */
-export type ProtectionAction = 
+export type ProtectionAction =
   | "REDUCE_SUGGESTIONS"
   | "SILENCE"
   | "MODE_PASSIVE";
@@ -51,77 +51,85 @@ export interface UserCognitiveSettings {
 }
 
 /**
- * Vérifie les invariants anti-manipulation
+ * Invariants anti-manipulation (Loi 4)
  */
-export function checkCognitiveInvariants(decision: BrainDecision): CognitiveInvariants {
-  // Pour l'instant, tous les invariants sont respectés par défaut
-  // Dans une implémentation complète, cela vérifierait réellement les décisions
-  return {
-    NO_GUILT: true,
-    NO_ADDICTION: true,
-    NO_URGENCY: true,
-    TRANSPARENT_NUDGES: true
-  };
-}
+export const COGNITIVE_INVARIANTS: CognitiveInvariants = {
+  NO_GUILT: true,
+  NO_ADDICTION: true,
+  NO_URGENCY: true,
+  TRANSPARENT_NUDGES: true
+};
 
 /**
- * Détecte la dérive cognitive basée sur l'historique
+ * Détecte la dérive cognitive basée sur l'historique et l'inactivité
  */
-export function detectCognitiveDrift(overrideHistory: OverrideEvent[]): CognitiveRiskSnapshot {
-  // Compteur d'overrides répétés
-  const recentOverrides = overrideHistory.filter(event => 
-    Date.now() - event.timestamp.getTime() < 7 * 24 * 60 * 60 * 1000 // 7 derniers jours
+export function detectCognitiveRisk(
+  overrideHistory: OverrideEvent[],
+  lastActionAt: Date
+): CognitiveRiskSnapshot {
+  const now = new Date();
+  const inactivityHours = (now.getTime() - lastActionAt.getTime()) / (1000 * 60 * 60);
+
+  // Phase 3.5.3 : Silence Recovery Mode trigger (48h)
+  const isSilentRecoveryNeeded = inactivityHours >= 48;
+
+  // Compteur d'overrides récents (7 jours)
+  const recentOverrides = overrideHistory.filter(event =>
+    now.getTime() - event.timestamp.getTime() < 7 * 24 * 60 * 60 * 1000
   );
-  
-  // Calcul des scores de risque
-  const addictionRiskScore = Math.min(1.0, recentOverrides.length / 10); // 10 overrides = risque maximum
-  const coercionRiskScore = 0.0; // À implémenter avec plus de données
-  const overloadRiskScore = 0.0; // À implémenter avec plus de données
-  const autonomyLossScore = Math.min(1.0, recentOverrides.filter(o => 
-    o.userReason.includes("forced") || o.userReason.includes("must")
-  ).length / 5); // 5 forced overrides = perte d'autonomie
-  
+
+  // Calcul des scores SOTA
+  const addictionRiskScore = Math.min(1.0, recentOverrides.length / 15);
+  const overloadRiskScore = isSilentRecoveryNeeded ? 1.0 : Math.min(1.0, inactivityHours / 72);
+  const autonomyLossScore = Math.min(1.0, recentOverrides.filter(o => o.estimatedCognitiveDebt > 2).length / 5);
+
   return {
-    timestamp: new Date(),
+    timestamp: now,
     addictionRiskScore,
-    coercionRiskScore,
+    coercionRiskScore: 0,
     overloadRiskScore,
     autonomyLossScore
   };
 }
 
 /**
- * Applique une protection cognitive si nécessaire
+ * Applique une protection cognitive active (Phase 3.5.4)
  */
-export function applyCognitiveProtection(riskSnapshot: CognitiveRiskSnapshot): CognitiveProtection | null {
-  // Si le risque d'addiction est élevé, réduire les suggestions
-  if (riskSnapshot.addictionRiskScore > 0.7) {
+export function getRequiredProtection(riskSnapshot: CognitiveRiskSnapshot): CognitiveProtection | null {
+  // PRIORITÉ 1 : Mode Silence Long (Phase 3.5.4)
+  if (riskSnapshot.overloadRiskScore >= 1.0) {
     return {
-      triggeredBy: "NO_ADDICTION",
-      action: "REDUCE_SUGGESTIONS",
-      reversible: true
-    };
-  }
-  
-  // Si la perte d'autonomie est élevée, passer en mode silencieux
-  if (riskSnapshot.autonomyLossScore > 0.7) {
-    return {
-      triggeredBy: "TRANSPARENT_NUDGES",
+      triggeredBy: "NO_URGENCY",
       action: "SILENCE",
       reversible: true
     };
   }
-  
-  // Aucune protection nécessaire
+
+  // PRIORITÉ 2 : Autonomie
+  if (riskSnapshot.autonomyLossScore > 0.8) {
+    return {
+      triggeredBy: "TRANSPARENT_NUDGES",
+      action: "REDUCE_SUGGESTIONS",
+      reversible: true
+    };
+  }
+
+  // PRIORITÉ 3 : Addiction
+  if (riskSnapshot.addictionRiskScore > 0.7) {
+    return {
+      triggeredBy: "NO_ADDICTION",
+      action: "MODE_PASSIVE",
+      reversible: true
+    };
+  }
+
   return null;
 }
 
 /**
- * Paramètres cognitifs par défaut
+ * Exécute l'action de protection cognitive
  */
-export const DEFAULT_COGNITIVE_SETTINGS: UserCognitiveSettings = {
-  nudgeLevel: 2, // Niveau moyen par défaut
-  allowSuggestions: true,
-  allowOptimization: true,
-  showInfluenceReports: false // Désactivé par défaut pour éviter la surcharge
-};
+export function applyProtection(action: ProtectionAction): void {
+  console.log(`[CognitiveSecurity] Action appliquée: ${action}`);
+  // Ici on notifierait le BrainEngine pour changer son SystemMode
+}

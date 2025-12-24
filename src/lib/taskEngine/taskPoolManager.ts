@@ -4,7 +4,7 @@ import { Task } from './types';
 /**
  * Types de pools de tâches
  */
-export type TaskPoolType = 
+export type TaskPoolType =
   | 'OVERDUE'    // Tâches en retard
   | 'TODAY'      // Tâches du jour
   | 'SOON'       // Tâches dans 2-7 jours
@@ -60,7 +60,7 @@ export interface SoonScore {
 export function calculateSoonScore(task: Task, referenceDate: Date): SoonScore {
   // Score basé sur l'urgence et l'impact
   let score = 0.5; // Score de base
-  
+
   // Ajouter de l'importance selon l'urgence
   switch (task.urgency) {
     case 'urgent':
@@ -73,7 +73,7 @@ export function calculateSoonScore(task: Task, referenceDate: Date): SoonScore {
       score += 0.1;
       break;
   }
-  
+
   // Ajouter de l'importance selon l'impact
   switch (task.impact) {
     case 'high':
@@ -83,18 +83,18 @@ export function calculateSoonScore(task: Task, referenceDate: Date): SoonScore {
       score += 0.1;
       break;
   }
-  
+
   // Dégrader le score de 10% par jour
   if (task.deadline) {
     const daysUntilDeadline = Math.ceil(
       (task.deadline.getTime() - referenceDate.getTime()) / (1000 * 60 * 60 * 24)
     );
-    
+
     // Appliquer la dégradation (10% par jour)
     const degradation = Math.max(0, (daysUntilDeadline - 2) * 0.1);
     score = Math.max(0.1, score - degradation);
   }
-  
+
   return {
     score,
     lastCalculated: new Date()
@@ -124,29 +124,46 @@ export function sortSoonTasks(tasks: Task[], referenceDate: Date): Task[] {
 export function assignTaskToPool(task: Task, manager: TaskPoolManager): TaskPoolType {
   const today = new Date(manager.referenceDate);
   today.setHours(0, 0, 0, 0);
-  
+
   // Vérifier si la tâche a une deadline
   if (task.deadline) {
     const taskDeadline = new Date(task.deadline);
     taskDeadline.setHours(0, 0, 0, 0);
-    
+
     // Comparer les dates
     if (taskDeadline < today) {
       return 'OVERDUE';
     } else if (taskDeadline.getTime() === today.getTime()) {
+      // Si c'est aujourd'hui, vérifier l'heure programmée (si elle existe)
+      if (task.scheduledTime) {
+        const now = new Date(manager.referenceDate);
+        const timeMatch = task.scheduledTime.match(/(\d{1,2})[:h](\d{2})/);
+
+        if (timeMatch) {
+          const hours = parseInt(timeMatch[1], 10);
+          const minutes = parseInt(timeMatch[2], 10);
+          const scheduledDate = new Date(today);
+          scheduledDate.setHours(hours, minutes, 0, 0);
+
+          // Si l'heure programmée est passée d'au moins 1 minute
+          if (now.getTime() > scheduledDate.getTime() + 60 * 1000) {
+            return 'OVERDUE';
+          }
+        }
+      }
       return 'TODAY';
     } else {
       // Calculer la différence en jours
       const diffTime = taskDeadline.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
+
       // Tâches dans 2-7 jours
       if (diffDays >= 2 && diffDays <= 7) {
         return 'SOON';
       }
     }
   }
-  
+
   // Tâches sans deadline ou avec deadline > J+7
   return 'AVAILABLE';
 }
@@ -159,11 +176,11 @@ export function assignTaskToPool(task: Task, manager: TaskPoolManager): TaskPool
  */
 export function updateTaskPools(tasks: Task[], manager: TaskPoolManager): TaskPoolManager {
   const updatedManager = createTaskPoolManager(manager.referenceDate);
-  
+
   // Distribuer les tâches dans les pools
   for (const task of tasks) {
     const poolType = assignTaskToPool(task, manager);
-    
+
     switch (poolType) {
       case 'OVERDUE':
         updatedManager.overdue.push(task);
@@ -179,10 +196,10 @@ export function updateTaskPools(tasks: Task[], manager: TaskPoolManager): TaskPo
         break;
     }
   }
-  
+
   // Trier les tâches SOON par score
   updatedManager.soon = sortSoonTasks(updatedManager.soon, manager.referenceDate);
-  
+
   // Limiter la taille des pools
   // SOON limité à 3 tâches
   if (updatedManager.soon.length > 3) {
@@ -190,24 +207,24 @@ export function updateTaskPools(tasks: Task[], manager: TaskPoolManager): TaskPo
     const excessTasks = updatedManager.soon.splice(3);
     updatedManager.available.push(...excessTasks);
   }
-  
+
   // AVAILABLE limité à 10 tâches
   if (updatedManager.available.length > 10) {
     // Garder les 10 tâches les plus récentes
     updatedManager.available.sort((a, b) => {
       // Trier par date de création (la plus récente en premier)
-      const dateA = a.completionHistory.length > 0 
-        ? a.completionHistory[a.completionHistory.length - 1].date 
+      const dateA = a.completionHistory.length > 0
+        ? a.completionHistory[a.completionHistory.length - 1].date
         : new Date(0);
-      const dateB = b.completionHistory.length > 0 
-        ? b.completionHistory[b.completionHistory.length - 1].date 
+      const dateB = b.completionHistory.length > 0
+        ? b.completionHistory[b.completionHistory.length - 1].date
         : new Date(0);
       return dateB.getTime() - dateA.getTime();
     });
-    
+
     updatedManager.available = updatedManager.available.slice(0, 10);
   }
-  
+
   return updatedManager;
 }
 
@@ -221,7 +238,7 @@ export function getEligibleTasks(manager: TaskPoolManager): Task[] {
   if (manager.overdue.length > 0 || manager.today.length > 0) {
     return [...manager.overdue, ...manager.today];
   }
-  
+
   // Sinon, prendre SOON et AVAILABLE (dans la limite)
   return [...manager.soon, ...manager.available];
 }

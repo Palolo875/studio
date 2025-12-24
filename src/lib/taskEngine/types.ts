@@ -72,6 +72,19 @@ export interface Task {
   lastActivated?: Date;
   /** Date de création de la tâche */
   createdAt: Date;
+  /** Métadonnées NLP (Phase 2) */
+  nlpMetadata?: {
+    detectedLang: string;
+    energySuggestion?: string;
+    effortSuggestion?: string;
+    confidence: number;
+    isUncertain: boolean;
+    rawText: string;
+  };
+  /** Origine de la tâche (Phase 3.2) */
+  origin: 'imposed' | 'self_chosen';
+  /** Indique si la tâche produit un résultat tangible (Phase 3.2) */
+  hasTangibleResult: boolean;
 }
 
 /**

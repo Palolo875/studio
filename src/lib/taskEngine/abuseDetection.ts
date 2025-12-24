@@ -5,7 +5,7 @@ import { OverrideEvent } from './brainContracts';
 /**
  * Types d'abus détectables
  */
-export type AbuseType = 
+export type AbuseType =
   | "COMPULSIVE_OVERRIDE"     // Override compulsif
   | "CAPACITY_INFLATION"      // Inflation de capacité
   | "TOTAL_DELEGATION"        // Délégation totale
@@ -37,7 +37,7 @@ export interface AbuseDetectionThresholds {
  */
 export class AbuseTypology {
   private thresholds: AbuseDetectionThresholds;
-  
+
   constructor(thresholds?: AbuseDetectionThresholds) {
     this.thresholds = thresholds || {
       maxOverridesPerHour: 5,
@@ -46,18 +46,18 @@ export class AbuseTypology {
       forcedTaskDropRateThreshold: 0.6
     };
   }
-  
+
   /**
    * Détecte l'override compulsif
    */
   detectCompulsiveOverride(overrides: OverrideEvent[], timeWindowHours: number = 1): AbuseSignal | null {
     const now = new Date();
     const windowStart = new Date(now.getTime() - timeWindowHours * 60 * 60 * 1000);
-    
-    const recentOverrides = overrides.filter(override => 
+
+    const recentOverrides = overrides.filter(override =>
       override.timestamp >= windowStart
     );
-    
+
     if (recentOverrides.length > this.thresholds.maxOverridesPerHour) {
       return {
         type: "COMPULSIVE_OVERRIDE",
@@ -70,10 +70,10 @@ export class AbuseTypology {
         }
       };
     }
-    
+
     return null;
   }
-  
+
   /**
    * Détecte l'inflation de capacité
    */
@@ -91,22 +91,22 @@ export class AbuseTypology {
         }
       };
     }
-    
+
     return null;
   }
-  
+
   /**
    * Détecte la délégation totale
    */
   detectTotalDelegation(userRequests: string[]): AbuseSignal | null {
     const delegationKeywords = ["decide for me", "tell me what to do", "choose for me"];
-    
-    const delegationRequests = userRequests.filter(request => 
-      delegationKeywords.some(keyword => 
+
+    const delegationRequests = userRequests.filter(request =>
+      delegationKeywords.some(keyword =>
         request.toLowerCase().includes(keyword.toLowerCase())
       )
     );
-    
+
     if (delegationRequests.length > 3) { // Plus de 3 demandes de délégation
       return {
         type: "TOTAL_DELEGATION",
@@ -119,27 +119,27 @@ export class AbuseTypology {
         }
       };
     }
-    
+
     return null;
   }
-  
+
   /**
    * Détecte l'exploitation des modes
    */
   detectModeExploitation(modeHistory: string[]): AbuseSignal | null {
     // Compter les changements de mode fréquents
     const modeChanges: Record<string, number> = {};
-    
+
     for (let i = 1; i < modeHistory.length; i++) {
-      if (modeHistory[i] !== modeHistory[i-1]) {
-        const transition = `${modeHistory[i-1]}->${modeHistory[i]}`;
+      if (modeHistory[i] !== modeHistory[i - 1]) {
+        const transition = `${modeHistory[i - 1]}->${modeHistory[i]}`;
         modeChanges[transition] = (modeChanges[transition] || 0) + 1;
       }
     }
-    
+
     // Si un mode particulier est changé trop fréquemment
     const frequentTransitions = Object.entries(modeChanges).filter(([_, count]) => count > 5);
-    
+
     if (frequentTransitions.length > 0) {
       return {
         type: "MODE_EXPLOITATION",
@@ -151,78 +151,67 @@ export class AbuseTypology {
         }
       };
     }
-    
+
     return null;
   }
 }
 
-// Instance singleton pour la typologie des abus
-export const abuseTypology = new AbuseTypology();
-
 /**
- * Paramètres de throttling des overrides
+ * Coût cognitif explicite (Phase 3.9.4)
  */
-export interface OverrideThrottleParams {
-  windowMinutes: number;
-  maxOverrides: number;
-  effect: "CONFIRMATION_REQUIRED" | "DELAY" | "WARNING";
+export interface CognitiveCost {
+  action: "OVERRIDE" | "FORCE_MODE" | "EXTRA_TASK";
+  estimatedCost: number; // ex: 25% de la capacité
+  acknowledged: boolean;
 }
 
 /**
- * Gestionnaire de throttling des overrides
+ * Détection de délégation excessive (Phase 3.9.5)
  */
-export class OverrideThrottler {
-  private throttleParams: OverrideThrottleParams;
-  private overrideHistory: Date[] = [];
-  
-  constructor(params?: OverrideThrottleParams) {
-    this.throttleParams = params || {
-      windowMinutes: 60,
-      maxOverrides: 3,
-      effect: "CONFIRMATION_REQUIRED"
+export class DelegationGuard {
+  private delegationSignals: string[] = ["decide_for_me", "tell_me_what_to_do", "choose for me"];
+  private repeatCount: number = 0;
+
+  /**
+   * Analyse si l'action de l'utilisateur est une abdication de responsabilité
+   */
+  shouldReframe(userInput: string): boolean {
+    const isDelegation = this.delegationSignals.some(s => userInput.toLowerCase().includes(s));
+    if (isDelegation) this.repeatCount++;
+
+    // Si l'utilisateur demande 3 fois de suite, on reframe (Phase 3.9.5)
+    return this.repeatCount >= 3;
+  }
+
+  getReframingMessage(): string {
+    return "Je peux t'aider à clarifier, mais le choix final t'appartient pour garantir ton autonomie.";
+  }
+}
+
+/**
+ * Gestionnaire d'abus SOTA
+ */
+export class BrainAbuseProtector {
+  /**
+   * Calcule le coût cognitif d'un override (Phase 3.9.4)
+   */
+  calculateOverrideCost(task: Task): CognitiveCost {
+    // Les tâches imposées ont un droit de passage mais coûtent quand même (Phase 3.9.7)
+    const baseCost = task.origin === "imposed" ? 15 : 25;
+
+    return {
+      action: "OVERRIDE",
+      estimatedCost: baseCost,
+      acknowledged: false
     };
   }
-  
+
   /**
-   * Vérifie si un override est autorisé
+   * Applique une limitation douce (Phase 3.9.5) - Friction sans blocage
    */
-  isOverrideAllowed(): { allowed: boolean; reason?: string } {
-    const now = new Date();
-    const windowStart = new Date(now.getTime() - this.throttleParams.windowMinutes * 60 * 1000);
-    
-    // Nettoyer l'historique ancien
-    this.overrideHistory = this.overrideHistory.filter(timestamp => timestamp >= windowStart);
-    
-    // Vérifier si la limite est atteinte
-    if (this.overrideHistory.length >= this.throttleParams.maxOverrides) {
-      return {
-        allowed: false,
-        reason: `Limite d'overrides atteinte (${this.throttleParams.maxOverrides} dans les ${this.throttleParams.windowMinutes} dernières minutes)`
-      };
-    }
-    
-    // Enregistrer cette tentative
-    this.overrideHistory.push(now);
-    
-    return { allowed: true };
-  }
-  
-  /**
-   * Applique l'effet de throttling
-   */
-  applyThrottlingEffect(): string {
-    switch (this.throttleParams.effect) {
-      case "CONFIRMATION_REQUIRED":
-        return "Tu as déjà forcé plusieurs décisions récemment. Confirme consciemment.";
-      case "DELAY":
-        return "Attendez quelques minutes avant de forcer une autre décision.";
-      case "WARNING":
-        return "Attention : forcer trop de décisions peut nuire à votre productivité.";
-      default:
-        return "Confirmation requise pour continuer.";
-    }
+  getFrictionLevel(overrideCount: number): "NONE" | "CONFIRMATION" | "THROTTLE" {
+    if (overrideCount > 10) return "THROTTLE"; // Ralentissement volontaire
+    if (overrideCount > 5) return "CONFIRMATION"; // Demande de conscience
+    return "NONE";
   }
 }
-
-// Instance singleton pour le throttling
-export const overrideThrottler = new OverrideThrottler();

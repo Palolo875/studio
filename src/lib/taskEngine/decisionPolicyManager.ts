@@ -1,88 +1,60 @@
-// Gestionnaire de politique de décision - Phase 3.2
-import { BrainInput, BrainOutput, DecisionPolicy, SystemMode } from './brainContracts';
-import { Task } from './types';
-
 /**
- * Détection du mode système basé sur les entrées
+ * Calcule le nombre maximum de tâches autorisé (Cap Dynamique - Phase 3.2)
  */
-export function detectSystemMode(input: BrainInput): SystemMode {
-  // Mode silencieux si l'utilisateur l'a demandé
-  if (input.history.some(h => h.overrideEvents.some(e => e.userReason === "silent_mode"))) {
-    return "SILENT";
-  }
-  
-  // Mode urgence si la journée est impossible
-  if (detectImpossibleDay(input.tasks, input.temporal.availableTime)) {
-    return "EMERGENCY";
-  }
-  
-  // Mode detox si le TAI est trop élevé
-  if (detectDetox(input.history)) {
-    return "DETOX";
-  }
-  
-  // Mode recovery si l'utilisateur a besoin de repos
-  if (detectRecovery(input.history)) {
-    return "RECOVERY";
-  }
-  
-  return "NORMAL";
-}
+export function calculateMaxTasks(input: BrainInput, policyLevel: string): number {
+  let base = 3;
+  let modifiers = 0;
 
-/**
- * Détection d'une journée impossible
- */
-function detectImpossibleDay(tasks: Task[], availableTime: number): boolean {
-  const fixedTasks = tasks.filter(t => t.scheduledTime);
-  const totalTimeNeeded = fixedTasks.reduce((sum, task) => sum + (task.duration || 0), 0);
-  return totalTimeNeeded > availableTime;
-}
+  // Bonus pour les tâches imposées
+  const imposedTasks = input.tasks.filter(t => t.origin === 'imposed').length;
+  if (imposedTasks > 2) modifiers += 1;
 
-/**
- * Détection du mode detox
- */
-function detectDetox(history: any[]): boolean {
-  // Logique de détection du detox basée sur l'historique
-  // Cette fonction serait implémentée plus complètement avec le TAI
-  return false;
-}
+  // Bonus pour les tâches à faible effort (Quick Wins)
+  const lowEffortTasks = input.tasks.filter(t => t.effort === 'low').length;
+  if (lowEffortTasks > 3) modifiers += 1;
 
-/**
- * Détection du mode recovery
- */
-function detectRecovery(history: any[]): boolean {
-  // Logique de détection du recovery basée sur l'historique
-  return false;
+  // Bonus pour le mode urgence
+  if (policyLevel === 'EMERGENCY') modifiers += 2;
+
+  // Clamp entre 1 et 9 (Hard Limit)
+  return Math.max(1, Math.min(9, base + modifiers));
 }
 
 /**
  * Applique la politique de décision STRICT
+ * Élimination uniquement par invariants, pas de tri prédictif.
  */
 export function applyStrictPolicy(input: BrainInput): BrainOutput {
-  // En mode strict, seulement l'élimination est autorisée
-  // Pas de recommandation finale
-  
-  // Utiliser le sélecteur existant mais sans tri
-  // (l'implémentation détaillée viendrait ici)
-  
+  const maxTasks = calculateMaxTasks(input, 'STRICT');
+
+  // En mode STRICT, on ne trie pas, on garde l'ordre original (utilisateur)
+  // mais on filtre ce qui viole les invariants fondamentaux
+  const allowedTasks = input.tasks
+    .filter(t => t.effort !== 'high' || input.userState.energy !== 'low')
+    .slice(0, maxTasks);
+
+  const rejectedTasks = input.tasks.filter(t => !allowedTasks.includes(t));
+  const reasons = new Map<string, any>();
+  rejectedTasks.forEach(t => reasons.set(t.id, "budget_exceeded" as const));
+
   return {
     session: {
-      allowedTasks: [],
-      maxTasks: 0,
-      estimatedDuration: 0,
-      budgetConsumed: 0
+      allowedTasks,
+      maxTasks,
+      estimatedDuration: allowedTasks.reduce((sum, t) => sum + (t.duration || 0), 0),
+      budgetConsumed: allowedTasks.length * 2 // Simulation
     },
     rejected: {
-      tasks: input.tasks,
-      reasons: new Map()
+      tasks: rejectedTasks,
+      reasons
     },
     mode: {
       current: "NORMAL",
-      reason: "Politique STRICTE appliquée"
+      reason: "Politique STRICTE : Protection maximale, aucun tri automatique."
     },
     warnings: [],
     explanations: {
-      summary: "Mode STRICTE - Élimination uniquement",
+      summary: "Le système a filtré les tâches selon vos invariants sans modifier l'ordre de vos priorités.",
       perTask: new Map()
     },
     guarantees: {
@@ -95,7 +67,7 @@ export function applyStrictPolicy(input: BrainInput): BrainOutput {
     metadata: {
       decisionId: generateDecisionId(),
       timestamp: new Date(),
-      brainVersion: "1.0.0",
+      brainVersion: "1.1.0",
       policy: { level: "STRICT", consentRequired: true, overrideCostVisible: true },
       overrideEvents: []
     }
@@ -104,29 +76,41 @@ export function applyStrictPolicy(input: BrainInput): BrainOutput {
 
 /**
  * Applique la politique de décision ASSISTED
+ * Tri par score, favorise les résultats tangibles.
  */
 export function applyAssistedPolicy(input: BrainInput): BrainOutput {
-  // En mode assisté, tri explicite mais non forcé
-  // Ordre expliqué
-  
+  const maxTasks = calculateMaxTasks(input, 'ASSISTED');
+
+  // Tri intelligent : Tangibles d'abord, puis par urgence
+  const sortedTasks = [...input.tasks].sort((a, b) => {
+    if (a.hasTangibleResult && !b.hasTangibleResult) return -1;
+    if (!a.hasTangibleResult && b.hasTangibleResult) return 1;
+    // Puis urgence
+    const urgencyScore = { urgent: 4, high: 3, medium: 2, low: 1 };
+    return urgencyScore[b.urgency] - urgencyScore[a.urgency];
+  });
+
+  const allowedTasks = sortedTasks.slice(0, maxTasks);
+  const rejectedTasks = input.tasks.filter(t => !allowedTasks.includes(t));
+
   return {
     session: {
-      allowedTasks: input.tasks.slice(0, 3),
-      maxTasks: 3,
-      estimatedDuration: input.tasks.slice(0, 3).reduce((sum, task) => sum + (task.duration || 0), 0),
-      budgetConsumed: 0
+      allowedTasks,
+      maxTasks,
+      estimatedDuration: allowedTasks.reduce((sum, t) => sum + (t.duration || 0), 0),
+      budgetConsumed: allowedTasks.length * 1.5
     },
     rejected: {
-      tasks: input.tasks.slice(3),
+      tasks: rejectedTasks,
       reasons: new Map()
     },
     mode: {
       current: "NORMAL",
-      reason: "Politique ASSISTÉE appliquée"
+      reason: "Politique ASSISTÉE : Recommandations basées sur la complétion et les résultats tangibles."
     },
     warnings: [],
     explanations: {
-      summary: "Mode ASSISTÉ - Tri explicite mais non forcé",
+      summary: "Suggestions optimisées pour maximiser vos résultats tangibles aujourd'hui.",
       perTask: new Map()
     },
     guarantees: {
@@ -139,7 +123,7 @@ export function applyAssistedPolicy(input: BrainInput): BrainOutput {
     metadata: {
       decisionId: generateDecisionId(),
       timestamp: new Date(),
-      brainVersion: "1.0.0",
+      brainVersion: "1.1.0",
       policy: { level: "ASSISTED", consentRequired: true, overrideCostVisible: true },
       overrideEvents: []
     }
@@ -148,35 +132,38 @@ export function applyAssistedPolicy(input: BrainInput): BrainOutput {
 
 /**
  * Applique la politique de décision EMERGENCY
+ * Réalité brute, exposition de l'impossible.
  */
 export function applyEmergencyPolicy(input: BrainInput): BrainOutput {
-  // En mode urgence, réalité brute
-  // Exposition de l'impossible
-  // Choix forcé par l'utilisateur
-  // Aucune optimisation cachée
-  
+  const maxTasks = calculateMaxTasks(input, 'EMERGENCY');
+
+  // En mode URGENCE, on expose tout ce qui est critique, même si ça dépasse un peu
+  const urgentTasks = input.tasks.filter(t => t.urgency === 'urgent' || t.origin === 'imposed');
+  const allowedTasks = urgentTasks.slice(0, maxTasks);
+  const rejectedTasks = input.tasks.filter(t => !allowedTasks.includes(t));
+
   return {
     session: {
-      allowedTasks: input.tasks.slice(0, 5),
-      maxTasks: 5,
-      estimatedDuration: input.tasks.slice(0, 5).reduce((sum, task) => sum + (task.duration || 0), 0),
-      budgetConsumed: 0
+      allowedTasks,
+      maxTasks,
+      estimatedDuration: allowedTasks.reduce((sum, t) => sum + (t.duration || 0), 0),
+      budgetConsumed: allowedTasks.length * 3
     },
     rejected: {
-      tasks: input.tasks.slice(5),
+      tasks: rejectedTasks,
       reasons: new Map()
     },
     mode: {
       current: "EMERGENCY",
-      reason: "Politique D'URGENCE appliquée"
+      reason: "Politique D'URGENCE : Traitement brutal des priorités imposées."
     },
     warnings: [{
       type: "overload_risk",
-      message: "Mode urgence activé - charge cognitive élevée",
+      message: "ALERTE : Journée saturée. Seules les urgences critiques sont affichées.",
       severity: "high"
     }],
     explanations: {
-      summary: "Mode URGENGE - Réalité brute exposée",
+      summary: "Mode survie activé. Concentration uniquement sur les obligations non négociables.",
       perTask: new Map()
     },
     guarantees: {
@@ -189,7 +176,7 @@ export function applyEmergencyPolicy(input: BrainInput): BrainOutput {
     metadata: {
       decisionId: generateDecisionId(),
       timestamp: new Date(),
-      brainVersion: "1.0.0",
+      brainVersion: "1.1.0",
       policy: { level: "EMERGENCY", consentRequired: true, overrideCostVisible: true },
       overrideEvents: []
     }
@@ -215,7 +202,6 @@ export function applyDecisionPolicy(input: BrainInput, policy: DecisionPolicy): 
     case "EMERGENCY":
       return applyEmergencyPolicy(input);
     default:
-      // Par défaut, appliquer la politique STRICTE
       return applyStrictPolicy(input);
   }
 }

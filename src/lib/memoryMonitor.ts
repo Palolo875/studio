@@ -1,7 +1,5 @@
-/**
- * Moniteur de mémoire actif - Phase 4
- * Implémente le monitoring continu de l'utilisation mémoire avec enforcement
- */
+import { modelMemoryManager } from './modelMemoryManager';
+import { progressiveFallback, FallbackLevel } from './progressiveFallback';
 
 // Interface pour les statistiques de mémoire
 export interface MemoryStats {
@@ -34,11 +32,11 @@ export class MemoryMonitor {
   private isActive: boolean = false;
   private onWarningCallback: ((stats: MemoryStats) => void) | null = null;
   private onCriticalCallback: ((stats: MemoryStats) => void) | null = null;
-  
+
   constructor(limits?: Partial<MemoryLimits>) {
     this.limits = { ...DEFAULT_MEMORY_LIMITS, ...limits };
   }
-  
+
   /**
    * Vérifie l'utilisation actuelle de la mémoire
    * @returns Statistiques de mémoire ou null si l'API n'est pas disponible
@@ -48,13 +46,13 @@ export class MemoryMonitor {
     if (typeof performance !== 'undefined' && 'memory' in performance) {
       // @ts-ignore
       const mem = performance.memory;
-      
+
       if (mem) {
         const used = mem.usedJSHeapSize;
         const total = mem.totalJSHeapSize;
         const limit = mem.jsHeapSizeLimit;
         const percent = (used / limit) * 100;
-        
+
         return {
           used,
           total,
@@ -63,11 +61,11 @@ export class MemoryMonitor {
         };
       }
     }
-    
+
     // API non disponible
     return null;
   }
-  
+
   /**
    * Applique les actions d'enforcement en fonction de l'utilisation mémoire
    * @param limits Limites de mémoire à utiliser (optionnel)
@@ -75,145 +73,62 @@ export class MemoryMonitor {
   enforce(limits?: MemoryLimits): void {
     const currentLimits = limits || this.limits;
     const current = this.check();
-    
+
     if (!current) {
       // API de mémoire non disponible
       return;
     }
-    
+
     // Vérifier le seuil critique
     if (current.percent > currentLimits.criticalThreshold) {
       this.handleCriticalMemory(current);
       return;
     }
-    
+
     // Vérifier le seuil d'avertissement
     if (current.percent > currentLimits.warningThreshold) {
       this.handleWarningMemory(current);
       return;
     }
   }
-  
+
   /**
    * Gère l'utilisation mémoire critique
    * @param stats Statistiques de mémoire
    */
+  /**
+   * Actions de dégradation progressive (Phase 4.5)
+   */
   private handleCriticalMemory(stats: MemoryStats): void {
     console.warn(`[MemoryMonitor] Utilisation mémoire critique: ${stats.percent.toFixed(2)}%`);
-    
-    // Actions de dégradation progressive
-    this.unloadModels();
+
+    // 1. Décharger tous les modèles (Poids lourd)
+    modelMemoryManager.unloadAllModels();
+
+    // 2. Vider les caches volatils
     this.clearCache();
-    this.pruneOldData();
-    
-    // Mode survie
-    this.enableSimpleMode();
-    this.alertUser("Mémoire critique");
-    
-    // Appeler le callback si défini
+
+    // 3. Forcer le mode SURVIVAL (Phase 4.5)
+    progressiveFallback.forceFallbackLevel(FallbackLevel.LEVEL_3);
+
+    // 4. Alerte utilisateur non intrusive
+    this.alertUser("Mémoire saturée : Passage en mode survie pour rester fluide.");
+
     if (this.onCriticalCallback) {
       this.onCriticalCallback(stats);
     }
   }
-  
-  /**
-   * Gère l'utilisation mémoire d'avertissement
-   * @param stats Statistiques de mémoire
-   */
+
   private handleWarningMemory(stats: MemoryStats): void {
     console.warn(`[MemoryMonitor] Utilisation mémoire élevée: ${stats.percent.toFixed(2)}%`);
-    
-    // Actions préventives
-    this.unloadUnusedModels();
-    this.clearOldCache();
-    
-    // Appeler le callback si défini
-    if (this.onWarningCallback) {
-      this.onWarningCallback(stats);
-    }
+
+    // 1. Décharger les modèles inutilisés
+    // modelMemoryManager.unloadUnusedModels(); // À implémenter si besoin
+
+    // 2. Passer en mode OPTIMIZED
+    progressiveFallback.forceFallbackLevel(FallbackLevel.LEVEL_1);
   }
-  
-  /**
-   * Décharge les modèles de la mémoire
-   */
-  private unloadModels(): void {
-    // Cette fonction dépend de l'implémentation spécifique des modèles
-    // Pour l'instant, nous simulons le déchargement
-    console.log('[MemoryMonitor] Déchargement des modèles');
-    
-    // Exemple d'implémentation hypothétique:
-    /*
-    if (typeof modelMemoryManager !== 'undefined') {
-      modelMemoryManager.unloadAllModels();
-    }
-    */
-  }
-  
-  /**
-   * Décharge les modèles inutilisés
-   */
-  private unloadUnusedModels(): void {
-    // Cette fonction dépend de l'implémentation spécifique des modèles
-    console.log('[MemoryMonitor] Déchargement des modèles inutilisés');
-  }
-  
-  /**
-   * Vide le cache
-   */
-  private clearCache(): void {
-    // Cette fonction dépend de l'implémentation spécifique du cache
-    console.log('[MemoryMonitor] Vidage du cache');
-    
-    // Exemple d'implémentation hypothétique:
-    /*
-    if (typeof caches !== 'undefined') {
-      caches.keys().then(cacheNames => {
-        cacheNames.forEach(cacheName => {
-          caches.delete(cacheName);
-        });
-      });
-    }
-    */
-  }
-  
-  /**
-   * Vide l'ancien cache
-   */
-  private clearOldCache(): void {
-    // Cette fonction dépend de l'implémentation spécifique du cache
-    console.log('[MemoryMonitor] Vidage de l\'ancien cache');
-  }
-  
-  /**
-   * Archive les anciennes données
-   */
-  private pruneOldData(): void {
-    // Cette fonction dépend de l'implémentation spécifique de la base de données
-    console.log('[MemoryMonitor] Archivage des anciennes données');
-    
-    // Exemple d'implémentation hypothétique:
-    /*
-    if (typeof storageGuard !== 'undefined') {
-      storageGuard.pruneOldData(30);
-    }
-    */
-  }
-  
-  /**
-   * Active le mode simple
-   */
-  private enableSimpleMode(): void {
-    // Cette fonction dépend de l'implémentation spécifique de l'application
-    console.log('[MemoryMonitor] Activation du mode simple');
-    
-    // Exemple d'implémentation hypothétique:
-    /*
-    if (typeof appState !== 'undefined') {
-      appState.setMode('SIMPLE');
-    }
-    */
-  }
-  
+
   /**
    * Alerte l'utilisateur
    * @param message Message d'alerte
@@ -221,7 +136,7 @@ export class MemoryMonitor {
   private alertUser(message: string): void {
     // Cette fonction dépend de l'implémentation spécifique des notifications
     console.info(`[MemoryMonitor] Alerte utilisateur: ${message}`);
-    
+
     // Exemple d'implémentation hypothétique:
     /*
     if (typeof notificationService !== 'undefined') {
@@ -229,7 +144,7 @@ export class MemoryMonitor {
     }
     */
   }
-  
+
   /**
    * Démarre le monitoring périodique
    */
@@ -238,15 +153,15 @@ export class MemoryMonitor {
       console.warn('[MemoryMonitor] Monitoring déjà actif');
       return;
     }
-    
+
     this.isActive = true;
     this.intervalId = setInterval(() => {
       this.enforce();
     }, this.limits.checkInterval);
-    
+
     console.log('[MemoryMonitor] Monitoring démarré');
   }
-  
+
   /**
    * Arrête le monitoring périodique
    */
@@ -258,21 +173,21 @@ export class MemoryMonitor {
       console.log('[MemoryMonitor] Monitoring arrêté');
     }
   }
-  
+
   /**
    * Met à jour les limites de mémoire
    * @param limits Nouvelles limites
    */
   updateLimits(limits: Partial<MemoryLimits>): void {
     this.limits = { ...this.limits, ...limits };
-    
+
     // Redémarrer le monitoring si actif
     if (this.isActive) {
       this.stopMonitoring();
       this.startMonitoring();
     }
   }
-  
+
   /**
    * Obtient les limites actuelles
    * @returns Limites actuelles
@@ -280,7 +195,7 @@ export class MemoryMonitor {
   getLimits(): MemoryLimits {
     return { ...this.limits };
   }
-  
+
   /**
    * Définit le callback pour les avertissements mémoire
    * @param callback Fonction de rappel
@@ -288,7 +203,7 @@ export class MemoryMonitor {
   onWarning(callback: (stats: MemoryStats) => void): void {
     this.onWarningCallback = callback;
   }
-  
+
   /**
    * Définit le callback pour les situations critiques
    * @param callback Fonction de rappel
@@ -296,7 +211,7 @@ export class MemoryMonitor {
   onCritical(callback: (stats: MemoryStats) => void): void {
     this.onCriticalCallback = callback;
   }
-  
+
   /**
    * Vérifie si le monitoring est actif
    * @returns true si le monitoring est actif, false sinon

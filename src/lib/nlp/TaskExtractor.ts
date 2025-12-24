@@ -141,60 +141,76 @@ interface EffortResult {
 /**
  * Extraction de tâches à partir d'un texte avec approche SOTA
  * @param text Le texte à analyser
- * @param lang La langue du texte
+ * @param uiLang Langue de l'interface (pour le fallback)
  * @returns Liste de tâches brutes avec scores de confiance
  */
-export function extractTasks(text: string, lang: 'fr' | 'en' | 'es'): RawTaskWithContract[] {
-  // Détecter la fatigue linguistique
+export function extractTasks(text: string, uiLang: 'fr' | 'en' | 'es' = 'fr'): RawTaskWithContract[] {
+  // 1. Détecter la langue (Règles Phase 2)
+  const langDetection = LanguageDetector.detect(text, uiLang);
+  const lang = langDetection.lang;
+
+  // 2. Détecter la fatigue linguistique
   const fatigueState = linguisticFatigueDetector.detectFatigue(text);
-  
-  // Ajuster les seuils selon la fatigue
   const confidenceThreshold = fatigueState.processingThreshold;
-  
+
   // Normaliser le texte
   const normalizedText = text.trim();
   if (!normalizedText) return [];
-  
-  // Séparer en phrases (simulé)
+
+  // 3. Séparer en phrases (simulé)
   const sentences = splitIntoSentences(normalizedText, lang);
-  const tasks: RawTask[] = [];
-  
-  // Traiter chaque phrase
+  const tasks: RawTaskWithContract[] = [];
+
+  // 4. Traiter chaque phrase
   for (const sentence of sentences) {
     // Extraire les verbes potentiels avec scores
     const potentialVerbs = extractPotentialVerbsWithScores(sentence, lang);
-    
-    // Pour chaque verbe, créer une tâche
+
+    // Règle Phase 2 : Limiter à l'action la plus probable par phrase
+    let bestAction: [string, number] | null = null;
     for (const [verb, score] of potentialVerbs) {
-      if (score > confidenceThreshold) { // Seuil de confiance ajusté selon la fatigue
-        const task = createTaskWithContract({
-          id: generateId(),
-          action: verb,
-          object: extractObject(sentence, verb),
-          deadline: parseDateNL(sentence, lang),
-          effortHint: guessEffort(sentence),
-          rawText: sentence,
-          sentence: sentence,
-          confidence: score,
-          entities: extractEntities(sentence, lang)
-        }, {
-          inferred: false,
-          decided: false,
-          corrected: false,
-          extracted: true,
-          classified: false,
-          confidence: score
-        });
-        
-        tasks.push(task);
+      if (!bestAction || score > bestAction[1]) {
+        bestAction = [verb, score];
       }
     }
+
+    if (bestAction && bestAction[1] > confidenceThreshold) {
+      const [verb, score] = bestAction;
+
+      const task = createTaskWithContract({
+        id: generateId(),
+        action: verb,
+        object: extractObject(sentence, verb),
+        deadline: parseDateNL(sentence, lang),
+        effortHint: guessEffort(sentence),
+        rawText: sentence,
+        sentence: sentence,
+        confidence: score * langDetection.confidence, // Pondérer par la confiance de la langue
+        entities: extractEntities(sentence, lang)
+      }, {
+        inferred: false,
+        decided: false,
+        corrected: false,
+        extracted: true,
+        classified: false,
+        confidence: score
+      }, {
+        low_confidence: score < 0.7,
+        mixed_language: langDetection.reason === 'low_model_score_fallback_to_char',
+        linguistic_fatigue: fatigueState.level !== 'LOW'
+      });
+
+      // Injecter la langue détectée dans les métadonnées
+      task.metadata.detectedLang = lang;
+
+      tasks.push(task);
+    }
   }
-  
+
   // Trier par confiance décroissante
   tasks.sort((a, b) => b.confidence - a.confidence);
-  
-  // Limiter à 5 tâches maximum
+
+  // Limiter à 5 tâches maximum par session de capture
   return tasks.slice(0, 5);
 }
 
@@ -205,7 +221,7 @@ function splitIntoSentences(text: string, lang: string): string[] {
   // Amélioration : utiliser des règles linguistiques plus précises
   const sentenceEndings = /[.!?]+(?=\s+[A-ZÀ-ÖØ-Þ])/g;
   const sentences = text.split(sentenceEndings);
-  
+
   // Nettoyer et filtrer les phrases
   return sentences
     .map(s => s.trim())
@@ -218,30 +234,30 @@ function splitIntoSentences(text: string, lang: string): string[] {
 function extractPotentialVerbsWithScores(sentence: string, lang: string): Map<string, number> {
   const verbMap = new Map<string, number>();
   const langVerbs = ACTION_VERBS[lang as keyof typeof ACTION_VERBS];
-  
+
   // Convertir en minuscules pour la comparaison
   const lowerSentence = sentence.toLowerCase();
-  
+
   // Vérifier chaque verbe connu
   for (const [verb, baseScore] of langVerbs.entries()) {
     if (lowerSentence.includes(verb)) {
       // Ajuster le score en fonction du contexte
       let adjustedScore = baseScore;
-      
+
       // Bonus pour les verbes au début de phrase
       if (new RegExp(`^\\s*${verb}`, 'i').test(sentence)) {
         adjustedScore += 0.1;
       }
-      
+
       // Pénalité pour les verbes très courts dans des phrases longues
       if (verb.length <= 3 && sentence.length > 50) {
         adjustedScore -= 0.1;
       }
-      
+
       verbMap.set(verb, Math.min(1.0, adjustedScore));
     }
   }
-  
+
   return verbMap;
 }
 
@@ -252,13 +268,13 @@ function extractObject(sentence: string, verb: string): string {
   // Trouver la position du verbe
   const verbIndex = sentence.toLowerCase().indexOf(verb.toLowerCase());
   if (verbIndex === -1) return '';
-  
+
   // Extraire le texte après le verbe
   const afterVerb = sentence.substring(verbIndex + verb.length).trim();
-  
+
   // Utiliser une approche plus sophistiquée pour extraire l'objet
   const object = extractMainObject(afterVerb, verb);
-  
+
   return object;
 }
 
@@ -271,12 +287,12 @@ function extractMainObject(text: string, verb: string): string {
     .replace(/[^\w\sáéíóúüñàâäôöùûüÿç]/g, ' ')
     .split(/\s+/)
     .filter(w => w.length > 0);
-  
+
   // Filtrer les mots de liaison et stopwords
-  const filteredTokens = tokens.filter(token => 
+  const filteredTokens = tokens.filter(token =>
     !['le', 'la', 'les', 'de', 'du', 'des', 'un', 'une', 'et', 'ou', 'à', 'au', 'aux', 'pour', 'avec'].includes(token.toLowerCase())
   );
-  
+
   // Prendre les 3 premiers tokens significatifs
   return filteredTokens.slice(0, 3).join(' ').trim();
 }
@@ -297,7 +313,7 @@ function guessEffort(text: string): 'S' | 'M' | 'L' {
   const lowerText = text.toLowerCase();
   let scores = { S: 0, M: 0, L: 0 };
   let totalCount = 0;
-  
+
   // Calculer les scores pour chaque niveau d'effort
   for (const effortLevel of ['S', 'M', 'L'] as const) {
     const hints = EFFORT_HINTS[effortLevel];
@@ -308,21 +324,21 @@ function guessEffort(text: string): 'S' | 'M' | 'L' {
       }
     }
   }
-  
+
   // Si aucun indice trouvé, retourner 'M' par défaut
   if (totalCount === 0) return 'M';
-  
+
   // Retourner le niveau avec le score le plus élevé
   let maxEffort: 'S' | 'M' | 'L' = 'M';
   let maxScore = 0;
-  
+
   for (const [effort, score] of Object.entries(scores)) {
     if (score > maxScore) {
       maxScore = score;
       maxEffort = effort as 'S' | 'M' | 'L';
     }
   }
-  
+
   return maxEffort;
 }
 
@@ -332,7 +348,7 @@ function guessEffort(text: string): 'S' | 'M' | 'L' {
 function extractEntities(text: string, lang: string): Record<string, string> {
   const entities: Record<string, string> = {};
   const patterns = ENTITY_PATTERNS[lang as keyof typeof ENTITY_PATTERNS];
-  
+
   // Extraire chaque type d'entité
   for (const [entityType, pattern] of Object.entries(patterns)) {
     const match = text.match(pattern);
@@ -340,7 +356,7 @@ function extractEntities(text: string, lang: string): Record<string, string> {
       entities[entityType] = match[0];
     }
   }
-  
+
   return entities;
 }
 

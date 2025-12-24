@@ -252,8 +252,9 @@ function generateTags(
  */
 export async function classifyTask(
     rawTask: RawTaskWithContract
-): Promise<TaskClassification> {
+): Promise<TaskClassification & { isUncertain: boolean; unknown?: boolean }> {
     const text = rawTask.rawText;
+    const CONFIDENCE_THRESHOLD = 0.7; // Documentation Phase 2
 
     logger.debug('Classifying task', { text: text.substring(0, 50) });
     logger.startTimer('classify-task');
@@ -288,6 +289,12 @@ export async function classifyTask(
         const urgency = calculateUrgency(text);
         const autoTags = generateTags(text, energyType, effort);
 
+        // Déterminer si la classification est incertaine (Zone de Quarantaine)
+        const isUncertain = energyConfidence < CONFIDENCE_THRESHOLD || effortConfidence < CONFIDENCE_THRESHOLD;
+
+        // Déterminer si la tâche est "unknown" (cas refusés augmentés)
+        const isUnknown = energyConfidence < 0.4 && effortConfidence < 0.4;
+
         logger.endTimer('classify-task');
 
         return {
@@ -298,11 +305,13 @@ export async function classifyTask(
             sentiment,
             urgency,
             autoTags,
+            isUncertain,
+            unknown: isUnknown
         };
     } catch (error) {
         logger.error('Task classification failed', error as Error);
 
-        // Retourner des valeurs par défaut
+        // Retourner des valeurs par défaut avec flag d'incertitude
         return {
             energyType: 'admin',
             energyConfidence: 0.5,
@@ -311,6 +320,8 @@ export async function classifyTask(
             sentiment: 'neutral',
             urgency: 0.5,
             autoTags: ['uncategorized'],
+            isUncertain: true,
+            unknown: true
         };
     }
 }

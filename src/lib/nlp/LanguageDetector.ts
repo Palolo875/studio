@@ -55,36 +55,52 @@ export class LanguageDetector {
   /**
    * Détecte la langue d'un texte avec une approche SOTA
    * @param text Le texte à analyser
-   * @returns La langue détectée ('fr', 'en', ou 'es')
+   * @param uiLang Langue de l'interface utilisateur (fallback)
+   * @returns Résultat avec langue, confiance et raison
    */
-  static detect(text: string): 'fr' | 'en' | 'es' {
-    if (!text.trim()) return 'fr'; // Default français
-    
+  static detect(text: string, uiLang: 'fr' | 'en' | 'es' = 'fr'): { lang: 'fr' | 'en' | 'es', confidence: number, reason: string } {
+    if (!text.trim()) {
+      return { lang: uiLang, confidence: 1.0, reason: "empty" };
+    }
+
     // Nettoyer et normaliser le texte
     const cleanedText = this.cleanText(text);
     const words = this.tokenize(cleanedText);
-    
-    // Si le texte est trop court, utiliser une approche basée sur les caractères
+
+    // Règle 1 : Si texte < 10 chars (Documentation Phase 2)
     if (cleanedText.length < 10) {
-      return this.characterBasedDetection(cleanedText);
+      return {
+        lang: uiLang,
+        confidence: 0.3,
+        reason: "too_short"
+      };
     }
-    
+
     // Approche SOTA basée sur les modèles de langue
     const scores = this.modelBasedDetection(cleanedText, words);
-    
+
     // Trouver la langue avec le meilleur score
-    const best = Object.entries(scores).reduce((max, [lang, score]) => 
+    const best = Object.entries(scores).reduce((max, [lang, score]) =>
       score > max.score ? { lang: lang as any, score } : max
-    , { lang: 'fr' as any, score: 0 });
-    
-    // Si le score est très bas, utiliser la détection basée sur les caractères
+      , { lang: uiLang as any, score: 0 });
+
+    // Règle 2 : Texte mixte ou confiance basse
     if (best.score < 0.3) {
-      return this.characterBasedDetection(cleanedText);
+      const charBestLang = this.characterBasedDetection(cleanedText);
+      return {
+        lang: charBestLang,
+        confidence: 0.4,
+        reason: "low_model_score_fallback_to_char"
+      };
     }
-    
-    return best.lang;
+
+    return {
+      lang: best.lang,
+      confidence: Math.min(1.0, best.score * 2), // Normalisation approximative
+      reason: "model_match"
+    };
   }
-  
+
   /**
    * Nettoie et normalise le texte
    */
@@ -95,63 +111,63 @@ export class LanguageDetector {
       .replace(/\s+/g, ' ')
       .trim();
   }
-  
+
   /**
    * Tokenize le texte en mots
    */
   private static tokenize(text: string): string[] {
     return text.split(/\s+/).filter(token => token.length > 0);
   }
-  
+
   /**
    * Détection basée sur les modèles de langue SOTA
    */
   private static modelBasedDetection(text: string, words: string[]): Record<string, number> {
     const scores: Record<string, number> = { fr: 0, en: 0, es: 0 };
-    
+
     // Extraire les caractéristiques du texte
     const features = {
       trigrams: this.extractNGrams(text, 3),
       bigrams: this.extractNGrams(text, 2),
       chars: new Set(text.split('')),
       endings: this.extractEndings(words),
-      functionWords: words.filter(word => 
-        Object.values(this.LANGUAGE_MODELS).some(model => 
+      functionWords: words.filter(word =>
+        Object.values(this.LANGUAGE_MODELS).some(model =>
           model.functionWords.has(word)
         )
       )
     };
-    
+
     // Calculer les scores pour chaque langue
     for (const lang of ['fr', 'en', 'es']) {
       const model = this.LANGUAGE_MODELS[lang as keyof typeof this.LANGUAGE_MODELS];
-      
+
       // Score pour les trigrammes
       const trigramScore = this.calculateSimilarity(features.trigrams, model.trigrams);
       scores[lang] += trigramScore * this.WEIGHTS.trigrams;
-      
+
       // Score pour les bigrammes
       const bigramScore = this.calculateSimilarity(features.bigrams, model.bigrams);
       scores[lang] += bigramScore * this.WEIGHTS.bigrams;
-      
+
       // Score pour les caractères
       const charScore = this.calculateSimilarity(features.chars, model.chars);
       scores[lang] += charScore * this.WEIGHTS.chars;
-      
+
       // Score pour les terminaisons
       const endingScore = this.calculateSimilarity(features.endings, model.endings);
       scores[lang] += endingScore * this.WEIGHTS.endings;
-      
+
       // Score pour les mots fonctionnels
-      const functionWordScore = features.functionWords.filter(word => 
+      const functionWordScore = features.functionWords.filter(word =>
         model.functionWords.has(word)
       ).length / Math.max(1, features.functionWords.length);
       scores[lang] += functionWordScore * this.WEIGHTS.functionWords;
     }
-    
+
     return scores;
   }
-  
+
   /**
    * Extraction des n-grammes
    */
@@ -162,7 +178,7 @@ export class LanguageDetector {
     }
     return ngrams;
   }
-  
+
   /**
    * Extraction des terminaisons des mots
    */
@@ -179,19 +195,19 @@ export class LanguageDetector {
     }
     return endings;
   }
-  
+
   /**
    * Calcul de similarité entre deux ensembles
    */
   private static calculateSimilarity(set1: Set<string>, set2: Set<string>): number {
     if (set1.size === 0 || set2.size === 0) return 0;
-    
+
     const intersection = new Set([...set1].filter(x => set2.has(x)));
     const union = new Set([...set1, ...set2]);
-    
+
     return intersection.size / union.size;
   }
-  
+
   /**
    * Détection basée sur les caractères pour les textes courts
    */
@@ -202,18 +218,18 @@ export class LanguageDetector {
       en: 0,
       es: 0
     };
-    
+
     for (const char of text) {
       if (this.LANGUAGE_MODELS.fr.chars.has(char)) charCounts.fr++;
       if (this.LANGUAGE_MODELS.en.chars.has(char)) charCounts.en++;
       if (this.LANGUAGE_MODELS.es.chars.has(char)) charCounts.es++;
     }
-    
+
     // Trouver la langue avec le plus de caractères correspondants
-    const best = Object.entries(charCounts).reduce((max, [lang, count]) => 
+    const best = Object.entries(charCounts).reduce((max, [lang, count]) =>
       count > max.count ? { lang: lang as any, count } : max
-    , { lang: 'fr' as any, count: 0 });
-    
+      , { lang: 'fr' as any, count: 0 });
+
     return best.lang;
   }
 }

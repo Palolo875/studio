@@ -1,3 +1,4 @@
+import { db } from './taskDatabase';
 /**
  * Storage Guard pour IndexedDB - Phase 4
  * Implémente la surveillance active des quotas de stockage
@@ -36,11 +37,11 @@ export class StorageGuard {
   private config: StorageGuardConfig;
   private intervalId: NodeJS.Timeout | null = null;
   private isActive: boolean = false;
-  
+
   constructor(config?: Partial<StorageGuardConfig>) {
     this.config = { ...STORAGE_GUARD, ...config };
   }
-  
+
   /**
    * Estime l'utilisation du stockage
    * @returns Promesse résolue avec les statistiques de stockage
@@ -50,7 +51,7 @@ export class StorageGuard {
       const estimate = await navigator.storage.estimate();
       const usage = estimate.usage || 0;
       const quota = estimate.quota || null;
-      
+
       // Calculer le pourcentage d'utilisation
       let percentage = 0;
       if (quota) {
@@ -59,7 +60,7 @@ export class StorageGuard {
         // Si le quota n'est pas disponible, utiliser la limite stricte
         percentage = (usage / this.config.hardLimit) * 100;
       }
-      
+
       return {
         usage,
         quota,
@@ -74,7 +75,7 @@ export class StorageGuard {
       };
     }
   }
-  
+
   /**
    * Applique le Storage Guard
    * Vérifie l'utilisation du stockage et déclenche des actions si nécessaire
@@ -82,25 +83,25 @@ export class StorageGuard {
   async enforce(): Promise<void> {
     try {
       const stats = await this.estimateStorage();
-      
+
       // Vérifier si nous avons dépassé le seuil d'avertissement
       if (stats.usage > this.config.hardLimit * this.config.warnThreshold) {
         console.warn(`[StorageGuard] Utilisation du stockage élevée: ${stats.percentage.toFixed(2)}%`);
-        
+
         // Déclencher le pruning des anciennes données
         await this.pruneOldData(30); // Archiver les données de plus de 30 jours
-        
+
         // Notifier l'utilisateur
         this.notifyUser("Archivage automatique pour éviter la saturation");
       }
-      
+
       // Vérifier si nous avons dépassé la limite stricte
       if (stats.usage > this.config.hardLimit) {
         console.error(`[StorageGuard] Limite de stockage dépassée: ${stats.usage / MB} MB > ${this.config.hardLimit / MB} MB`);
-        
+
         // Déclencher un pruning plus agressif
         await this.pruneOldData(7); // Archiver les données de plus de 7 jours
-        
+
         // Notifier l'utilisateur
         this.notifyUser("Saturation imminente - archivage intensif activé");
       }
@@ -108,37 +109,23 @@ export class StorageGuard {
       console.error('[StorageGuard] Erreur lors de l\'application du Storage Guard:', error);
     }
   }
-  
+
   /**
-   * Archive les anciennes données
-   * @param days Nombre de jours après lesquels les données sont archivées
+   * Archive les anciennes données (Phase 4.2)
    */
   async pruneOldData(days: number): Promise<void> {
     try {
-      // Cette fonction dépend de l'implémentation spécifique de la base de données
-      // Pour l'instant, nous simulons le pruning
-      console.log(`[StorageGuard] Pruning des données de plus de ${days} jours`);
-      
-      // Dans une implémentation réelle, cela supprimerait ou archiverait les anciennes entrées
-      // de la base de données IndexedDB
-      
-      // Exemple d'implémentation hypothétique:
-      /*
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - days);
-      
-      // Supprimer les tâches terminées avant cette date
-      await db.tasks
-        .where('completed')
-        .equals(true)
-        .and(task => new Date(task.completedAt) < cutoffDate)
-        .delete();
-      */
+      console.log(`[StorageGuard] Déclenchement du pruning (> ${days} jours)`);
+      const removedCount = await db.pruneData(days);
+
+      if (removedCount > 0) {
+        this.notifyUser(`${removedCount} éléments anciens ont été archivés pour libérer de l'espace.`);
+      }
     } catch (error) {
-      console.error('[StorageGuard] Erreur lors du pruning des anciennes données:', error);
+      console.error('[StorageGuard] Erreur lors du pruning:', error);
     }
   }
-  
+
   /**
    * Notifie l'utilisateur d'un événement de stockage
    * @param message Message de notification
@@ -147,7 +134,7 @@ export class StorageGuard {
     // Dans une implémentation réelle, cela utiliserait le système de notifications
     // de l'application pour afficher un message à l'utilisateur
     console.info(`[StorageGuard] Notification utilisateur: ${message}`);
-    
+
     // Exemple d'implémentation avec un toast ou une notification
     /*
     if (typeof window !== 'undefined' && window.dispatchEvent) {
@@ -157,7 +144,7 @@ export class StorageGuard {
     }
     */
   }
-  
+
   /**
    * Démarre la surveillance périodique du stockage
    */
@@ -166,15 +153,15 @@ export class StorageGuard {
       console.warn('[StorageGuard] Surveillance déjà active');
       return;
     }
-    
+
     this.isActive = true;
     this.intervalId = setInterval(() => {
       this.enforce();
     }, this.config.checkInterval);
-    
+
     console.log('[StorageGuard] Surveillance démarrée');
   }
-  
+
   /**
    * Arrête la surveillance périodique du stockage
    */
@@ -186,21 +173,21 @@ export class StorageGuard {
       console.log('[StorageGuard] Surveillance arrêtée');
     }
   }
-  
+
   /**
    * Met à jour la configuration du Storage Guard
    * @param newConfig Nouvelle configuration
    */
   updateConfig(newConfig: Partial<StorageGuardConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    
+
     // Redémarrer la surveillance si elle est active
     if (this.isActive) {
       this.stopMonitoring();
       this.startMonitoring();
     }
   }
-  
+
   /**
    * Obtient la configuration actuelle
    * @returns Configuration actuelle
@@ -208,7 +195,7 @@ export class StorageGuard {
   getConfig(): StorageGuardConfig {
     return { ...this.config };
   }
-  
+
   /**
    * Vérifie si la surveillance est active
    * @returns true si la surveillance est active, false sinon

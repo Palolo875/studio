@@ -3,9 +3,10 @@ import { BrainDecision, BrainVersion } from './brainContracts';
 
 /**
  * Base de données simulée pour le stockage des décisions
- * Dans une vraie implémentation, cela utiliserait une base de données persistante
  */
-let decisionDatabase: BrainDecision[] = [];
+export let decisionDatabase: BrainDecision[] = [];
+(global as any).decisionDatabase = decisionDatabase; // Exposition globale pour le replay
+
 let versionDatabase: BrainVersion[] = [];
 
 /**
@@ -13,7 +14,7 @@ let versionDatabase: BrainVersion[] = [];
  */
 export function logBrainDecision(decision: BrainDecision): void {
   decisionDatabase.push(decision);
-  console.log(`[BrainDecision] Décision logguée: ${decision.id}`);
+  console.log(`[BrainDecision] Décision logguée: ${decision.id} (Total: ${decisionDatabase.length})`);
 }
 
 /**
@@ -39,7 +40,7 @@ export function replayDecision(decisionId: string): BrainDecision | null {
     console.warn(`[BrainDecision] Décision ${decisionId} non trouvée pour le replay`);
     return null;
   }
-  
+
   // Dans une vraie implémentation, cela rechargerait le cerveau 
   // avec la version exacte utilisée à l'origine
   console.log(`[BrainDecision] Rejeu de la décision: ${decisionId}`);
@@ -75,10 +76,10 @@ export function generateVersionId(rules: any): string {
 export function pruneDecisionHistory(maxAgeDays: number = 30): void {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
-  
+
   const initialLength = decisionDatabase.length;
   decisionDatabase = decisionDatabase.filter(d => d.timestamp > cutoffDate);
-  
+
   console.log(`[BrainDecision] Nettoyage effectué: ${initialLength - decisionDatabase.length} décisions supprimées`);
 }
 
@@ -88,7 +89,7 @@ export function pruneDecisionHistory(maxAgeDays: number = 30): void {
 export function archiveOldDecisions(maxAgeDays: number = 7): void {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
-  
+
   const oldDecisions = decisionDatabase.filter(d => d.timestamp <= cutoffDate);
   // Dans une vraie implémentation, cela les déplacerait dans un stockage d'archive
   console.log(`[BrainDecision] ${oldDecisions.length} décisions archivées`);

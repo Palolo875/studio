@@ -11,26 +11,44 @@ import { getStabilityPenalty } from './energyModel';
  */
 export function calculateTaskCost(task: Task, userEnergy: EnergyState): number {
   // Facteur de base basé sur l'effort requis
-  let effortFactor: number;
+  let effortBase: number;
   switch (task.effort) {
     case 'low':
-      effortFactor = 1.0;
+      effortBase = 1.0;
       break;
     case 'medium':
-      effortFactor = 1.5;
+      effortBase = 1.5;
       break;
     case 'high':
-      effortFactor = 2.5;
+      effortBase = 2.5;
       break;
     default:
-      effortFactor = 1.5; // Valeur par défaut
+      effortBase = 1.5;
   }
-  
+
+  // Facteur d'inadéquation énergétique (energyMismatchFactor)
+  // Basé sur les exemples de la documentation Phase 1
+  let energyMismatchFactor = 1.0;
+
+  if (userEnergy.level === 'low') {
+    if (task.effort === 'high') energyMismatchFactor = 3.0; // Devrait être bloqué par invariant
+    else if (task.effort === 'medium') energyMismatchFactor = 2.0;
+    else if (task.effort === 'low') energyMismatchFactor = 0.8; // "admin (S) + énergie basse -> coût x0.8"
+  } else if (userEnergy.level === 'medium') {
+    if (task.effort === 'high') energyMismatchFactor = 1.5;
+    else if (task.effort === 'medium') energyMismatchFactor = 1.0;
+    else if (task.effort === 'low') energyMismatchFactor = 0.9;
+  } else if (userEnergy.level === 'high') {
+    if (task.effort === 'high') energyMismatchFactor = 1.0;
+    else if (task.effort === 'medium') energyMismatchFactor = 0.8;
+    else if (task.effort === 'low') energyMismatchFactor = 0.6;
+  }
+
   // Facteur de pénalité basé sur la stabilité de l'énergie
   const stabilityPenalty = getStabilityPenalty(userEnergy.stability);
-  
-  // Calcul du coût : effort × durée × pénalité de stabilité
-  return task.duration * effortFactor * stabilityPenalty;
+
+  // Calcul du coût final : durée × base_effort × mismatch × stabilité
+  return task.duration * effortBase * energyMismatchFactor * stabilityPenalty;
 }
 
 /**
@@ -45,10 +63,10 @@ export function calculateSessionCapacity(durationMinutes: number, energyState: E
   // Pour une session de 60 min : capacité de 10
   // Pour une session de 120 min : capacité de 20
   const baseCapacity = Math.round(durationMinutes / 6);
-  
+
   // Appliquer une pénalité si l'énergie est instable
   const stabilityPenalty = getStabilityPenalty(energyState.stability);
-  
+
   return baseCapacity / stabilityPenalty;
 }
 
@@ -63,6 +81,23 @@ export function initializeDailyCapacity(maxLoad: number = 10): DailyCapacity {
     usedLoad: 0,
     remaining: maxLoad,
     tasksToday: []
+  };
+}
+
+/**
+ * Applique une dette cognitive à la capacité (Mode Dette)
+ * @param capacity Capacité actuelle
+ * @param debtPercentage Pourcentage de réduction (ex: 0.2 pour 20%)
+ * @returns Capacité avec la dette appliquée
+ */
+export function applyCognitiveDebt(capacity: DailyCapacity, debtPercentage: number): DailyCapacity {
+  const reduction = capacity.maxLoad * debtPercentage;
+  const newMaxLoad = Math.max(0, capacity.maxLoad - reduction);
+
+  return {
+    ...capacity,
+    maxLoad: newMaxLoad,
+    remaining: Math.max(0, newMaxLoad - capacity.usedLoad)
   };
 }
 
@@ -88,11 +123,11 @@ export function updateDailyCapacity(
       { cost: taskCost, status }
     ]
   };
-  
+
   // Mettre à jour la charge utilisée et restante
   updatedCapacity.usedLoad += taskCost;
   updatedCapacity.remaining = Math.max(0, capacity.maxLoad - updatedCapacity.usedLoad);
-  
+
   return updatedCapacity;
 }
 

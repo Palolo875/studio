@@ -22,6 +22,23 @@ class TaskDatabase {
       }
     };
   }
+
+  /**
+   * Nettoie les données anciennes pour libérer de l'espace (Phase 4.2)
+   */
+  async pruneData(days: number): Promise<number> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+
+    const initialCount = this.taskHistory.length;
+    this.taskHistory = this.taskHistory.filter(entry =>
+      new Date(entry.timestamp) > cutoffDate
+    );
+
+    const removedCount = initialCount - this.taskHistory.length;
+    console.log(`[Database] Nettoyage : ${removedCount} entrées d'historique supprimées (> ${days} jours)`);
+    return removedCount;
+  }
 }
 
 export const db = new TaskDatabase();
@@ -33,10 +50,6 @@ export const db = new TaskDatabase();
 export async function getTodoTasksBulk(): Promise<Task[]> {
   try {
     // Simulation de la récupération des tâches
-    // Dans une vraie implémentation avec Dexie, ce serait :
-    // const todoTasks = await db.tasks.where('completed').equals(false).toArray();
-    
-    // Pour l'instant, retournons un tableau vide
     return [];
   } catch (error) {
     console.error('Erreur lors de la récupération des tâches todo:', error);
@@ -50,10 +63,6 @@ export async function getTodoTasksBulk(): Promise<Task[]> {
 export async function getTaskHistoryBulk(): Promise<TaskHistoryEntry[]> {
   try {
     // Simulation de la récupération de l'historique
-    // Dans une vraie implémentation avec Dexie, ce serait :
-    // const history = await db.taskHistory.toArray();
-    
-    // Pour l'instant, retournons un tableau vide
     return [];
   } catch (error) {
     console.error('Erreur lors de la récupération de l\'historique:', error);
@@ -66,8 +75,6 @@ export async function getTaskHistoryBulk(): Promise<TaskHistoryEntry[]> {
  */
 export async function updateUserPatternsInDB(patterns: any): Promise<void> {
   try {
-    // Stocker les patterns dans localStorage pour simplifier
-    // Dans une vraie application, on utiliserait une table dédiée
     localStorage.setItem('userPatterns', JSON.stringify(patterns));
   } catch (error) {
     console.error('Erreur lors de la mise à jour des patterns:', error);
