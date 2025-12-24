@@ -14,6 +14,9 @@ export interface TaskHistoryEntry {
 class TaskDatabase {
   tasks: any[] = [];
   taskHistory: TaskHistoryEntry[] = [];
+  meta: any[] = [];
+  brainDecisions: any[] = [];
+  overrides: any[] = [];
 
   version(versionNumber: number) {
     return {
@@ -21,6 +24,27 @@ class TaskDatabase {
         // Simulation de la méthode stores
       }
     };
+  }
+
+  /**
+   * Snapshot complet (Phase 5.3)
+   */
+  async createSnapshot(): Promise<string> {
+    const data = {
+      tasks: this.tasks,
+      history: this.taskHistory,
+      decisions: this.brainDecisions,
+      overrides: this.overrides
+    };
+    return JSON.stringify(data);
+  }
+
+  async restoreSnapshot(snapshot: string): Promise<void> {
+    const data = JSON.parse(snapshot);
+    this.tasks = data.tasks || [];
+    this.taskHistory = data.history || [];
+    this.brainDecisions = data.decisions || [];
+    this.overrides = data.overrides || [];
   }
 
   /**

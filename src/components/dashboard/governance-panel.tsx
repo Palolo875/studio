@@ -8,24 +8,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Shield, 
-  AlertTriangle, 
-  CheckCircle, 
-  XCircle, 
-  RefreshCw, 
-  User, 
+import {
+  Shield,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  User,
   Cpu,
   Lock,
   Unlock,
   Vote
 } from 'lucide-react';
-import { 
-  GovernanceMetrics 
+import {
+  GovernanceMetrics
 } from '@/lib/governanceDashboard';
-import { 
-  SovereigntyMode 
+import {
+  SovereigntyMode
 } from '@/lib/phase7Implementation';
+import { phase7Manager } from '@/lib/phase7Main';
 
 // Types pour les props
 interface GovernancePanelProps {
@@ -34,7 +35,7 @@ interface GovernancePanelProps {
 }
 
 // Composant principal du panneau de gouvernance
-export function GovernancePanel({ 
+export function GovernancePanel({
   onModeChange,
   onConflictResolve
 }: GovernancePanelProps) {
@@ -48,105 +49,48 @@ export function GovernancePanel({
   const [unresolvedConflicts, setUnresolvedConflicts] = useState<number>(0);
 
   // Note: Dans une implémentation complète, cet effet utiliserait le vrai gestionnaire de Phase 7
-  // useEffect(() => {
-  //   const dashboard = phase7Manager.getGovernanceDashboard();
-  //   
-  //   const updateMetrics = (newMetrics: GovernanceMetrics) => {
-  //     setMetrics(newMetrics);
-  //   };
-  //   
-  //   dashboard.onUpdate(updateMetrics);
-  //   setMetrics(dashboard.getMetrics());
-  //   setIsLoading(false);
-  //   
-  //   return () => {
-  //     // Nettoyage si nécessaire
-  //   };
-  // }, []);
-  
-  // Pour l'exemple, nous simulons les données
   useEffect(() => {
-    try {
-      const mockMetrics: GovernanceMetrics = {
-        autonomyIntegrityScore: 0.5,
-        userDecisions: 10,
-        systemDecisions: 15,
-        totalDecisions: 25,
-        currentMode: SovereigntyMode.GUIDED,
-        burnoutRisk: 0.3,
-        overrideRate: 0.2,
-        lastModeChange: Date.now() - 3600000 // Il y a 1 heure
-      };
-      
-      setMetrics(mockMetrics);
-      setIsLoading(false);
-    } catch (err) {
-      setError("Erreur lors du chargement des métriques de gouvernance");
-      setIsLoading(false);
-    }
+    const dashboard = phase7Manager.getGovernanceDashboard();
+
+    // Simuler une mise à jour initiale
+    const metrics = dashboard.getMetrics();
+    setMetrics(metrics);
+    setIsLoading(false);
+
+    // S'abonner aux changements si possible (simulé ici par un intervalle pour la démo)
+    const interval = setInterval(() => {
+      setMetrics(dashboard.getMetrics());
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  // Note: Dans une implémentation complète, cela appellerait le vrai gestionnaire de Phase 7
-  // const handleModeChange = (newMode: SovereigntyMode) => {
-  //   const success = phase7Manager.updateSovereigntyMode(newMode);
-  //   
-  //   if (success && onModeChange) {
-  //     onModeChange(newMode);
-  //   }
-  // };
-  
-  // Pour l'exemple, nous simulons le changement de mode
   const handleModeChange = (newMode: SovereigntyMode) => {
-    if (onModeChange) {
+    const success = phase7Manager.updateSovereigntyMode(newMode);
+
+    if (success && onModeChange) {
       onModeChange(newMode);
     }
-    
-    // Mettre à jour l'état local
-    if (metrics) {
-      setMetrics({
-        ...metrics,
-        currentMode: newMode,
-        lastModeChange: Date.now()
-      });
+  };
+
+  const handleRequestExitProtectiveMode = () => {
+    const protectiveManager = phase7Manager.getProtectiveModeManager();
+    const success = protectiveManager.requestExit();
+
+    if (success) {
+      setProtectiveModeActive(protectiveManager.isActive());
+      console.log("Demande de sortie du mode protectif enregistrée");
     }
   };
 
-  // Note: Dans une implémentation complète, cela appellerait le vrai ProtectiveModeManager
-  // const handleRequestExitProtectiveMode = () => {
-  //   const protectiveManager = phase7Manager.getProtectiveModeManager();
-  //   const success = protectiveManager.requestExit();
-  //   
-  //   if (success) {
-  //     console.log("Demande de sortie du mode protectif enregistrée");
-  //     // La mise à jour de l'UI se ferait via le dashboard
-  //   }
-  // };
-  
-  // Pour l'exemple, nous simulons la demande de sortie
-  const handleRequestExitProtectiveMode = () => {
-    console.log("Demande de sortie du mode protectif");
-    setProtectiveModeActive(false);
-  };
-
-  // Note: Dans une implémentation complète, cela appellerait le vrai ConflictResolver
-  // const handleResolveConflict = (conflictId: string, choice: number) => {
-  //   const conflictResolver = phase7Manager.getConflictResolver();
-  //   const result = conflictResolver.resolveInternally(conflictId, choice);
-  //   
-  //   if (result && onConflictResolve) {
-  //     onConflictResolve(conflictId, choice);
-  //   }
-  //   
-  //   // Mettre à jour le compteur de conflits non résolus
-  //   setUnresolvedConflicts(prev => Math.max(0, prev - 1));
-  // };
-  
-  // Pour l'exemple, nous simulons la résolution d'un conflit
   const handleResolveConflict = (conflictId: string, choice: number) => {
-    if (onConflictResolve) {
+    const conflictResolver = phase7Manager.getConflictResolver();
+    const result = conflictResolver.resolveInternally(conflictId, choice);
+
+    if (result && onConflictResolve) {
       onConflictResolve(conflictId, choice);
     }
-    
+
     // Mettre à jour le compteur de conflits non résolus
     setUnresolvedConflicts(prev => Math.max(0, prev - 1));
   };
@@ -240,8 +184,8 @@ export function GovernancePanel({
             <Shield className="h-5 w-5" />
             Panneau de Gouvernance
           </div>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             onClick={() => setShowDetails(!showDetails)}
           >
@@ -254,16 +198,16 @@ export function GovernancePanel({
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium">Intégrité Autonomie</span>
-            <Badge 
-              variant="outline" 
+            <Badge
+              variant="outline"
               className={getIntegrityColor(metrics?.autonomyIntegrityScore || 0)}
             >
               {(metrics?.autonomyIntegrityScore || 0).toFixed(1)}
             </Badge>
           </div>
-          <Progress 
-            value={(metrics?.autonomyIntegrityScore || 0) * 100} 
-            className="h-2" 
+          <Progress
+            value={(metrics?.autonomyIntegrityScore || 0) * 100}
+            className="h-2"
           />
           <p className="text-xs text-muted-foreground">
             {getIntegrityAssessment(metrics?.autonomyIntegrityScore || 0)}
@@ -282,15 +226,15 @@ export function GovernancePanel({
               </Badge>
             )}
           </div>
-          
+
           {/* Actions spécifiques au mode */}
           {metrics?.currentMode === SovereigntyMode.PROTECTIVE && (
             <div className="pt-2 space-y-2">
               <p className="text-xs text-muted-foreground">
                 Mode protectif actif. Certaines restrictions sont appliquées.
               </p>
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 variant="outline"
                 onClick={handleRequestExitProtectiveMode}
                 className="w-full"
@@ -306,21 +250,21 @@ export function GovernancePanel({
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium">Risque de Burnout</span>
-            <Badge 
+            <Badge
               variant={
-                (metrics?.burnoutRisk || 0) > 0.7 ? "destructive" : 
-                (metrics?.burnoutRisk || 0) > 0.5 ? "warning" : "default"
+                (metrics?.burnoutRisk || 0) > 0.7 ? "destructive" :
+                  (metrics?.burnoutRisk || 0) > 0.5 ? "warning" : "default"
               }
             >
               {((metrics?.burnoutRisk || 0) * 100).toFixed(0)}%
             </Badge>
           </div>
-          <Progress 
-            value={(metrics?.burnoutRisk || 0) * 100} 
-            className="h-2" 
+          <Progress
+            value={(metrics?.burnoutRisk || 0) * 100}
+            className="h-2"
             indicatorClassName={
-              (metrics?.burnoutRisk || 0) > 0.7 ? "bg-red-500" : 
-              (metrics?.burnoutRisk || 0) > 0.5 ? "bg-yellow-500" : "bg-green-500"
+              (metrics?.burnoutRisk || 0) > 0.7 ? "bg-red-500" :
+                (metrics?.burnoutRisk || 0) > 0.5 ? "bg-yellow-500" : "bg-green-500"
             }
           />
         </div>
@@ -329,21 +273,21 @@ export function GovernancePanel({
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium">Taux d'Overrides</span>
-            <Badge 
+            <Badge
               variant={
-                (metrics?.overrideRate || 0) > 0.8 ? "destructive" : 
-                (metrics?.overrideRate || 0) > 0.5 ? "warning" : "default"
+                (metrics?.overrideRate || 0) > 0.8 ? "destructive" :
+                  (metrics?.overrideRate || 0) > 0.5 ? "warning" : "default"
               }
             >
               {((metrics?.overrideRate || 0) * 100).toFixed(0)}%
             </Badge>
           </div>
-          <Progress 
-            value={(metrics?.overrideRate || 0) * 100} 
-            className="h-2" 
+          <Progress
+            value={(metrics?.overrideRate || 0) * 100}
+            className="h-2"
             indicatorClassName={
-              (metrics?.overrideRate || 0) > 0.8 ? "bg-red-500" : 
-              (metrics?.overrideRate || 0) > 0.5 ? "bg-yellow-500" : "bg-green-500"
+              (metrics?.overrideRate || 0) > 0.8 ? "bg-red-500" :
+                (metrics?.overrideRate || 0) > 0.5 ? "bg-yellow-500" : "bg-green-500"
             }
           />
         </div>
@@ -361,23 +305,23 @@ export function GovernancePanel({
                 <p className="text-lg font-semibold">{metrics.systemDecisions}</p>
               </div>
             </div>
-            
+
             <div>
               <p className="text-sm text-muted-foreground">Dernier changement de mode</p>
               <p className="text-sm">
                 {new Date(metrics.lastModeChange).toLocaleString()}
               </p>
             </div>
-            
+
             {unresolvedConflicts > 0 && (
               <div className="flex items-center gap-2 p-3 rounded-md bg-yellow-50 dark:bg-yellow-900/20">
                 <AlertTriangle className="h-4 w-4 text-yellow-500" />
                 <span className="text-sm">
                   {unresolvedConflicts} conflit(s) en attente de résolution
                 </span>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
+                <Button
+                  size="sm"
+                  variant="outline"
                   className="ml-auto"
                   onClick={() => console.log("Ouvrir le gestionnaire de conflits")}
                 >
@@ -391,8 +335,8 @@ export function GovernancePanel({
 
         {/* Actions principales */}
         <div className="flex flex-wrap gap-2 pt-2">
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             variant="outline"
             onClick={() => handleModeChange(SovereigntyMode.MANUAL)}
             disabled={metrics?.currentMode === SovereigntyMode.PROTECTIVE}
@@ -400,8 +344,8 @@ export function GovernancePanel({
             <User className="h-4 w-4 mr-1" />
             Manuel
           </Button>
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             variant="outline"
             onClick={() => handleModeChange(SovereigntyMode.ASSISTED)}
             disabled={metrics?.currentMode === SovereigntyMode.PROTECTIVE}
@@ -409,8 +353,8 @@ export function GovernancePanel({
             <Shield className="h-4 w-4 mr-1" />
             Assisté
           </Button>
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             variant="outline"
             onClick={() => handleModeChange(SovereigntyMode.GUIDED)}
             disabled={metrics?.currentMode === SovereigntyMode.PROTECTIVE}

@@ -1,3 +1,4 @@
+import { validateDataIntegrity } from './dataIntegrityValidator';
 /**
  * Gestionnaire de migrations de base de données - Phase 5
  * Implémente les migrations avec rollback atomique et validation
@@ -49,69 +50,43 @@ export function hash(data: string): string {
 }
 
 /**
- * Applique une migration avec rollback atomique
- * @param db Instance de la base de données
- * @param migration Migration à appliquer
- * @returns Résultat de la migration
+ * Applique une migration avec rollback atomique (Phase 5.3)
  */
 export async function migrateWithRollback(db: any, migration: Migration): Promise<MigrationResult> {
-  console.log(`[DBMigration] Démarrage de la migration ${migration.version}: ${migration.name}`);
-  
-  // Étape 1 : Créer un snapshot complet
-  let snapshot: string | null = null;
-  let backupCreated = false;
-  
+  console.log(`[DBMigration] Préparation migration V${migration.version}...`);
+
+  // 1. Snapshot complet (Pre-migration)
+  const snapshot = await db.createSnapshot();
+  const hashVal = hash(snapshot);
+
   try {
-    snapshot = await exportEncryptedBackup();
-    backupCreated = true;
-    
-    // Sauvegarder les métadonnées de migration
-    if (db.meta) {
-      await db.meta.add({ 
-        migrationVersion: migration.version, 
-        migrationName: migration.name,
-        snapshotHash: hash(snapshot),
-        appliedAt: new Date()
-      });
-    }
-    
-    console.log('[DBMigration] Backup créé avec succès');
-    
-    // Étape 2 : Appliquer la migration
+    // 2. Application migration
     await migration.up(db);
-    console.log('[DBMigration] Migration appliquée avec succès');
-    
-    // Étape 3 : Validation post-migration
-    // Dans une implémentation réelle, vous pourriez effectuer des vérifications spécifiques
-    // à la migration ici
-    
-    return {
-      success: true,
-      backupCreated: true
-    };
-  } catch (error) {
-    console.error('[DBMigration] Échec de la migration:', error);
-    
-    // Échec → rollback immédiat
-    if (snapshot) {
-      try {
-        console.log('[DBMigration] Démarrage du rollback...');
-        await importEncryptedBackup(snapshot);
-        console.log('[DBMigration] Rollback effectué avec succès');
-      } catch (rollbackError) {
-        console.error('[DBMigration] Échec du rollback:', rollbackError);
-        return {
-          success: false,
-          error: `Migration échouée et rollback échoué: ${error instanceof Error ? error.message : 'Erreur inconnue'} | ${rollbackError instanceof Error ? rollbackError.message : 'Erreur inconnue'}`,
-          backupCreated
-        };
-      }
+
+    // 3. Validation Intégrité SOTA (Phase 5.4.1)
+    const integrity = await validateDataIntegrity(db);
+    if (!integrity.valid) {
+      throw new Error(`Incohérence détectée post-migration: ${integrity.errors[0].message}`);
     }
-    
+
+    // 4. Confirmation métadonnées
+    db.meta.push({
+      version: migration.version,
+      appliedAt: new Date(),
+      snapshotHash: hashVal
+    });
+
+    return { success: true, backupCreated: true };
+  } catch (error) {
+    console.error(`[DBMigration] Échec V${migration.version}. Rollback immédiat.`, error);
+
+    // 5. Rollback Atomique
+    await db.restoreSnapshot(snapshot);
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Erreur inconnue',
-      backupCreated
+      error: error instanceof Error ? error.message : "Erreur inconnue",
+      backupCreated: true
     };
   }
 }
@@ -150,32 +125,32 @@ export const MIGRATIONS: Migration[] = [
  */
 export async function applyPendingMigrations(db: any): Promise<void> {
   console.log('[DBMigration] Vérification des migrations en attente...');
-  
+
   // Obtenir la version actuelle de la base de données
   const currentVersion = db.verno || 0;
   console.log(`[DBMigration] Version actuelle: ${currentVersion}`);
-  
+
   // Filtrer les migrations qui n'ont pas encore été appliquées
   const pendingMigrations = MIGRATIONS.filter(m => m.version > currentVersion);
-  
+
   if (pendingMigrations.length === 0) {
     console.log('[DBMigration] Aucune migration en attente');
     return;
   }
-  
+
   console.log(`[DBMigration] ${pendingMigrations.length} migrations en attente`);
-  
+
   // Appliquer chaque migration avec rollback
   for (const migration of pendingMigrations) {
     const result = await migrateWithRollback(db, migration);
-    
+
     if (!result.success) {
       console.error(`[DBMigration] Échec de la migration ${migration.version}: ${result.error}`);
       throw new Error(`Échec de la migration ${migration.version}: ${result.error}`);
     }
-    
+
     console.log(`[DBMigration] Migration ${migration.version} appliquée avec succès`);
   }
-  
+
   console.log('[DBMigration] Toutes les migrations ont été appliquées');
 }

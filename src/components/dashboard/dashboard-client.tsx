@@ -1,20 +1,20 @@
 
 'use client';
 
-import {useState, useTransition, useEffect} from 'react';
-import type {DailyRituals, Task} from '@/lib/types';
-import {initialTasks} from '@/lib/data';
-import {Recommendations} from './recommendations';
-import {TaskList} from './task-list';
-import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
-import {Input} from '@/components/ui/input';
-import {RefreshCw, Search, Siren, CalendarClock, Shield} from 'lucide-react';
-import {PlaylistGenerator} from './playlist-generator';
-import {Button} from '../ui/button';
-import {DailyGreeting} from './daily-greeting';
-import {handleGeneratePlaylist} from '@/app/actions';
-import {useToast} from '@/hooks/use-toast';
-import {AnimatePresence, motion} from 'framer-motion';
+import { useState, useTransition, useEffect } from 'react';
+import type { DailyRituals, Task } from '@/lib/types';
+import { initialTasks } from '@/lib/data';
+import { Recommendations } from './recommendations';
+import { TaskList } from './task-list';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { RefreshCw, Search, Siren, CalendarClock, Shield } from 'lucide-react';
+import { PlaylistGenerator } from './playlist-generator';
+import { Button } from '../ui/button';
+import { DailyGreeting } from './daily-greeting';
+import { handleGeneratePlaylist } from '@/app/actions';
+import { useToast } from '@/hooks/use-toast';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,13 +34,18 @@ import {
   DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
-import {useRouter} from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TimelineView } from './timeline-view';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { EnergyCheckIn } from './energy-check-in';
 import { GovernancePanel } from './governance-panel';
+import { phase7Manager, UserState } from '@/lib/phase7Main';
+import { SovereigntyMode } from '@/lib/phase7Implementation';
+import { ConflictResolutionModal } from './conflict-resolution-modal';
+import { OverrideConfirmation } from './override-confirmation';
+import { ProtectiveModeNotification } from './protective-mode-notification';
 
 type EnergyState =
   | 'energized'
@@ -78,7 +83,16 @@ export function DashboardClient() {
   const [urgentTaskName, setUrgentTaskName] = useState('');
   const [replaceTask, setReplaceTask] = useState(false);
   const [isPanicModalOpen, setIsPanicModalOpen] = useState(false);
-  
+
+  // États de la Phase 7
+  const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
+  const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
+  const [isProtectiveNotificationOpen, setIsProtectiveNotificationOpen] = useState(false);
+  const [currentConflict, setCurrentConflict] = useState<any>(null);
+  const [pendingTask, setPendingTask] = useState<Task | null>(null);
+  const [overrideCost, setOverrideCost] = useState<any>(null);
+  const [burnoutSignals, setBurnoutSignals] = useState<any>({});
+
   const [showMorningRitual, setShowMorningRitual] = useState(false);
   const [morningRitualCompleted, setMorningRitualCompleted] = useState(false);
 
@@ -86,43 +100,43 @@ export function DashboardClient() {
     const lastCheckin = localStorage.getItem('lastMorningCheckin');
     const today = new Date().toISOString().split('T')[0];
     if (lastCheckin !== today) {
-        setShowMorningRitual(true);
+      setShowMorningRitual(true);
     } else {
-        setMorningRitualCompleted(true);
-        // Load tasks from somewhere if ritual is already done
-        const storedEnergy = localStorage.getItem('todayEnergyLevel') as EnergyState;
-        const storedIntention = localStorage.getItem('todayIntention');
-        if (storedEnergy) setEnergyLevel(storedEnergy);
-        if (storedIntention) setIntention(storedIntention);
+      setMorningRitualCompleted(true);
+      // Load tasks from somewhere if ritual is already done
+      const storedEnergy = localStorage.getItem('todayEnergyLevel') as EnergyState;
+      const storedIntention = localStorage.getItem('todayIntention');
+      if (storedEnergy) setEnergyLevel(storedEnergy);
+      if (storedIntention) setIntention(storedIntention);
 
-        // For demo, we'll just load initial tasks. In a real app, you'd fetch the user's playlist for the day.
-        const storedTasks = localStorage.getItem('dailyTasks');
-        if (storedTasks) {
-          const parsedTasks = JSON.parse(storedTasks);
-          setTasks(parsedTasks);
-          setInitialTaskCount(parsedTasks.length);
-        } else {
-          setTasks(initialTasks);
-          setInitialTaskCount(initialTasks.length);
-        }
+      // For demo, we'll just load initial tasks. In a real app, you'd fetch the user's playlist for the day.
+      const storedTasks = localStorage.getItem('dailyTasks');
+      if (storedTasks) {
+        const parsedTasks = JSON.parse(storedTasks);
+        setTasks(parsedTasks);
+        setInitialTaskCount(parsedTasks.length);
+      } else {
+        setTasks(initialTasks);
+        setInitialTaskCount(initialTasks.length);
+      }
     }
   }, []);
 
   const handleMorningRitualSubmit = () => {
     if (!energyLevel) {
-        toast({
-            variant: "destructive",
-            title: "Oups !",
-            description: "Veuillez sélectionner votre niveau d'énergie.",
-        });
-        return;
+      toast({
+        variant: "destructive",
+        title: "Oups !",
+        description: "Veuillez sélectionner votre niveau d'énergie.",
+      });
+      return;
     }
     setShowMorningRitual(false);
     setMorningRitualCompleted(true);
     const today = new Date().toISOString().split('T')[0];
     localStorage.setItem('lastMorningCheckin', today);
     localStorage.setItem('todayEnergyLevel', energyLevel);
-    if(intention) localStorage.setItem('todayIntention', intention);
+    if (intention) localStorage.setItem('todayIntention', intention);
     handleRegeneratePlaylist(true);
   };
 
@@ -148,7 +162,7 @@ export function DashboardClient() {
       });
       return;
     }
-    
+
     setIsGenerating(true);
 
     startTransition(async () => {
@@ -156,7 +170,7 @@ export function DashboardClient() {
       formData.append('goals', 'My current goals');
       formData.append('priorities', 'My top priorities');
       formData.append('dailyRituals', JSON.stringify(dailyRituals));
-      
+
       if (energyLevel) {
         formData.append('energyLevel', energyLevel);
       }
@@ -165,7 +179,7 @@ export function DashboardClient() {
       }
 
       const response = await handleGeneratePlaylist(
-        {tasks: tasks, errors: null, message: ''},
+        { tasks: tasks, errors: null, message: '' },
         formData
       );
 
@@ -243,12 +257,12 @@ export function DashboardClient() {
 
   const handleAllTasksCompleted = (currentRituals: DailyRituals) => {
     const completedTaskNames = currentRituals.completedTasks
-        .map(t => t.name)
-        .join(',');
+      .map(t => t.name)
+      .join(',');
     router.push(
-        `/dashboard/evening?completed=${encodeURIComponent(
-            completedTaskNames
-        )}&total=${initialTaskCount}`
+      `/dashboard/evening?completed=${encodeURIComponent(
+        completedTaskNames
+      )}&total=${initialTaskCount}`
     );
   };
 
@@ -268,7 +282,7 @@ export function DashboardClient() {
     setShowBonusCard(false);
   };
 
-  const handleAddUrgentTask = () => {
+  const handleAddUrgentTask = async () => {
     if (!urgentTaskName) return;
 
     const newTask: Task = {
@@ -282,28 +296,93 @@ export function DashboardClient() {
       completionRate: 0,
     };
 
+    // Phase 7 : Vérification des Lignes Rouges (Non-Negotiables)
+    const userState: any = {
+      energy: energyLevel === 'energized' ? 'HIGH' : energyLevel === 'slow' ? 'LOW' : 'MEDIUM',
+      dailyBudget: { remaining: 5, total: 10 }, // Simulation
+      burnoutScore: 0.8, // Simulation pour déclencher le conflit
+      overridesLast2h: 1,
+      sessions: [],
+      tasks: tasks,
+      overrides: [],
+      decisions: 10,
+      sleepData: []
+    };
+
+    const violations = phase7Manager.checkNonNegotiables(userState);
+
+    if (violations.length > 0 || (phase7Manager.getSovereigntyManager().currentMode === SovereigntyMode.PROTECTIVE)) {
+      // Déclencher le ConflictResolutionModal
+      setCurrentConflict({
+        userRequest: { title: urgentTaskName, priority: "URGENT", effort: "HEAVY" },
+        systemRejection: {
+          reason: violations.length > 0 ? violations[0] : "Mode protection actif : repos prioritaire.",
+          code: "BURNOUT"
+        }
+      });
+      setPendingTask(newTask);
+      setIsConflictModalOpen(true);
+      setIsPanicModalOpen(false);
+      return;
+    }
+
+    executeAddTask(newTask);
+  };
+
+  const executeAddTask = (newTask: Task) => {
     let newTasks;
     if (replaceTask && tasks.length > 0) {
-        const remainingTasks = tasks.slice(1);
-        newTasks = [newTask, ...remainingTasks];
-        toast({
-            title: "Tâche urgente ajoutée",
-            description: `"${newTask.name}" a remplacé la tâche précédente.`,
-        });
+      const remainingTasks = tasks.slice(1);
+      newTasks = [newTask, ...remainingTasks];
+      toast({
+        title: "Tâche urgente ajoutée",
+        description: `"${newTask.name}" a remplacé la tâche précédente.`,
+      });
     } else {
-        newTasks = [newTask, ...tasks];
-        toast({
-            title: "Tâche urgente ajoutée",
-            description: `"${newTask.name}" est maintenant en haut de votre liste.`,
-        });
+      newTasks = [newTask, ...tasks];
+      toast({
+        title: "Tâche urgente ajoutée",
+        description: `"${newTask.name}" est maintenant en haut de votre liste.`,
+      });
     }
     setTasks(newTasks);
     localStorage.setItem('dailyTasks', JSON.stringify(newTasks));
-
-
     setUrgentTaskName('');
     setReplaceTask(false);
     setIsPanicModalOpen(false);
+  };
+
+  const handleResolveConflict = (choice: number) => {
+    setIsConflictModalOpen(false);
+
+    if (choice === 1) { // Forcer
+      const cost = phase7Manager.calculateOverrideCost(pendingTask!, {
+        energy: "MEDIUM",
+        dailyBudget: { remaining: 0.5, total: 1 },
+        burnoutScore: 0.8,
+        overridesLast2h: 1,
+        sessions: [],
+        tasks: [],
+        overrides: [],
+        decisions: 1,
+        sleepData: []
+      } as any);
+      setOverrideCost(cost);
+      setIsOverrideModalOpen(true);
+    } else if (choice === 2) { // Micro-tâches
+      toast({ title: "Tâche découpée", description: "Vérifiez vos sous-tâches pour commencer doucement." });
+      // Logique micro-tâches ici
+    }
+  };
+
+  const handleConfirmOverride = (reason?: string) => {
+    setIsOverrideModalOpen(false);
+    if (pendingTask) executeAddTask(pendingTask);
+    toast({
+      title: "Décision forcée",
+      description: `Protections désactivées pour 24h. Coût appliqué: ${(overrideCost.total * 100).toFixed(0)}%`,
+      variant: "destructive"
+    });
   };
 
   const filteredTasks = tasks.filter((task: Task) =>
@@ -318,23 +397,23 @@ export function DashboardClient() {
     <div className="space-y-8">
       <Dialog open={showMorningRitual} onOpenChange={setShowMorningRitual}>
         <DialogContent className="sm:max-w-[480px] p-8">
-            <DialogHeader>
-                <DialogTitle className="text-2xl text-center">Comment tu te sens ce matin ?</DialogTitle>
-            </DialogHeader>
-            <EnergyCheckIn
-              onEnergyChange={setEnergyLevel}
-              onIntentionChange={setIntention}
-            />
-            <DialogFooter className="!justify-center pt-4">
-              <Button 
-                size="lg" 
-                className="h-12 rounded-full px-8"
-                onClick={handleMorningRitualSubmit}
-                disabled={!energyLevel}
-              >
-                Valider
-              </Button>
-            </DialogFooter>
+          <DialogHeader>
+            <DialogTitle className="text-2xl text-center">Comment tu te sens ce matin ?</DialogTitle>
+          </DialogHeader>
+          <EnergyCheckIn
+            onEnergyChange={setEnergyLevel}
+            onIntentionChange={setIntention}
+          />
+          <DialogFooter className="!justify-center pt-4">
+            <Button
+              size="lg"
+              className="h-12 rounded-full px-8"
+              onClick={handleMorningRitualSubmit}
+              disabled={!energyLevel}
+            >
+              Valider
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -381,9 +460,8 @@ export function DashboardClient() {
                 disabled={isPending || dailyRituals.playlistShuffledCount >= 2}
               >
                 <RefreshCw
-                  className={`mr-2 h-4 w-4 ${
-                    isPending || isGenerating ? 'animate-spin' : ''
-                  }`}
+                  className={`mr-2 h-4 w-4 ${isPending || isGenerating ? 'animate-spin' : ''
+                    }`}
                 />
                 Rafraîchir la playlist
               </Button>
@@ -407,10 +485,10 @@ export function DashboardClient() {
                     {isGenerating ? (
                       <motion.div
                         key="generating"
-                        initial={{opacity: 0, y: 50}}
-                        animate={{opacity: 1, y: 0}}
-                        exit={{opacity: 0, y: -50}}
-                        transition={{duration: 0.3}}
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -50 }}
+                        transition={{ duration: 0.3 }}
                         className="absolute inset-0 flex items-center justify-center"
                       >
                         <p>Génération de votre playlist...</p>
@@ -418,10 +496,10 @@ export function DashboardClient() {
                     ) : (
                       <motion.div
                         key="tasks"
-                        initial={{opacity: 0}}
-                        animate={{opacity: 1}}
-                        exit={{opacity: 0}}
-                        transition={{duration: 0.3}}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3 }}
                       >
                         <TaskList
                           tasks={filteredTasks}
@@ -476,17 +554,17 @@ export function DashboardClient() {
               </AlertDialogHeader>
               <div className="space-y-4 py-2">
                 <div className="space-y-2">
-                    <Label htmlFor="urgent-task">Nom de la tâche urgente</Label>
-                    <Input
-                        id="urgent-task"
-                        value={urgentTaskName}
-                        onChange={(e) => setUrgentTaskName(e.target.value)}
-                        placeholder="Ex: Appeler le client X en urgence"
-                    />
+                  <Label htmlFor="urgent-task">Nom de la tâche urgente</Label>
+                  <Input
+                    id="urgent-task"
+                    value={urgentTaskName}
+                    onChange={(e) => setUrgentTaskName(e.target.value)}
+                    placeholder="Ex: Appeler le client X en urgence"
+                  />
                 </div>
                 <div className="flex items-center space-x-2">
-                    <Switch id="replace-task" checked={replaceTask} onCheckedChange={setReplaceTask} />
-                    <Label htmlFor="replace-task">Remplacer la tâche actuelle</Label>
+                  <Switch id="replace-task" checked={replaceTask} onCheckedChange={setReplaceTask} />
+                  <Label htmlFor="replace-task">Remplacer la tâche actuelle</Label>
                 </div>
               </div>
               <AlertDialogFooter>
@@ -497,22 +575,54 @@ export function DashboardClient() {
           </AlertDialog>
 
           <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-20">
-          <Button 
-            onClick={() => setIsPanicModalOpen(true)}
-            className="h-16 w-16 rounded-full shadow-2xl"
-            size="icon"
-          >
-            <Siren className="h-8 w-8" />
-          </Button>
-          
-          <Button 
-            onClick={() => console.log("Ouvrir le panneau de gouvernance")}
-            className="h-12 w-12 rounded-full shadow-2xl bg-purple-600 hover:bg-purple-700"
-            size="icon"
-          >
-            <Shield className="h-5 w-5" />
-          </Button>
-        </div>
+            <Button
+              onClick={() => setIsPanicModalOpen(true)}
+              className="h-16 w-16 rounded-full shadow-2xl"
+              size="icon"
+            >
+              <Siren className="h-8 w-8" />
+            </Button>
+
+            <Button
+              onClick={() => setShowDetails(!showDetails)}
+              className="h-12 w-12 rounded-full shadow-2xl bg-purple-600 hover:bg-purple-700"
+              size="icon"
+            >
+              <Shield className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Modaux Phase 7 */}
+          {currentConflict && (
+            <ConflictResolutionModal
+              open={isConflictModalOpen}
+              onOpenChange={setIsConflictModalOpen}
+              userRequest={currentConflict.userRequest}
+              systemRejection={currentConflict.systemRejection}
+              onResolve={handleResolveConflict}
+            />
+          )}
+
+          {overrideCost && pendingTask && (
+            <OverrideConfirmation
+              open={isOverrideModalOpen}
+              onOpenChange={setIsOverrideModalOpen}
+              taskTitle={pendingTask.name}
+              cost={overrideCost}
+              onConfirm={handleConfirmOverride}
+              onCancel={() => setIsOverrideModalOpen(false)}
+            />
+          )}
+
+          {isProtectiveNotificationOpen && (
+            <div className="fixed top-20 right-6 w-96 z-50">
+              <ProtectiveModeNotification
+                signals={burnoutSignals}
+                onUnderstand={() => setIsProtectiveNotificationOpen(false)}
+                onExitRequest={() => toast({ title: "Demande envoyée", description: "Votre demande sera examinée sous 2h." })}
+              />
+            </div>
+          )}
 
           <Card className="hidden">
             <CardHeader>
