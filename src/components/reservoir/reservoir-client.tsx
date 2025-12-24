@@ -3,11 +3,11 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import type { Subtask, Task } from '@/lib/types';
-import { addDays, format, isSameDay, startOfDay, subDays } from 'date-fns';
+import { addDays, format, isSameDay, startOfDay, subDays, endOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { ReservoirTaskCard, priorityStyles } from './reservoir-task-card';
-import { Calendar as CalendarIcon, Plus, SlidersHorizontal, Zap, Search, Grid, List, Archive, Trash2, Star, MoreHorizontal, ChevronDown, PlusCircle, Edit, Check, KanbanSquare, LayoutGrid } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, SlidersHorizontal, Zap, Search, Grid, List, Archive, Trash2, Star, MoreHorizontal, ChevronDown, PlusCircle, Edit, Check, KanbanSquare, LayoutGrid, Tag as TagIcon } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -57,6 +57,8 @@ type Filters = {
   status: 'all' | 'completed' | 'not_completed';
   priorities: ('low' | 'medium' | 'high')[];
   energy: ('low' | 'medium' | 'high')[];
+  tags: string[];
+  deadline: 'all' | 'today' | 'tomorrow' | 'this-week' | 'none';
 };
 
 type GroupedTasks = {
@@ -76,6 +78,8 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     status: 'not_completed',
     priorities: [],
     energy: [],
+    tags: [],
+    deadline: 'all',
   });
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -207,7 +211,10 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     handleSheetDataChange('subtasks', updatedSubtasks);
   };
 
-  const { filteredAndGroupedTasks, sortedGroupKeys } = useMemo(() => {
+  const { filteredAndGroupedTasks, sortedGroupKeys, allTags } = useMemo(() => {
+    const allTags = [...new Set(tasks.flatMap(task => task.tags || []))];
+    const today = startOfDay(new Date());
+
     const filtered = tasks.filter(task => {
       const searchMatch = debouncedSearchTerm === '' || 
         task.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
@@ -228,7 +235,25 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
         filters.energy.length === 0 ||
         (task.energyRequired && filters.energy.includes(task.energyRequired));
 
-      return searchMatch && statusMatch && priorityMatch && energyMatch;
+      const tagMatch =
+        filters.tags.length === 0 ||
+        (task.tags && filters.tags.every(filterTag => task.tags?.includes(filterTag)));
+      
+      let deadlineMatch = true;
+      if (filters.deadline !== 'all') {
+        const taskDate = task.scheduledDate ? startOfDay(new Date(task.scheduledDate)) : null;
+        if (filters.deadline === 'none') {
+            deadlineMatch = !taskDate;
+        } else if (filters.deadline === 'today') {
+            deadlineMatch = !!taskDate && isSameDay(taskDate, today);
+        } else if (filters.deadline === 'tomorrow') {
+            deadlineMatch = !!taskDate && isSameDay(taskDate, addDays(today, 1));
+        } else if (filters.deadline === 'this-week') {
+            deadlineMatch = !!taskDate && taskDate >= today && taskDate <= endOfWeek(today, { locale: fr });
+        }
+      }
+
+      return searchMatch && statusMatch && priorityMatch && energyMatch && tagMatch && deadlineMatch;
     });
 
     const grouped = filtered.reduce((acc: GroupedTasks, task) => {
@@ -246,7 +271,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
         return new Date(a).getTime() - new Date(b).getTime();
     });
 
-    return { filteredAndGroupedTasks: grouped, sortedGroupKeys: sortedKeys };
+    return { filteredAndGroupedTasks: grouped, sortedGroupKeys: sortedKeys, allTags };
 
   }, [tasks, filters, debouncedSearchTerm]);
 
@@ -255,9 +280,9 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleMultiSelectFilterChange = (key: 'priorities' | 'energy', value: 'low' | 'medium' | 'high') => {
+  const handleMultiSelectFilterChange = (key: 'priorities' | 'energy' | 'tags', value: string) => {
     setFilters(prev => {
-        const currentValues = prev[key];
+        const currentValues = prev[key] as string[];
         if (currentValues.includes(value)) {
             return { ...prev, [key]: currentValues.filter(v => v !== value) };
         } else {
@@ -281,6 +306,8 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
         status: 'not_completed',
         priorities: [],
         energy: [],
+        tags: [],
+        deadline: 'all',
     });
   }
 
@@ -313,7 +340,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
       });
   };
   
-  const activeFilterCount = (filters.priorities.length > 0 ? 1 : 0) + (filters.energy.length > 0 ? 1 : 0) + (filters.status !== 'not_completed' ? 1 : 0);
+  const activeFilterCount = (filters.priorities.length > 0 ? 1 : 0) + (filters.energy.length > 0 ? 1 : 0) + (filters.tags.length > 0 ? 1 : 0) + (filters.status !== 'not_completed' ? 1 : 0) + (filters.deadline !== 'all' ? 1 : 0);
   
   const subtasksProgress = useMemo(() => {
     if (!sheetTaskData.subtasks || sheetTaskData.subtasks.length === 0) return 0;
@@ -815,68 +842,86 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
               Affinez votre vue pour vous concentrer sur ce qui compte.
             </SheetDescription>
           </SheetHeader>
-          <div className="flex-1 overflow-y-auto p-6 space-y-8">
-            {/* Status Filter */}
-            <div className="space-y-3">
-              <Label className="font-semibold">Statut</Label>
-              <RadioGroup
-                value={filters.status}
-                onValueChange={(value: 'all' | 'completed' | 'not_completed') => handleFilterChange('status', value)}
-                className="flex flex-col space-y-1"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="all" id="status-all" />
-                  <Label htmlFor="status-all">Toutes</Label>
+          <ScrollArea className="flex-1">
+            <div className="p-6 space-y-8">
+                {/* Status Filter */}
+                <div className="space-y-3">
+                <Label className="font-semibold">Statut</Label>
+                <RadioGroup
+                    value={filters.status}
+                    onValueChange={(value: 'all' | 'completed' | 'not_completed') => handleFilterChange('status', value)}
+                    className="flex flex-col space-y-1"
+                >
+                    <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="all" id="status-all" />
+                    <Label htmlFor="status-all">Toutes</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="not_completed" id="status-not-completed" />
+                    <Label htmlFor="status-not-completed">Non terminées</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="completed" id="status-completed" />
+                    <Label htmlFor="status-completed">Terminées</Label>
+                    </div>
+                </RadioGroup>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="not_completed" id="status-not-completed" />
-                  <Label htmlFor="status-not-completed">Non terminées</Label>
+
+                <Separator />
+                
+                {/* Deadline Filter */}
+                <div className="space-y-3">
+                <Label className="font-semibold">Deadline</Label>
+                <RadioGroup
+                    value={filters.deadline}
+                    onValueChange={(value: 'all' | 'today' | 'tomorrow' | 'this-week' | 'none') => handleFilterChange('deadline', value)}
+                    className="flex flex-col space-y-1"
+                >
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="all" id="deadline-all" /><Label htmlFor="deadline-all">Toutes</Label></div>
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="today" id="deadline-today" /><Label htmlFor="deadline-today">Aujourd'hui</Label></div>
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="tomorrow" id="deadline-tomorrow" /><Label htmlFor="deadline-tomorrow">Demain</Label></div>
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="this-week" id="deadline-this-week" /><Label htmlFor="deadline-this-week">Cette semaine</Label></div>
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="none" id="deadline-none" /><Label htmlFor="deadline-none">Aucune</Label></div>
+                </RadioGroup>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="completed" id="status-completed" />
-                  <Label htmlFor="status-completed">Terminées</Label>
+
+                <Separator />
+
+                {/* Priority Filter */}
+                <div className="space-y-3">
+                <Label className="font-semibold">Priorité</Label>
+                <div className="flex flex-wrap gap-2">
+                    {(['high', 'medium', 'low'] as const).map(priority => (
+                    <Button key={priority} variant={filters.priorities.includes(priority) ? 'default' : 'outline'} size="sm" onClick={() => handleMultiSelectFilterChange('priorities', priority)} className="capitalize rounded-full">{priority}</Button>
+                    ))}
                 </div>
-              </RadioGroup>
-            </div>
+                </div>
 
-            <Separator />
-            
-            {/* Priority Filter */}
-            <div className="space-y-3">
-              <Label className="font-semibold">Priorité</Label>
-              <div className="space-y-2">
-                {(['high', 'medium', 'low'] as const).map(priority => (
-                  <div key={priority} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`priority-${priority}`}
-                      checked={filters.priorities.includes(priority)}
-                      onCheckedChange={() => handleMultiSelectFilterChange('priorities', priority)}
-                    />
-                    <Label htmlFor={`priority-${priority}`} className="capitalize font-normal">{priority}</Label>
-                  </div>
-                ))}
-              </div>
-            </div>
+                <Separator />
 
-            <Separator />
+                {/* Energy Filter */}
+                <div className="space-y-3">
+                <Label className="font-semibold">Énergie Requise</Label>
+                <div className="flex flex-wrap gap-2">
+                    {(['high', 'medium', 'low'] as const).map(energy => (
+                    <Button key={energy} variant={filters.energy.includes(energy) ? 'default' : 'outline'} size="sm" onClick={() => handleMultiSelectFilterChange('energy', energy)} className="capitalize rounded-full">{energy}</Button>
+                    ))}
+                </div>
+                </div>
 
-            {/* Energy Filter */}
-            <div className="space-y-3">
-              <Label className="font-semibold">Énergie Requise</Label>
-              <div className="space-y-2">
-                {(['high', 'medium', 'low'] as const).map(energy => (
-                  <div key={energy} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`energy-${energy}`}
-                      checked={filters.energy.includes(energy)}
-                      onCheckedChange={() => handleMultiSelectFilterChange('energy', energy)}
-                    />
-                    <Label htmlFor={`energy-${energy}`} className="capitalize font-normal">{energy}</Label>
-                  </div>
-                ))}
-              </div>
+                 <Separator />
+
+                {/* Tags Filter */}
+                <div className="space-y-3">
+                <Label className="font-semibold">Tags</Label>
+                <div className="flex flex-wrap gap-2">
+                    {allTags.map(tag => (
+                    <Button key={tag} variant={filters.tags.includes(tag) ? 'default' : 'outline'} size="sm" onClick={() => handleMultiSelectFilterChange('tags', tag)} className="rounded-full">{tag}</Button>
+                    ))}
+                </div>
+                </div>
             </div>
-          </div>
+          </ScrollArea>
           <SheetFooter className="p-4 flex-row justify-between sm:justify-between border-t bg-card">
             <Button variant="outline" onClick={resetFilters}>Réinitialiser</Button>
             <Button onClick={() => setIsFilterSheetOpen(false)}>Appliquer</Button>
