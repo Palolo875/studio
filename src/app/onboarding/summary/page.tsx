@@ -1,16 +1,36 @@
+
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
 export default function OnboardingSummaryPage() {
-  const name = "Junior";
-  const rhythm = "Chouette";
-  const hours = 9;
+  const [name, setName] = useState('Junior');
+  const [rhythm, setRhythm] = useState('Chouette');
+  const [hours, setHours] = useState('9');
   const router = useRouter();
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedName = localStorage.getItem('onboardingName');
+      const storedRhythm = localStorage.getItem('onboardingRhythm');
+      const storedHours = localStorage.getItem('onboardingHours');
+
+      if (storedName) setName(storedName);
+      if (storedRhythm) setRhythm(storedRhythm);
+      if (storedHours) setHours(storedHours);
+    }
+  }, []);
+
   const handleNext = () => {
+    // Clear onboarding data from localStorage after completion
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('onboardingName');
+      localStorage.removeItem('onboardingRhythm');
+      localStorage.removeItem('onboardingHours');
+    }
     router.push('/dashboard');
   };
 

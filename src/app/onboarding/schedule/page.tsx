@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -15,6 +16,9 @@ export default function SchedulePage() {
   const router = useRouter();
 
   const handleNext = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('onboardingHours', productiveHours.toString());
+    }
     router.push('/onboarding/summary');
   };
 

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,9 @@ export default function OnboardingWelcomePage() {
   const router = useRouter();
 
   const handleNext = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('onboardingName', name);
+    }
     router.push('/onboarding/energy-quiz');
   };
 
@@ -42,6 +46,7 @@ export default function OnboardingWelcomePage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="h-14 text-center text-xl rounded-full"
+            onKeyDown={(e) => e.key === 'Enter' && name && handleNext()}
         />
       </div>
 
