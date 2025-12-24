@@ -43,7 +43,7 @@ export function CaptureClient() {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Écrivez librement... une idée, une tâche, une pensée..."
-          className="w-full bg-transparent text-lg md:text-xl text-foreground placeholder:text-muted-foreground/50 border-none focus:ring-0 resize-none p-0 focus:outline-none"
+          className="w-full bg-transparent text-lg md:text-xl text-foreground placeholder:text-muted-foreground/50 border-0 focus-visible:ring-0 focus:ring-0 resize-none p-0 focus:outline-none shadow-none"
           minRows={5}
         />
         <div className="flex justify-end items-center gap-2 mt-4">
