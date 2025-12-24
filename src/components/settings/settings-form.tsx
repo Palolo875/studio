@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -69,14 +70,16 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const SettingsSection = ({ title, description, children }: { title: string, description?: string, children: React.ReactNode }) => (
-    <div className="space-y-6">
-        <div>
-            <h2 className="text-xl font-bold tracking-tight">{title}</h2>
-            {description && <p className="text-muted-foreground mt-1">{description}</p>}
-        </div>
-        <div className="space-y-8">{children}</div>
-    </div>
+const SettingsSectionCard = ({ id, title, description, children }: { id: string, title: string, description?: string, children: React.ReactNode }) => (
+    <Card id={id}>
+        <CardHeader>
+            <CardTitle>{title}</CardTitle>
+            {description && <CardDescription>{description}</CardDescription>}
+        </CardHeader>
+        <CardContent className="space-y-8">
+            {children}
+        </CardContent>
+    </Card>
 );
 
 
@@ -134,7 +137,7 @@ export function SettingsForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-12">
         
-        <SettingsSection title="Profil" description="Mettez à jour les informations de votre profil.">
+        <SettingsSectionCard id="profil" title="Profil" description="Mettez à jour les informations de votre profil.">
             <FormField
               control={form.control}
               name="firstName"
@@ -149,6 +152,86 @@ export function SettingsForm() {
               )}
             />
             
+            <FormField
+              control={form.control}
+              name="energyProfile"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Profil énergétique</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="h-12 rounded-xl">
+                        <SelectValue placeholder="Sélectionnez votre profil" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Alouette">Alouette (du matin)</SelectItem>
+                      <SelectItem value="Colibri">Colibri (stable)</SelectItem>
+                      <SelectItem value="Hibou">Hibou (du soir)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Indiquez quand vous êtes le plus productif pendant la journée.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+        </SettingsSectionCard>
+
+        <SettingsSectionCard id="theme" title="Thème & Apparence" description="Personnalisez l'apparence de l'application.">
+            <FormField
+              control={form.control}
+              name="theme"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                    <FormLabel>Thème</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+                    >
+                      <FormItem>
+                        <RadioGroupItem value="light" id="light" className="sr-only" />
+                        <Label
+                          htmlFor="light"
+                          className="flex flex-col items-center justify-center rounded-2xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer aspect-video"
+                        >
+                          <Sun className="mb-3 h-6 w-6" />
+                          Clair
+                        </Label>
+                      </FormItem>
+                      <FormItem>
+                        <RadioGroupItem value="dark" id="dark" className="sr-only" />
+                        <Label
+                          htmlFor="dark"
+                           className="flex flex-col items-center justify-center rounded-2xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer aspect-video"
+                        >
+                          <Moon className="mb-3 h-6 w-6" />
+                          Sombre
+                        </Label>
+                      </FormItem>
+                      <FormItem>
+                         <RadioGroupItem
+                          value="system"
+                          id="system"
+                          className="sr-only"
+                        />
+                        <Label
+                          htmlFor="system"
+                           className="flex flex-col items-center justify-center rounded-2xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer aspect-video"
+                        >
+                           <Monitor className="mb-3 h-6 w-6" />
+                          Automatique
+                        </Label>
+                      </FormItem>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="accentColor"
@@ -183,37 +266,127 @@ export function SettingsForm() {
                 </FormItem>
               )}
             />
-            
-            <FormField
-              control={form.control}
-              name="energyProfile"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Profil énergétique</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+        </SettingsSectionCard>
+        
+        <SettingsSectionCard id="horaires" title="Horaires" description="Définissez vos horaires de travail et de productivité.">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <FormField
+                control={form.control}
+                name="workStartTime"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Heure début</FormLabel>
                     <FormControl>
-                      <SelectTrigger className="h-12 rounded-xl">
-                        <SelectValue placeholder="Sélectionnez votre profil" />
-                      </SelectTrigger>
+                        <Input type="time" {...field} className="h-12 rounded-xl" />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Alouette">Alouette</SelectItem>
-                      <SelectItem value="Colibri">Colibri</SelectItem>
-                      <SelectItem value="Hibou">Hibou</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Indiquez quand vous êtes le plus productif pendant la journée.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-        </SettingsSection>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                
+                <FormField
+                control={form.control}
+                name="workEndTime"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Heure fin</FormLabel>
+                    <FormControl>
+                        <Input type="time" {...field} className="h-12 rounded-xl" />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                
+                <FormField
+                control={form.control}
+                name="workHoursPerDay"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Heures par jour</FormLabel>
+                    <FormControl>
+                        <Input type="number" {...field} className="h-12 rounded-xl" min="1" max="24" />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
+        </SettingsSectionCard>
 
-        <Separator />
-
-        <SettingsSection title="Notifications" description="Gérez vos préférences de notification.">
+        <SettingsSectionCard id="focus" title="Mode Focus & Pomodoro" description="Configurez vos cycles de travail et de pause.">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                <FormField
+                    control={form.control}
+                    name="pomodoroWork"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Durée de travail (minutes)</FormLabel>
+                            <FormControl>
+                                <Input type="number" {...field} className="h-12 rounded-xl" min="5" />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="pomodoroBreak"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Durée de pause (minutes)</FormLabel>
+                            <FormControl>
+                                <Input type="number" {...field} className="h-12 rounded-xl" min="1" />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                <FormField
+                    control={form.control}
+                    name="focusAutoSave"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 flex-1">
+                            <div className="space-y-0.5">
+                                <FormLabel className="text-base">
+                                    Sauvegarde auto. des notes
+                                </FormLabel>
+                            </div>
+                            <FormControl>
+                                <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                        </FormItem>
+                    )}
+                />
+                
+                <FormField
+                    control={form.control}
+                    name="focusSoundEnabled"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 flex-1">
+                            <div className="space-y-0.5">
+                                <FormLabel className="text-base">
+                                    Sons de notification
+                                </FormLabel>
+                            </div>
+                            <FormControl>
+                                <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                        </FormItem>
+                    )}
+                />
+            </div>
+        </SettingsSectionCard>
+        
+        <SettingsSectionCard id="notifications" title="Notifications" description="Gérez vos préférences de notification.">
             <FormField
               control={form.control}
               name="notificationsEnabled"
@@ -297,241 +470,15 @@ export function SettingsForm() {
                 </FormItem>
               )}
             />
-        </SettingsSection>
-        
-        <Separator />
+        </SettingsSectionCard>
 
-        <SettingsSection title="Thème" description="Personnalisez l'apparence de l'application.">
-            <FormField
-              control={form.control}
-              name="theme"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="grid grid-cols-1 sm:grid-cols-3 gap-4"
-                    >
-                      <FormItem>
-                        <RadioGroupItem value="light" id="light" className="sr-only" />
-                        <Label
-                          htmlFor="light"
-                          className="flex flex-col items-center justify-center rounded-2xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer aspect-video"
-                        >
-                          <Sun className="mb-3 h-6 w-6" />
-                          Clair
-                        </Label>
-                      </FormItem>
-                      <FormItem>
-                        <RadioGroupItem value="dark" id="dark" className="sr-only" />
-                        <Label
-                          htmlFor="dark"
-                           className="flex flex-col items-center justify-center rounded-2xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer aspect-video"
-                        >
-                          <Moon className="mb-3 h-6 w-6" />
-                          Sombre
-                        </Label>
-                      </FormItem>
-                      <FormItem>
-                         <RadioGroupItem
-                          value="system"
-                          id="system"
-                          className="sr-only"
-                        />
-                        <Label
-                          htmlFor="system"
-                           className="flex flex-col items-center justify-center rounded-2xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer aspect-video"
-                        >
-                           <Monitor className="mb-3 h-6 w-6" />
-                          Automatique
-                        </Label>
-                      </FormItem>
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-        </SettingsSection>
-        
-        <Separator />
-        
-        <SettingsSection title="Horaires de Travail" description="Définissez vos horaires de travail habituels.">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <FormField
-                control={form.control}
-                name="workStartTime"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Heure début</FormLabel>
-                    <FormControl>
-                        <Input type="time" {...field} className="h-12 rounded-xl" />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                
-                <FormField
-                control={form.control}
-                name="workEndTime"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Heure fin</FormLabel>
-                    <FormControl>
-                        <Input type="time" {...field} className="h-12 rounded-xl" />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                
-                <FormField
-                control={form.control}
-                name="workHoursPerDay"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Heures par jour</FormLabel>
-                    <FormControl>
-                        <Input type="number" {...field} className="h-12 rounded-xl" min="1" max="24" />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
-        </SettingsSection>
-        
-        <Separator />
+        <SettingsSectionCard id="ia" title="Intelligence Artificielle" description="Paramétrez le comportement du cerveau de KairuFlow.">
+          {/* TODO: Add AI settings */}
+          <p className="text-sm text-muted-foreground">Les paramètres de l'IA seront bientôt disponibles ici.</p>
+        </SettingsSectionCard>
 
-        <SettingsSection title="Pomodoro" description="Configurez vos cycles de travail et de pause.">
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                <FormField
-                    control={form.control}
-                    name="pomodoroWork"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Durée de travail (minutes)</FormLabel>
-                            <FormControl>
-                                <Input type="number" {...field} className="h-12 rounded-xl" min="5" />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="pomodoroBreak"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Durée de pause (minutes)</FormLabel>
-                            <FormControl>
-                                <Input type="number" {...field} className="h-12 rounded-xl" min="1" />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </div>
-        </SettingsSection>
-        
-        <Separator />
 
-        <SettingsSection title="Mode Focus Adaptatif" description="Configurez votre environnement de travail sans distraction.">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <Label htmlFor="work-duration">Durée de travail (minutes)</Label>
-                    <Input
-                        id="work-duration"
-                        type="number"
-                        min="1"
-                        max="60"
-                        defaultValue="25"
-                        {...form.register("focusWorkDuration", { valueAsNumber: true })}
-                    />
-                    <p className="text-sm text-muted-foreground">
-                        Durée d'une session de travail pomodoro
-                    </p>
-                </div>
-                
-                <div className="space-y-2">
-                    <Label htmlFor="break-duration">Durée de pause (minutes)</Label>
-                    <Input
-                        id="break-duration"
-                        type="number"
-                        min="1"
-                        max="30"
-                        defaultValue="5"
-                        {...form.register("focusBreakDuration", { valueAsNumber: true })}
-                    />
-                    <p className="text-sm text-muted-foreground">
-                        Durée de la pause entre deux sessions
-                    </p>
-                </div>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-4 pt-2">
-                <FormField
-                    control={form.control}
-                    name="focusAutoSave"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 flex-1">
-                            <div className="space-y-0.5">
-                                <FormLabel className="text-base">
-                                    Sauvegarde auto. des notes
-                                </FormLabel>
-                                <FormDescription>
-                                    Enregistre vos notes toutes les 2s
-                                </FormDescription>
-                            </div>
-                            <FormControl>
-                                <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                />
-                            </FormControl>
-                        </FormItem>
-                    )}
-                />
-                
-                <FormField
-                    control={form.control}
-                    name="focusSoundEnabled"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 flex-1">
-                            <div className="space-y-0.5">
-                                <FormLabel className="text-base">
-                                    Sons de notification
-                                </FormLabel>
-                                <FormDescription>
-                                    Émet un son à la fin de chaque session
-                                </FormDescription>
-                            </div>
-                            <FormControl>
-                                <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                />
-                            </FormControl>
-                        </FormItem>
-                    )}
-                />
-            </div>
-        </SettingsSection>
-
-        <Separator />
-
-        <SettingsSection title="Avancé" description="Options avancées pour les utilisateurs techniques.">
-            <div className="flex flex-col sm:flex-row items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                    <FormLabel className="text-base">
-                        Version de l'application
-                    </FormLabel>
-                    <p className="text-sm text-muted-foreground">v1.0.0</p>
-                </div>
-            </div>
-            
+        <SettingsSectionCard id="avance" title="Avancé" description="Options pour les utilisateurs techniques.">
             <div className="flex flex-col sm:flex-row items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                     <FormLabel className="text-base">
@@ -540,9 +487,9 @@ export function SettingsForm() {
                     <p className="text-sm text-muted-foreground">Libérer l'espace utilisé par le cache</p>
                 </div>
                 <Button 
+                    type="button"
                     variant="outline" 
                     onClick={() => {
-                        // Clear cache logic
                         if ('caches' in window) {
                             caches.keys().then(names => {
                                 names.forEach(name => {
@@ -583,9 +530,11 @@ export function SettingsForm() {
                     </FormItem>
                 )}
             />
-        </SettingsSection>
+        </SettingsSectionCard>
 
-        <Button type="submit" className="h-12 rounded-full px-8">Enregistrer les modifications</Button>
+        <div className="flex justify-end">
+            <Button type="submit" size="lg" className="h-12 rounded-full px-8">Enregistrer les modifications</Button>
+        </div>
       </form>
     </Form>
   );

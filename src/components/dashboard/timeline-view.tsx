@@ -1,13 +1,14 @@
-
 'use client';
 
 import type { Task } from '@/lib/types';
-import { Card, CardContent } from '@/components/ui/card';
-import { Check, MoreHorizontal } from 'lucide-react';
-import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Clock, Tag, User, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Image from "next/image";
+import { format, parseISO, startOfDay, addHours, addMinutes, isAfter, setHours, setMinutes } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import React from 'react';
 
 interface TimelineViewProps {
   tasks: Task[];
@@ -16,84 +17,137 @@ interface TimelineViewProps {
 
 const userAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
 
+// Helper to get task start time, defaulting to a specific time if not set
+const getTaskStartTime = (task: Task): Date | null => {
+    if (task.scheduledDate) {
+        const date = parseISO(task.scheduledDate);
+        // If no time is specified, it might be just a date. We can handle this.
+        // For now, let's assume it has a time or default to something.
+        // A real implementation would parse time from a string like "14:00"
+        return date;
+    }
+    return null;
+}
 
 export function TimelineView({ tasks, onToggleCompletion }: TimelineViewProps) {
-  const tasksWithTime = tasks.map((task, index) => {
-    // Basic time estimation logic, can be improved
-    const baseTime = new Date();
-    baseTime.setHours(9, 0, 0, 0);
-    const duration = task.estimatedDuration || 60; // default to 60 mins
-    const startTime = new Date(baseTime.getTime() + index * duration * 60000);
-    
-    return {
-      ...task,
-      time: startTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-    }
+  const now = new Date();
+
+  // 1. Separate tasks with and without specific times
+  const scheduledTasks = tasks.filter(task => getTaskStartTime(task) !== null);
+  const unscheduledTasks = tasks.filter(task => getTaskStartTime(task) === null);
+
+  // 2. Sort scheduled tasks by their start time
+  scheduledTasks.sort((a, b) => {
+    const timeA = getTaskStartTime(a)!;
+    const timeB = getTaskStartTime(b)!;
+    return timeA.getTime() - timeB.getTime();
   });
 
-  if (tasks.length === 0) {
-    return <div className="text-center py-10 text-muted-foreground">Aucune tâche dans la timeline.</div>;
+  // 3. Generate time slots for the day (e.g., 8 AM to 10 PM)
+  const dayStart = setMinutes(setHours(startOfDay(now), 8), 0);
+  const dayEnd = setMinutes(setHours(startOfDay(now), 22), 0);
+  const timeSlots = [];
+  for (let d = dayStart; d <= dayEnd; d = addHours(d, 1)) {
+    timeSlots.push(d);
+  }
+
+  // Map tasks to time slots
+  const timelineItems = timeSlots.map(slot => {
+    const tasksInSlot = scheduledTasks.filter(task => {
+        const taskStart = getTaskStartTime(task)!;
+        return taskStart.getHours() === slot.getHours();
+    });
+    return {
+        time: slot,
+        tasks: tasksInSlot,
+    };
+  });
+
+  const getDotColor = (task: Task) => {
+    if (task.priority === 'high' || task.effort === 'L') return 'bg-red-500';
+    if (task.priority === 'medium' || task.effort === 'M') return 'bg-yellow-500';
+    return 'bg-blue-500';
   }
 
   return (
-    <div className="space-y-8 relative">
-        <div className="absolute left-3.5 top-2 w-0.5 h-full bg-border -z-10"></div>
+    <div className="space-y-0 relative pb-8">
+      {/* Vertical Timeline Bar */}
+      <div className="absolute left-4 top-0 w-0.5 h-full bg-border -z-10"></div>
 
-        {tasksWithTime.map((task, index) => (
-            <div key={task.id} className="flex items-start gap-4">
+      {timelineItems.map(({ time, tasks }, index) => (
+        <React.Fragment key={time.toISOString()}>
+          {tasks.length > 0 ? (
+            tasks.map(task => (
+              <div key={task.id} className="flex items-start gap-6">
                 <div className="flex flex-col items-center">
-                    <div className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center",
-                        index === 0 ? "bg-primary" : "bg-muted"
-                    )}>
-                       <div className={cn(
-                           "w-3 h-3 rounded-full",
-                           index === 0 ? "bg-primary-foreground" : "bg-muted-foreground"
-                       )}></div>
+                   <div className="text-sm font-medium text-muted-foreground w-10 text-right">
+                    {format(getTaskStartTime(task)!, 'HH:mm')}
+                   </div>
+                </div>
+                <div className="relative flex-1">
+                   <div className={cn("absolute -left-[32px] top-1.5 h-4 w-4 rounded-full border-4 border-background", getDotColor(task))}></div>
+                   <Card className="mb-6 bg-card/80 backdrop-blur-sm">
+                     <CardContent className="p-4">
+                       <p className="font-semibold text-foreground">{task.name}</p>
+                       <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
+                       <div className="flex items-center gap-4 text-xs text-muted-foreground mt-3">
+                         <div className="flex items-center gap-1.5">
+                           <Clock className="h-3.5 w-3.5" />
+                           <span>{task.estimatedDuration || 30} min</span>
+                         </div>
+                         {task.tags && task.tags[0] && (
+                           <div className="flex items-center gap-1.5">
+                             <Tag className="h-3.5 w-3.5" />
+                             <span>{task.tags[0]}</span>
+                           </div>
+                         )}
+                       </div>
+                     </CardContent>
+                   </Card>
+                </div>
+              </div>
+            ))
+          ) : (
+             (index > 0 && timelineItems[index-1].tasks.length > 0) || index === 0 ? (
+                <div className="flex items-start gap-6">
+                    <div className="text-sm font-medium text-muted-foreground w-10 text-right">
+                        {format(time, 'HH:mm')}
+                    </div>
+                    <div className="relative flex-1">
+                      <div className="absolute -left-[30px] top-1.5 h-3 w-3 rounded-full bg-muted-foreground/50 border-2 border-background"></div>
                     </div>
                 </div>
-                
-                <div className="w-full mt-1">
-                    { index === 0 ? (
-                        <Card className="bg-primary text-primary-foreground shadow-lg -mt-1">
-                            <CardContent className="p-4">
-                                <div className="flex justify-between items-center mb-2">
-                                    <p className="font-semibold">{task.name}</p>
-                                    <p className="text-sm opacity-80">{task.time}</p>
-                                </div>
-                                <p className="text-sm opacity-80 mb-4">{task.description || "Tâche actuelle de la playlist."}</p>
-                                <div className="flex justify-between items-center">
-                                    <div className="flex -space-x-2">
-                                        <Avatar className="h-8 w-8 border-2 border-primary">
-                                            {userAvatar && <Image src={userAvatar.imageUrl} alt="User Avatar" width={32} height={32} className="rounded-full" />}
-                                            <AvatarFallback>J</AvatarFallback>
-                                        </Avatar>
-                                         <Avatar className="h-8 w-8 border-2 border-primary">
-                                            <AvatarFallback>D</AvatarFallback>
-                                        </Avatar>
-                                    </div>
-                                    <button 
-                                      className="h-8 w-8 rounded-full bg-primary-foreground/20 flex items-center justify-center hover:bg-primary-foreground/30 transition-colors"
-                                      onClick={() => onToggleCompletion?.(task.id)}
-                                    >
-                                        <Check className="h-5 w-5 text-primary-foreground" />
-                                    </button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="font-medium text-foreground">{task.name}</p>
-                                <p className="text-sm text-muted-foreground">{task.description || "Prochaine tâche."}</p>
-                            </div>
-                            <p className="text-sm text-muted-foreground">{task.time}</p>
-                        </div>
-                    )
-                }
+             ) : null
+          )}
+        </React.Fragment>
+      ))}
+
+      {/* Unscheduled Tasks Section */}
+      {unscheduledTasks.length > 0 && (
+         <div className="mt-12">
+            <h3 className="text-lg font-bold mb-4 pl-14">Tâches non planifiées</h3>
+             {unscheduledTasks.map(task => (
+                <div key={task.id} className="flex items-start gap-6">
+                    <div className="w-10"></div>
+                     <div className="relative flex-1">
+                       <div className={cn("absolute -left-[32px] top-1.5 h-4 w-4 rounded-full border-4 border-background", getDotColor(task))}></div>
+                       <Card className="mb-6 bg-card/80 backdrop-blur-sm">
+                         <CardContent className="p-4">
+                           <p className="font-semibold text-foreground">{task.name}</p>
+                           <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
+                           <div className="flex items-center gap-4 text-xs text-muted-foreground mt-3">
+                             <div className="flex items-center gap-1.5">
+                               <Clock className="h-3.5 w-3.5" />
+                               <span>{task.estimatedDuration || 30} min</span>
+                             </div>
+                           </div>
+                         </CardContent>
+                       </Card>
+                    </div>
                 </div>
-            </div>
-        ))}
+             ))}
+         </div>
+      )}
     </div>
   );
 }

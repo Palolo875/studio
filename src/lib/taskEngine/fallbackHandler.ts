@@ -20,8 +20,8 @@ export function handleLowEnergyFallback(tasks: Task[]): TaskPlaylist | null {
       tasks: [easyTask],
       generatedAt: new Date(),
       energyUsed: { level: 'low', stability: 'stable' }, // Énergie basse par défaut
-      explanation: "Fallback énergie basse",
-      warnings: ["Énergie basse détectée. Une seule tâche facile recommandée."]
+      explanation: "Fallback : Votre énergie est basse, commençons par quelque chose de simple.",
+      warnings: ["Votre énergie semble basse. Une seule tâche facile est suggérée pour commencer en douceur."]
     };
   }
   
@@ -58,8 +58,8 @@ export function handleOverconstrainedFallback(
     tasks: selectedTasks,
     generatedAt: new Date(),
     energyUsed: userEnergy,
-    explanation: "Fallback contraintes multiples",
-    warnings: ["Trop de contraintes. Playlist réduite aux tâches les plus légères."]
+    explanation: "Fallback : Trop de contraintes détectées. La playlist a été simplifiée.",
+    warnings: ["Journée chargée ! La playlist a été allégée pour vous permettre de vous concentrer."]
   };
 }
 
@@ -95,8 +95,8 @@ export function handleInconsistentHistoryFallback(tasks: Task[]): TaskPlaylist |
     tasks: selectedTasks,
     generatedAt: new Date(),
     energyUsed: { level: 'medium', stability: 'stable' }, // Énergie moyenne par défaut
-    explanation: "Fallback historique incohérent",
-    warnings: ["Historique comportemental incohérent. Reset doux appliqué."]
+    explanation: "Fallback : Votre historique montre des variations. Proposition d'une playlist fraîche pour repartir sur de bonnes bases.",
+    warnings: ["Vos habitudes semblent changer. Voici une nouvelle approche pour aujourd'hui."]
   };
 }
 
@@ -114,7 +114,7 @@ export function handleDefaultFallback(tasks: Task[]): TaskPlaylist {
     tasks: selectedTasks,
     generatedAt: new Date(),
     energyUsed: { level: 'medium', stability: 'stable' }, // Énergie moyenne par défaut
-    explanation: "Fallback par défaut",
-    warnings: ["Aucune règle de fallback spécifique appliquée."]
+    explanation: "Fallback par défaut appliqué.",
+    warnings: ["Génération d'une playlist équilibrée pour commencer."]
   };
 }

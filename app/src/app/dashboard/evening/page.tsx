@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Lightbulb, TrendingUp, Target } from 'lucide-react';
 import { useWindowSize } from 'react-use';
@@ -12,6 +12,7 @@ import { calculateFocusScore, getFocusScoreMessage as getFocusScoreMessageIntern
 
 function EveningContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { width, height } = useWindowSize();
   const [showConfetti, setShowConfetti] = useState(true);
   const [brainDump, setBrainDump] = useState('');
@@ -178,7 +179,7 @@ function EveningContent() {
 
         <motion.div variants={itemVariants} className="pt-8">
             <p className="text-muted-foreground mb-6">L'esprit est maintenant clair. La soirée peut commencer.</p>
-            <Button size="lg" className="rounded-full h-14 px-10 text-lg" onClick={() => { setShowConfetti(true); setTimeout(() => { window.location.href = '/dashboard'; }, 3000); }}>Terminer la journée</Button>
+            <Button size="lg" className="rounded-full h-14 px-10 text-lg" onClick={() => { setShowConfetti(true); setTimeout(() => { router.push('/dashboard'); }, 3000); }}>Terminer la journée</Button>
             <p className="text-muted-foreground mt-4">À demain, {name}.</p>
         </motion.div>
       </motion.div>

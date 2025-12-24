@@ -35,24 +35,24 @@ export function CaptureClient() {
 
 
   return (
-    <div className="flex flex-col items-center justify-start h-full pt-8">
-      <form action={formAction} className="w-full max-w-2xl">
+    <div className="relative h-full w-full px-4 sm:px-8 md:px-12 lg:px-24 xl:px-32 py-12">
+      <form action={formAction} className="w-full h-full flex flex-col">
         <Textarea
           ref={textareaRef}
           name="text"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Capturez vos pensées, idées, tâches... et laissez l'IA les trier."
-          className="w-full bg-transparent text-lg md:text-xl text-foreground placeholder:text-muted-foreground/50 border-none focus:ring-0 resize-none p-0"
+          placeholder="Écrivez librement..."
+          className="w-full flex-1 bg-transparent text-lg md:text-xl text-foreground placeholder:text-muted-foreground/50 border-0 focus-visible:ring-0 focus:ring-0 resize-none p-0 focus:outline-none shadow-none leading-relaxed"
           minRows={5}
         />
-        <div className="flex justify-end items-center gap-2 mt-4">
+        <div className="fixed bottom-6 right-6 flex items-center gap-2 z-20">
             <Button type="button" variant="ghost" size="icon" disabled>
                 <Mic className="h-5 w-5" />
                 <span className="sr-only">Capturer par la voix (bientôt)</span>
             </Button>
             <Button type="submit" disabled={!content.trim() || isPending}>
-                {isPending ? 'Analyse en cours...' : 'Analyser et Trier'}
+                {isPending ? 'Analyse...' : 'Analyser et Trier'}
                 <Sparkles className="ml-2 h-4 w-4" />
             </Button>
         </div>
@@ -65,7 +65,7 @@ export function CaptureClient() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.5 }}
-            className="w-full max-w-2xl mt-12"
+            className="w-full max-w-3xl mt-12 mx-auto"
           >
             <Card className="bg-card/50">
               <CardHeader>

@@ -46,6 +46,13 @@ import { SovereigntyMode } from '@/lib/phase7Implementation';
 import { ConflictResolutionModal } from './conflict-resolution-modal';
 import { OverrideConfirmation } from './override-confirmation';
 import { ProtectiveModeNotification } from './protective-mode-notification';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+
 
 type EnergyState =
   | 'energized'
@@ -56,11 +63,11 @@ type EnergyState =
   | null;
 
 const dynamicMessages: Record<string, string> = {
-  energized: 'Vous êtes en feu ! Voici vos défis :',
-  normal: 'Voici votre journée, claire et faisable :',
-  slow: 'On y va doucement. Voici 3 choses simples :',
-  focused: 'Mode concentration activé. Voici vos défis :',
-  creative: "L'inspiration est là ! Voici comment la canaliser :",
+  energized: 'Prêt à déplacer des montagnes ! Voici vos défis :',
+  normal: 'Une bonne énergie pour une journée productive. Voici votre plan :',
+  slow: 'On y va en douceur. Voici 3 tâches simples pour bien démarrer :',
+  focused: 'Mode concentration activé. Voici vos objectifs pour rester dans la zone :',
+  creative: "L'inspiration est là ! Voici comment la canaliser et créer quelque chose de génial :",
 };
 
 export function DashboardClient() {
@@ -391,14 +398,14 @@ export function DashboardClient() {
 
   const playlistMessage = energyLevel
     ? dynamicMessages[energyLevel]
-    : 'Voici votre journée, claire et faisable :';
+    : 'Prêt à commencer ? Voici ce qui compte aujourd\'hui :';
 
   return (
     <div className="space-y-8">
       <Dialog open={showMorningRitual} onOpenChange={setShowMorningRitual}>
         <DialogContent className="sm:max-w-[480px] p-8">
           <DialogHeader>
-            <DialogTitle className="text-2xl text-center">Comment tu te sens ce matin ?</DialogTitle>
+            <DialogTitle className="text-2xl text-center">Comment te sens-tu ce matin ?</DialogTitle>
           </DialogHeader>
           <EnergyCheckIn
             onEnergyChange={setEnergyLevel}
@@ -516,9 +523,6 @@ export function DashboardClient() {
             </TabsContent>
           </Tabs>
 
-          {/* Panneau de gouvernance */}
-          <GovernancePanel />
-
           <AlertDialog open={showBonusCard} onOpenChange={setShowBonusCard}>
             <AlertDialogContent>
               <AlertDialogHeader>
@@ -575,21 +579,39 @@ export function DashboardClient() {
           </AlertDialog>
 
           <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-20">
-            <Button
-              onClick={() => setIsPanicModalOpen(true)}
-              className="h-16 w-16 rounded-full shadow-2xl"
-              size="icon"
-            >
-              <Siren className="h-8 w-8" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => setIsPanicModalOpen(true)}
+                    className="h-16 w-16 rounded-full shadow-2xl"
+                    size="icon"
+                  >
+                    <Siren className="h-8 w-8" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>Gérer un imprévu</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-            <Button
-              onClick={() => setShowDetails(!showDetails)}
-              className="h-12 w-12 rounded-full shadow-2xl bg-purple-600 hover:bg-purple-700"
-              size="icon"
-            >
-              <Shield className="h-5 w-5" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => router.push('/dashboard/stats')}
+                    className="h-12 w-12 rounded-full shadow-2xl bg-purple-600 hover:bg-purple-700"
+                    size="icon"
+                  >
+                    <Shield className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>Statistiques & Gouvernance</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           {/* Modaux Phase 7 */}

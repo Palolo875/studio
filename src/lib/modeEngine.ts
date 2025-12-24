@@ -221,3 +221,5 @@ export class SovereigntyManager {
     });
   }
 }
+
+export { SovereigntyMode };

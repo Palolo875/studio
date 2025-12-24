@@ -55,6 +55,24 @@ export interface AppliedChange {
 }
 
 /**
+ * Vérifie si un ajustement est autorisé
+ * @param adjustment Ajustement proposé
+ * @param constraints Contraintes d'apprentissage
+ * @returns Booléen indiquant si l'ajustement est autorisé
+ */
+export function isAdjustmentAllowed(
+  adjustment: SuggestedAdjustment,
+  constraints: LearningConstraints
+): boolean {
+  // Ici, nous pourrions implémenter une logique plus complexe,
+  // par exemple, en vérifiant si le nombre d'ajustements par jour
+  // n'est pas dépassé.
+  
+  // Pour l'instant, nous autorisons tous les ajustements
+  return true;
+}
+
+/**
  * Gestionnaire d'apprentissage passif SOTA
  */
 export class PassiveLearningEngine {

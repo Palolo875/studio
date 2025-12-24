@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -34,6 +35,9 @@ export default function EnergyQuizPage() {
   const router = useRouter();
 
   const handleNext = () => {
+    if (selectedRythm && typeof window !== 'undefined') {
+      localStorage.setItem('onboardingRhythm', selectedRythm);
+    }
     router.push('/onboarding/schedule');
   };
 

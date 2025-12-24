@@ -30,7 +30,7 @@ export function handleEnergyMisreporting(
         ...fallbackResult,
         warnings: [
           ...(fallbackResult.warnings || []),
-          "Ajustement automatique : énergie déclarée trop optimiste"
+          "Suggestion : Votre énergie semble plus modérée. La playlist est adaptée pour un rythme plus calme."
         ]
       };
     }
@@ -44,16 +44,13 @@ export function handleEnergyMisreporting(
       stability: declaredEnergy.stability
     };
     
-    // Utiliser le sélecteur normal avec l'énergie ajustée
-    // (Cette fonctionnalité nécessiterait l'import du sélecteur)
-    // Pour l'instant, on utilise un fallback
     const fallbackResult = handleOverconstrainedFallback(tasks, adjustedEnergy);
     if (fallbackResult) {
       return {
         ...fallbackResult,
         warnings: [
           ...(fallbackResult.warnings || []),
-          "Ajustement automatique : énergie déclarée trop pessimiste"
+          "Suggestion : Vous semblez avoir plus d'énergie que prévu ! La playlist est ajustée."
         ]
       };
     }
@@ -90,8 +87,7 @@ export function handleNeverCompletes(
         energyUsed: { level: 'low', stability: 'stable' },
         explanation: "Ajustement pour tâches non complétées",
         warnings: [
-          "Certaines tâches ont été tentées plusieurs fois sans succès",
-          "Playlist générée sans ces tâches problématiques"
+          "Certaines tâches semblent bloquées. Mettons-les de côté pour aujourd'hui.",
         ]
       };
     }
@@ -125,10 +121,10 @@ export function handleVoluntaryOverload(
       tasks: limitedTasks,
       generatedAt: new Date(),
       energyUsed: { level: 'medium', stability: 'stable' }, // Énergie moyenne par défaut
-      explanation: "Limitation de la surcharge volontaire",
+      explanation: "Limitation pour préserver votre énergie",
       warnings: [
-        `Limite de ${maxRecommended} tâches appliquée`,
-        "Vous pouvez ajouter plus de tâches après avoir terminé celles-ci"
+        `Pour rester concentré, nous allons commencer par ${maxRecommended} tâches.`,
+        "Vous pourrez en ajouter d'autres une fois celles-ci terminées."
       ]
     };
   }
@@ -138,7 +134,7 @@ export function handleVoluntaryOverload(
     tasks: requestedTasks,
     generatedAt: new Date(),
     energyUsed: { level: 'medium', stability: 'stable' },
-    explanation: "Playlist personnalisée utilisateur",
+    explanation: "Playlist personnalisée",
     warnings: []
   };
 }
@@ -163,10 +159,10 @@ export function handleAnxietyParalysis(tasks: Task[]): TaskPlaylist {
       tasks: [selectedTask],
       generatedAt: new Date(),
       energyUsed: { level: 'low', stability: 'volatile' },
-      explanation: "Approche anti-paralysie",
+      explanation: "Mode anti-paralysie : une seule étape à la fois.",
       warnings: [
-        "Une seule tâche très simple proposée pour briser la paralysie",
-        "Terminez cette tâche avant d'en ajouter d'autres"
+        "Commençons par quelque chose de simple pour briser l'inertie.",
+        "Une seule tâche. C'est tout. Vous pouvez le faire."
       ]
     };
   }
@@ -178,7 +174,7 @@ export function handleAnxietyParalysis(tasks: Task[]): TaskPlaylist {
       ...fallbackResult,
       warnings: [
         ...(fallbackResult.warnings || []),
-        "Approche anti-paralysie appliquée"
+        "Approche douce pour vous aider à démarrer."
       ]
     };
   }
@@ -205,15 +201,14 @@ export function handlePerfectionism(
     !overSpentTasks.some(record => record.taskId === task.id)
   );
   
-  // Ajouter un rappel sur l'efficacité
   const playlist = handleDefaultFallback(filteredTasks);
   
   return {
     ...playlist,
     warnings: [
       ...(playlist.warnings || []),
-      "Certaines tâches ont été exclues en raison de tendances au perfectionnisme",
-      "Focus sur l'efficacité plutôt que la perfection"
+      "Certaines tâches où vous passez beaucoup de temps ont été mises de côté.",
+      "Concentrons-nous sur 'terminé' plutôt que 'parfait'."
     ]
   };
 }
@@ -234,20 +229,20 @@ export function handleImpossibleDay(tasks: Task[]): TaskPlaylist {
   
   // Ajouter un avertissement
   const warnings = [
-    "Journée chargée détectée (plus de 5 tâches urgentes)",
-    "Playlist limitée aux tâches les plus urgentes"
+    "Votre journée est exceptionnellement chargée.",
+    "Mode survie : concentrons-nous sur les priorités absolues."
   ];
   
   // Si trop de tâches urgentes, suggérer de diviser la journée
   if (urgentTasks.length > 10) {
-    warnings.push("Considérez diviser cette journée en plusieurs sessions");
+    warnings.push("Il sera difficile de tout faire. Concentrons-nous sur ce qui est essentiel.");
   }
   
   return {
     tasks: selectedTasks,
     generatedAt: new Date(),
     energyUsed: { level: 'high', stability: 'volatile' }, // Énergie haute mais volatile
-    explanation: "Gestion de journée impossible",
+    explanation: "Gestion de journée impossible : mode survie.",
     warnings
   };
 }

@@ -57,8 +57,9 @@ export function calculateFocusScore(
  * @returns Le message correspondant
  */
 export function getFocusScoreMessage(focusScore: number): string {
-  if (focusScore > 80) return "Journée exceptionnelle !";
-  if (focusScore > 60) return "Solide performance.";
-  if (focusScore > 0) return "Une bonne journée.";
-  return "Vous avez avancé, c'est l'essentiel.";
+  if (focusScore >= 95) return "Concentration exceptionnelle aujourd'hui.";
+  if (focusScore >= 70) return "Excellente journée, vous avez été très productif.";
+  if (focusScore >= 40) return "Bonne progression. Vous avez bien avancé.";
+  if (focusScore > 0) return "Chaque tâche accomplie est une victoire.";
+  return "Le plus important est d'avoir commencé. Demain est un autre jour.";
 }
