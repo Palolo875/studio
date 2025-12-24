@@ -42,8 +42,8 @@ export function CaptureClient() {
           name="text"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Capturez vos pensées, idées, tâches... et laissez l'IA les trier."
-          className="w-full bg-transparent text-lg md:text-xl text-foreground placeholder:text-muted-foreground/50 border-none focus:ring-0 resize-none p-0"
+          placeholder="Écrivez librement... une idée, une tâche, une pensée..."
+          className="w-full bg-transparent text-lg md:text-xl text-foreground placeholder:text-muted-foreground/50 border-none focus:ring-0 resize-none p-0 focus:outline-none"
           minRows={5}
         />
         <div className="flex justify-end items-center gap-2 mt-4">

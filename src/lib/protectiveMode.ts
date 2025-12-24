@@ -86,7 +86,7 @@ export class ProtectiveModeManager {
   // Demander à sortir du mode protectif
   requestExit(): boolean {
     if (!this.canExit()) {
-      console.log("Impossible de sortir du mode protectif pour le moment. Veuillez patienter.");
+      console.log("Pour votre bien, il est préférable de rester en mode protégé encore un peu.");
       return false;
     }
     
@@ -106,14 +106,14 @@ export class ProtectiveModeManager {
     
     // Après 48 heures, sortir automatiquement
     if (hoursElapsed >= 48) {
-      console.log("48 heures écoulées en mode protectif. Sortie automatique.");
+      console.log("48 heures écoulées en mode protectif. Le système vous redonne la main.");
       this.deactivate();
       return;
     }
     
     // Après 24 heures, proposer de sortir
     if (hoursElapsed >= 24 && hoursElapsed < 25) {
-      console.log("Mode protectif actif depuis 24h. Voulez-vous sortir ?");
+      console.log("Mode protectif actif depuis 24h. Souhaitez-vous évaluer la situation ?");
       // Dans une implémentation réelle, cela afficherait une notification à l'utilisateur
     }
   }
@@ -125,11 +125,9 @@ export class ProtectiveModeManager {
     }
     
     console.log("Restrictions du mode protectif appliquées:");
-    console.log("- Nombre maximal de tâches par session:", this.settings.maxTasksPerSession);
-    console.log("- Tâches lourdes autorisées:", this.settings.allowHeavyTasks);
-    console.log("- Coach activé:", this.settings.coachEnabled);
-    console.log("- Durée limite de session:", this.settings.sessionDurationLimit, "minutes");
-    console.log("- Suggestions uniquement:", this.settings.taskSuggestionsOnly);
+    console.log(`- Nombre de tâches limité à ${this.settings.maxTasksPerSession} par session.`);
+    console.log(`- Tâches à fort effort (${this.settings.allowHeavyTasks ? 'autorisées' : 'limitées'}).`);
+    console.log(`- Coach proactif ${this.settings.coachEnabled ? 'activé' : 'en retrait'}.`);
   }
 
   // Vérifier si une tâche est autorisée en mode protectif
@@ -157,45 +155,30 @@ export class ProtectiveModeManager {
     const signals = [];
     
     if (burnoutResult.signals.chronicOverload) {
-      signals.push("Charge élevée depuis plusieurs jours");
+      signals.push("une charge de travail élevée ces derniers jours");
     }
     
     if (burnoutResult.signals.sleepDebt) {
-      signals.push("Repos insuffisant récemment");
+      signals.push("un manque de repos récent");
     }
     
     if (burnoutResult.signals.overrideAbuse) {
-      signals.push("Beaucoup de décisions forcées");
+      signals.push("un besoin fréquent de forcer le système");
     }
     
     if (burnoutResult.signals.completionCollapse) {
-      signals.push("Taux de complétion faible");
-    }
-    
-    if (burnoutResult.signals.erraticBehavior) {
-      signals.push("Comportement erratique détecté");
-    }
-    
-    if (burnoutResult.signals.taskAccumulation) {
-      signals.push("Accumulation excessive de tâches");
+      signals.push("une baisse du nombre de tâches terminées");
     }
     
     return `
-=== MODE PROTECTION ACTIVÉ ===
+### Mode Protection Activé
 
-J'ai détecté plusieurs signaux qui suggèrent que tu forces trop en ce moment :
+KairuFlow a détecté ${signals.join(', ')}. Pour vous aider à retrouver un rythme serein, quelques ajustements sont appliqués temporairement :
 
-${signals.map(signal => `• ${signal}`).join('\n')}
+*   **Sessions plus courtes** et moins de tâches.
+*   Priorité aux **tâches légères** ou vraiment urgentes.
 
-Pendant les prochaines 24h :
-• Max ${this.settings.maxTasksPerSession} tâches par session
-• Seulement tâches légères ou urgentes
-• Suggestions de repos
-
-Tu gardes le contrôle : tu peux forcer des décisions,
-mais cela désactive les protections pendant 24h.
-
-============================
+Vous gardez le contrôle et pouvez toujours forcer une décision, mais l'idée est de vous aider à reprendre votre souffle.
 `;
   }
 }

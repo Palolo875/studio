@@ -23,17 +23,17 @@ export default function OnboardingWelcomePage() {
       className="text-center max-w-xl w-full"
     >
       <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
-        Bienvenue sur KairuFlow
+        Bienvenue sur KairuFlow.
       </h1>
       <p className="mt-6 text-lg text-muted-foreground">
-        Votre nouvel assistant pour une productivité sereine.
+        Votre nouvel allié pour une productivité sereine et alignée.
         <br />
         Commençons par faire connaissance.
       </p>
 
       <div className="mt-12 max-w-sm mx-auto">
         <label htmlFor="name" className="text-lg font-medium text-foreground block mb-4">
-            Comment dois-je t’appeler ?
+            Comment puis-je vous appeler ?
         </label>
         <Input
             id="name"

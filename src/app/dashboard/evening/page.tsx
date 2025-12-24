@@ -44,9 +44,10 @@ function EveningContent() {
   const name = 'Junior';
   
   const getTitle = () => {
-    if (focusScore >= 100) return `Bravo, ${name}. Mission accomplie.`;
-    if (focusScore >= 60) return `Bravo, ${name}. Une journée solide.`;
-    return `Vous avez avancé, c'est l'essentiel.`;
+    if (focusScore >= 95) return `Une journée exceptionnelle, ${name}.`;
+    if (focusScore >= 70) return `Mission accomplie, ${name}. Bravo !`;
+    if (focusScore >= 40) return `Une journée solide et productive.`;
+    return `Aujourd'hui, vous avez avancé. C'est l'essentiel.`;
   };
 
   const getFocusScoreMessage = () => {
@@ -54,13 +55,13 @@ function EveningContent() {
   };
 
   const getDailyPattern = () => {
-    if (completedTasks.length === 0) return { title: "Journée de repos", description: "Vous avez choisi de recharger vos batteries.", explanation: "Prendre des pauses est essentiel pour une productivité durable.", action: "Planifiez des moments de détente demain." };
-    if (focusScore >= 100) return { title: "Flow créatif exceptionnel", description: "Toutes les tâches créatives ont été complétées, un signe de flow idéal.", explanation: "Le flow créatif se produit lorsque les défis correspondent à nos compétences.", action: "Identifiez et recréez les conditions de votre créativité." };
-    if (focusScore > 80) return { title: "Résilience cognitive remarquable", description: "Malgré une fatigue matinale, vous avez maintenu un excellent niveau de performance.", explanation: "La résilience cognitive est la capacité à maintenir ses capacités après un stress.", action: "Utilisez cette réussite comme motivation." };
-    if (focusScore > 60) return { title: "Évitement des tâches administratives", description: "Les tâches administratives ont été systématiquement reportées.", explanation: "Reconnaître ce pattern est la première étape pour le gérer.", action: "Planifiez une tâche administrative facile pour demain." };
-    const hasRepeatedTask = completedTasks.some(task => task.toLowerCase().includes("report") || task.toLowerCase().includes("plus tard"));
-    if (hasRepeatedTask) return { title: "Blocage récurrent détecté", description: "Une tâche semble être reportée. Cela pourrait indiquer un obstacle.", explanation: "La procrastination peut signaler un manque de clarté ou de ressources.", action: "Découpez cette tâche en étapes plus petites." };
-    return { title: "Progression constante", description: "Vous avez maintenu un rythme soutenu.", explanation: "La constance bat souvent l'intensité sporadique.", action: "Continuez sur cette lancée demain." };
+      if (completedTasks.length === 0) return { title: "Une journée pour recharger les batteries", description: "Parfois, la meilleure chose à faire est de ne rien faire. Le repos est aussi une forme de productivité.", explanation: "Le repos permet à votre esprit de consolider les informations et de retrouver de l'énergie pour les défis à venir. C'est un investissement, pas une perte de temps.", action: "Comment pouvez-vous intégrer un peu plus de calme dans votre journée de demain ?" };
+      if (focusScore >= 95) return { title: "Un état de flow remarquable", description: "Vous avez été dans la zone aujourd'hui. Tout semblait fluide, concentré et efficace.", explanation: "Le 'flow' est cet état mental où l'on est complètement immergé dans une activité. C'est le Graal de la productivité créative.", action: "Quelles étaient les conditions qui vous ont permis d'atteindre cet état ? Essayez de les recréer." };
+      if (focusScore > 80) return { title: "Une résilience impressionnante", description: "Même si la matinée a pu sembler difficile, vous avez su trouver les ressources pour finir en force.", explanation: "La résilience cognitive, c'est cette capacité à rebondir et à maintenir sa performance malgré les obstacles. C'est une compétence précieuse.", action: "Prenez un instant pour reconnaître cette force intérieure. Vous êtes plus endurant que vous ne le pensez." };
+      if (focusScore > 60) return { title: "Le piège des tâches faciles", description: "Vous avez accompli beaucoup de choses, mais peut-être en évitant les sujets plus complexes.", explanation: "Il est naturel de préférer les 'quick wins'. Cela donne un sentiment d'accomplissement, mais peut masquer un évitement des tâches de fond qui ont plus d'impact.", action: "Demain, essayez de commencer par une seule tâche un peu plus difficile. Juste une." };
+      const hasRepeatedTask = completedTasks.some(task => task.toLowerCase().includes("report") || task.toLowerCase().includes("plus tard"));
+      if (hasRepeatedTask) return { title: "Le cycle de la procrastination", description: "Une tâche semble revenir encore et encore. C'est un signe qu'un obstacle vous bloque.", explanation: "La procrastination n'est pas de la paresse. C'est souvent le symptôme d'une tâche mal définie, trop intimidante, ou d'un manque de clarté sur la prochaine étape.", action: "Prenez 2 minutes pour découper cette tâche en une seule micro-action de moins de 5 minutes." };
+      return { title: "La force tranquille de la constance", description: "Vous avez avancé pas à pas, de manière régulière et soutenue. C'est la clé du succès sur le long terme.", explanation: "L'intensité est impressionnante, mais la constance est invincible. Votre approche méthodique est un marathon, pas un sprint.", action: "Maintenez ce rythme demain. La régularité est votre plus grande alliée." };
   };
 
   const pattern = getDailyPattern();
@@ -131,7 +132,7 @@ function EveningContent() {
         <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {completedTasks.length > 0 ? (
             <div className="lg:col-span-2 text-left space-y-4">
-              <h2 className="text-xl font-medium text-muted-foreground">Aujourd'hui, vous avez accompli :</h2>
+              <h2 className="text-xl font-medium text-muted-foreground">Ce que vous avez accompli :</h2>
               <ul className="space-y-3">
                 {completedTasks.map((task, index) => (
                   <motion.li key={index} custom={index} variants={itemVariants} className="flex items-center gap-3 bg-card/50 p-3 rounded-lg backdrop-blur-sm">
@@ -142,14 +143,14 @@ function EveningContent() {
               </ul>
             </div>
           ) : (
-            <p className="mt-8 text-muted-foreground lg:col-span-2">Demain est un nouveau jour. Reposez-vous.</p>
+            <p className="mt-8 text-muted-foreground lg:col-span-2">Le repos est aussi une victoire. Demain est un nouveau jour.</p>
           )}
           <FocusScoreGauge />
         </motion.div>
 
         <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="bg-purple-100/10 dark:bg-purple-900/10 border border-purple-200/20 p-6 rounded-2xl text-left">
-            <h4 className="font-semibold text-foreground flex items-center gap-2 mb-4"><Lightbulb className="h-5 w-5 text-purple-400" />Votre pattern du jour</h4>
+            <h4 className="font-semibold text-foreground flex items-center gap-2 mb-4"><Lightbulb className="h-5 w-5 text-purple-400" />Insight du jour</h4>
             <div className="space-y-4">
               <div>
                 <h5 className="font-semibold text-foreground">{pattern.title}</h5>
@@ -158,27 +159,27 @@ function EveningContent() {
               <div className="flex items-start gap-3 text-sm"><TrendingUp className="h-4 w-4 text-purple-400 mt-1 flex-shrink-0" /><span className="text-muted-foreground">{pattern.explanation}</span></div>
               <div className="flex items-start gap-3 text-sm"><Target className="h-4 w-4 text-purple-400 mt-1 flex-shrink-0" /><span className="text-muted-foreground">{pattern.action}</span></div>
             </div>
-            <Button variant="link" size="sm" className="p-0 h-auto mt-4 text-purple-600 dark:text-purple-400">Voir tous mes patterns →</Button>
+            <Button variant="link" size="sm" className="p-0 h-auto mt-4 text-purple-600 dark:text-purple-400">Explorer mes tendances</Button>
           </div>
 
           <div className="bg-card/20 backdrop-blur-lg border border-white/10 shadow-xl rounded-2xl p-6 text-left">
             <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-foreground">Une dernière pensée ?</h4>
+              <h4 className="font-semibold text-foreground">Vider son esprit</h4>
               {showActionBadge && <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{actionsDetected} action{actionsDetected > 1 ? 's' : ''} détectée{actionsDetected > 1 ? 's' : ''}</span>}
             </div>
-            <p className="text-sm text-muted-foreground/80 mt-1 mb-4">Videz votre esprit avant de vous déconnecter.</p>
-            <Textarea value={brainDump} onChange={(e) => setBrainDump(e.target.value)} placeholder="Notez tout ce qui vous passe par la tête…" className="bg-muted/50 border-0" rows={4} />
+            <p className="text-sm text-muted-foreground/80 mt-1 mb-4">Libérez votre esprit des pensées restantes avant de conclure la journée.</p>
+            <Textarea value={brainDump} onChange={(e) => setBrainDump(e.target.value)} placeholder="Qu'est-ce qui occupe encore votre esprit ? Notez-le ici pour y penser demain." className="bg-muted/50 border-0" rows={4} />
             <div className="flex gap-2 mt-3">
-              <Button variant="outline" size="sm" onClick={() => { if (brainDump.trim() && brainDump !== lastSavedBrainDump) { console.log("Brain dump saved:", brainDump); setLastSavedBrainDump(brainDump); } }}>Sauvegarder</Button>
-              {showActionBadge && <Button variant="default" size="sm" onClick={() => alert(`${actionsDetected} action(s) détectée(s).`)}>Trier les actions</Button>}
+              <Button variant="outline" size="sm" onClick={() => { if (brainDump.trim() && brainDump !== lastSavedBrainDump) { console.log("Brain dump saved:", brainDump); setLastSavedBrainDump(brainDump); } }}>Sauvegarder et classer</Button>
+              {showActionBadge && <Button variant="default" size="sm" onClick={() => alert(`${actionsDetected} action(s) détectée(s).`)}>Transformer en tâches</Button>}
             </div>
           </div>
         </motion.div>
 
         <motion.div variants={itemVariants} className="pt-8">
-            <p className="text-muted-foreground mb-6">L'esprit libre, la soirée vous appartient.</p>
-            <Button size="lg" className="rounded-full h-14 px-10 text-lg" onClick={() => { setShowConfetti(true); setTimeout(() => { window.location.href = '/dashboard'; }, 3000); }}>Fermer la journée</Button>
-            <p className="text-muted-foreground mt-4">À demain, {name}</p>
+            <p className="text-muted-foreground mb-6">L'esprit est maintenant clair. La soirée peut commencer.</p>
+            <Button size="lg" className="rounded-full h-14 px-10 text-lg" onClick={() => { setShowConfetti(true); setTimeout(() => { window.location.href = '/dashboard'; }, 3000); }}>Terminer la journée</Button>
+            <p className="text-muted-foreground mt-4">À demain, {name}.</p>
         </motion.div>
       </motion.div>
     </div>
@@ -187,7 +188,7 @@ function EveningContent() {
 
 export default function EveningPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<div>Chargement...</div>}>
             <EveningContent />
         </Suspense>
     )

@@ -153,7 +153,7 @@ export function generateTaskPlaylist(
       tasks: optimizedLoad.selectedTasks.slice(0, maxTasks),
       generatedAt: new Date(),
       energyUsed: userEnergy,
-      explanation: `MODE TRIAGE ACTIVÉ - ${triageMode.alertMessage}`,
+      explanation: `Mode Triage : Priorisation des tâches critiques.`,
       warnings: suggestions
     };
   }
@@ -233,54 +233,27 @@ export function generateTaskPlaylist(
 
   // 12. CONSTRUCTION DE LA PLAYLIST FINALE AVEC EXPLICATIONS STRUCTURÉES
   const explanationParts: string[] = [];
-
-  // Invariants vérifiés
-  const invariantsChecked = [
-    `maxTasks=${playlist.length}/${maxTasks}`,
-    `totalLoad=${playlist.reduce((sum, t) => sum + t.duration, 0)}/${sessionCapacity.toFixed(0)}min`,
-    `energy=${userEnergy.level}/${userEnergy.stability}`,
-    `diversity=${checkDiversity(playlist) ? 'OK' : 'VIOLATED'}`
-  ];
-  explanationParts.push(`Invariants: ${invariantsChecked.join(', ')}`);
-
-  // TAI et DETOX
-  explanationParts.push(`TAI=${tai.toFixed(2)} → DETOX=${detoxMode}`);
-  if (detoxActions.frozenSoonTasks.length > 0) {
-    explanationParts.push(`SOON gelées: ${detoxActions.frozenSoonTasks.length}`);
-  }
-  if (detoxActions.limitedTodayTasks && detoxMode === 'BLOCK') {
-    explanationParts.push(`TODAY limité à 2`);
+  
+  if(userEnergy.stability === 'volatile') {
+    explanationParts.push("Votre énergie semble changeante, la playlist est plus légère.");
   }
 
-  // Quick win
   if (quickWin) {
-    explanationParts.push(`Quick win injecté: "${quickWin.title}"`);
+    explanationParts.push(`Nous commençons par une tâche rapide pour prendre de l'élan.`);
   }
 
-  // Pools utilisés
-  const poolStats = {
-    overdue: poolManager.overdue.length,
-    today: poolManager.today.length,
-    soon: poolManager.soon.length,
-    available: poolManager.available.length
-  };
-  const activePools = Object.entries(poolStats)
-    .filter(([_, count]) => count > 0)
-    .map(([pool, count]) => `${pool.toUpperCase()}(${count})`);
-  explanationParts.push(`Pools: ${activePools.join(' ')}`);
-
-  // Exclusions
-  const excludedCount = tasks.length - playlist.length;
-  if (excludedCount > 0) {
-    explanationParts.push(`Exclusions: ${excludedCount} tâches (énergie, deadlines, diversité)`);
+  if(detoxMode !== 'NONE') {
+    explanationParts.push('Le mode Detox est actif pour vous aider à rattraper les anciennes tâches.');
   }
+
+  const explanation = explanationParts.length > 0 ? explanationParts.join(' ') : "Voici une sélection de tâches adaptées à votre journée.";
 
   const builtPlaylist: TaskPlaylist = {
     tasks: playlist,
     generatedAt: new Date(),
     energyUsed: userEnergy,
-    explanation: explanationParts.join(' | '),
-    warnings: playlist.length === 0 ? ["Aucune tâche éligible trouvée"] : undefined
+    explanation,
+    warnings: playlist.length === 0 ? ["Aucune tâche ne semble correspondre à votre énergie actuelle. Prenez une pause ?"] : undefined
   };
 
   // 13. VALIDATION DES INVARIANTS
@@ -290,59 +263,4 @@ export function generateTaskPlaylist(
   }
 
   return { ...validation };
-}
-
-/**
- * Applique les fallbacks en cas d'échec de la sélection normale
- * @param tasks Ensemble des tâches disponibles
- * @param userEnergy État d'énergie de l'utilisateur
- * @param reason Raison du fallback
- * @returns Playlist générée par le fallback
- */
-export function applyFallback(
-  tasks: Task[],
-  userEnergy: EnergyState,
-  reason: string
-): TaskPlaylist {
-  // Fallback 1 : Si énergie trop basse, proposer une seule tâche facile + repos
-  if (userEnergy.level === 'low') {
-    const easyTask = tasks.find(task =>
-      task.effort === 'low' &&
-      task.duration <= 15
-    );
-
-    if (easyTask) {
-      return {
-        tasks: [easyTask],
-        generatedAt: new Date(),
-        energyUsed: userEnergy,
-        explanation: "Fallback appliqué : énergie basse",
-        warnings: ["Énergie basse détectée. Une seule tâche facile recommandée."]
-      };
-    }
-  }
-
-  // Fallback 2 : Mode survie - tâches les plus urgentes
-  const urgentTasks = tasks
-    .filter(task => task.urgency === 'urgent')
-    .slice(0, 3);
-
-  if (urgentTasks.length > 0) {
-    return {
-      tasks: urgentTasks,
-      generatedAt: new Date(),
-      energyUsed: userEnergy,
-      explanation: "Fallback appliqué : mode survie",
-      warnings: [`Mode survie activé : ${reason}`]
-    };
-  }
-
-  // Fallback 3 : Playlist vide avec message d'explication
-  return {
-    tasks: [],
-    generatedAt: new Date(),
-    energyUsed: userEnergy,
-    explanation: "Fallback appliqué : aucune tâche trouvée",
-    warnings: [`Impossible de générer une playlist : ${reason}`]
-  };
 }

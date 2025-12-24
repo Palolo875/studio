@@ -86,10 +86,7 @@ export function determineTriageMode(analysis: DeadlineAnalysis): TriageMode {
   // Message d'alerte
   let alertMessage = "";
   if (active) {
-    alertMessage = `Deadlines impossibles détectées :
-→ ${analysis.totalTimeRequired} min de travail
-→ ${analysis.timeAvailable} min disponibles
-Ratio: ${loadRatio.toFixed(2)}x impossible`;
+    alertMessage = `Votre journée semble très chargée. Avec ${analysis.totalTimeRequired} minutes de travail prévues pour ${analysis.timeAvailable} minutes disponibles, un tri est nécessaire pour rester serein.`;
   }
   
   return {
@@ -154,25 +151,25 @@ export function generateDeadlineSuggestions(triageMode: TriageMode): string[] {
     return suggestions;
   }
   
-  suggestions.push("🚨 ALERTE CRITIQUE");
+  suggestions.push("Mode Triage : Priorisons ensemble.");
   suggestions.push(triageMode.alertMessage);
   suggestions.push("");
-  suggestions.push("Actions possibles :");
+  suggestions.push("Quelles options souhaitez-vous explorer ?");
   
   if (triageMode.options.defer) {
-    suggestions.push("[ ] Reporter certaines tâches");
+    suggestions.push("[ ] Reporter les tâches moins urgentes");
   }
   
   if (triageMode.options.negotiate) {
-    suggestions.push("[ ] Négocier des deadlines");
+    suggestions.push("[ ] Renégocier une deadline");
   }
   
   if (triageMode.options.delegate) {
-    suggestions.push("[ ] Déléguer des tâches");
+    suggestions.push("[ ] Déléguer une tâche");
   }
   
   if (triageMode.options.abandon) {
-    suggestions.push("[ ] Abandonner des tâches");
+    suggestions.push("[ ] Choisir consciemment ce qui ne sera pas fait");
   }
   
   return suggestions;
