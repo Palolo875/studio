@@ -11,7 +11,7 @@ import {
   CardDescription
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield, GraphUp, Moon, Warning } from 'lucide-react';
+import { Shield, TrendingUp, Moon, Warning } from 'lucide-react';
 
 // Types pour les props
 interface ProtectiveModeNotificationProps {
@@ -42,7 +42,7 @@ export function ProtectiveModeNotification({
   const getSignalIcon = (signal: string) => {
     switch (signal) {
       case 'chronicOverload':
-        return <GraphUp className="h-4 w-4" />;
+        return <TrendingUp className="h-4 w-4" />;
       case 'sleepDebt':
         return <Moon className="h-4 w-4" />;
       case 'constantOverrides':
@@ -59,17 +59,17 @@ export function ProtectiveModeNotification({
   const getSignalText = (signal: string) => {
     switch (signal) {
       case 'chronicOverload':
-        return 'Charge élevée depuis plusieurs jours';
+        return 'Charge de travail élevée et soutenue';
       case 'sleepDebt':
-        return 'Repos insuffisant récemment';
+        return 'Manque de repos récent';
       case 'constantOverrides':
-        return 'Beaucoup de décisions forcées';
+        return 'Besoin fréquent de forcer le système';
       case 'zeroCompletion':
-        return 'Taux de complétion très faible';
+        return 'Difficulté à terminer les tâches prévues';
       case 'erraticBehavior':
-        return 'Comportement erratique détecté';
+        return 'Rythme de travail très irrégulier';
       case 'taskAccumulation':
-        return 'Accumulation excessive de tâches';
+        return 'Accumulation rapide de nouvelles tâches';
       default:
         return signal;
     }
@@ -80,10 +80,10 @@ export function ProtectiveModeNotification({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-yellow-500" />
-          Mode protection activé
+          Mode Protection suggéré
         </CardTitle>
         <CardDescription>
-          J'ai détecté plusieurs signaux qui suggèrent que tu forces trop en ce moment :
+          Pour vous aider à retrouver un rythme serein, KairuFlow a détecté des signaux de surcharge :
         </CardDescription>
       </CardHeader>
       
@@ -101,18 +101,17 @@ export function ProtectiveModeNotification({
         
         <div className="space-y-4">
           <div className="rounded-md bg-muted p-4">
-            <h3 className="font-medium mb-2">Pendant les prochaines 24h :</h3>
-            <ul className="text-sm space-y-1">
-              <li>• Max 2 tâches par session</li>
-              <li>• Seulement tâches légères ou urgentes</li>
-              <li>• Suggestions de repos</li>
+            <h3 className="font-medium mb-2">Pendant les prochaines 24h, le système vous proposera :</h3>
+            <ul className="text-sm space-y-1 list-disc list-inside">
+              <li>Des sessions plus courtes et moins de tâches.</li>
+              <li>La priorité aux tâches légères ou urgentes.</li>
+              <li>Des suggestions de repos.</li>
             </ul>
           </div>
           
           <div className="rounded-md bg-yellow-100 dark:bg-yellow-900/20 p-4">
             <p className="text-sm">
-              <strong>Tu gardes le contrôle :</strong> tu peux forcer des décisions,
-              mais cela désactive les protections pendant 24h.
+              <strong>Vous gardez toujours le contrôle :</strong> vous pouvez forcer vos propres décisions, mais cela suspendra temporairement les protections.
             </p>
           </div>
         </div>
@@ -123,13 +122,13 @@ export function ProtectiveModeNotification({
             onClick={onExitRequest}
             className="flex-1"
           >
-            Demander à sortir du mode protectif
+            Ignorer pour aujourd'hui
           </Button>
           <Button 
             onClick={onUnderstand}
             className="flex-1"
           >
-            J'ai compris
+            J'ai compris, merci
           </Button>
         </div>
       </CardContent>
