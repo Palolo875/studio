@@ -11,7 +11,7 @@ import {
   CardDescription
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield, TrendingUp, Moon, Warning } from 'lucide-react';
+import { Shield, TrendingUp, Moon, AlertTriangle } from 'lucide-react';
 
 // Types pour les props
 interface ProtectiveModeNotificationProps {
@@ -49,9 +49,9 @@ export function ProtectiveModeNotification({
       case 'zeroCompletion':
       case 'erraticBehavior':
       case 'taskAccumulation':
-        return <Warning className="h-4 w-4" />;
+        return <AlertTriangle className="h-4 w-4" />;
       default:
-        return <Warning className="h-4 w-4" />;
+        return <AlertTriangle className="h-4 w-4" />;
     }
   };
 
@@ -59,17 +59,17 @@ export function ProtectiveModeNotification({
   const getSignalText = (signal: string) => {
     switch (signal) {
       case 'chronicOverload':
-        return 'Charge de travail élevée et soutenue';
+        return 'Surcharge de travail chronique';
       case 'sleepDebt':
-        return 'Manque de repos récent';
+        return 'Dette de sommeil détectée';
       case 'constantOverrides':
-        return 'Besoin fréquent de forcer le système';
+        return 'Contournement fréquent des suggestions';
       case 'zeroCompletion':
-        return 'Difficulté à terminer les tâches prévues';
+        return 'Difficulté à terminer les sessions';
       case 'erraticBehavior':
         return 'Rythme de travail très irrégulier';
       case 'taskAccumulation':
-        return 'Accumulation rapide de nouvelles tâches';
+        return 'Accumulation rapide des tâches';
       default:
         return signal;
     }
@@ -80,10 +80,10 @@ export function ProtectiveModeNotification({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-yellow-500" />
-          Mode Protection suggéré
+          Mode Protection Suggéré
         </CardTitle>
         <CardDescription>
-          Pour vous aider à retrouver un rythme serein, KairuFlow a détecté des signaux de surcharge :
+          Pour préserver votre énergie, KairuFlow a détecté des signaux de surcharge :
         </CardDescription>
       </CardHeader>
       
@@ -101,17 +101,17 @@ export function ProtectiveModeNotification({
         
         <div className="space-y-4">
           <div className="rounded-md bg-muted p-4">
-            <h3 className="font-medium mb-2">Pendant les prochaines 24h, le système vous proposera :</h3>
-            <ul className="text-sm space-y-1 list-disc list-inside">
-              <li>Des sessions plus courtes et moins de tâches.</li>
-              <li>La priorité aux tâches légères ou urgentes.</li>
-              <li>Des suggestions de repos.</li>
+            <h3 className="font-medium mb-2">Pendant les prochaines 24h :</h3>
+            <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
+              <li>Sessions plus courtes et moins de tâches.</li>
+              <li>Priorité aux tâches légères ou urgentes.</li>
+              <li>Suggestions de repos pour recharger les batteries.</li>
             </ul>
           </div>
           
           <div className="rounded-md bg-yellow-100 dark:bg-yellow-900/20 p-4">
-            <p className="text-sm">
-              <strong>Vous gardez toujours le contrôle :</strong> vous pouvez forcer vos propres décisions, mais cela suspendra temporairement les protections.
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              <strong>Vous gardez toujours le contrôle :</strong> vous pouvez forcer vos propres décisions, mais cela suspendra temporairement les protections pour vous laisser la main.
             </p>
           </div>
         </div>
