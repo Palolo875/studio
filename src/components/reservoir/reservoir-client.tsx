@@ -63,6 +63,8 @@ type GroupedTasks = {
   [key: string]: Task[];
 };
 
+type ViewMode = 'list' | 'grid' | 'masonry' | 'kanban';
+
 
 export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: Task[] }) {
   const [tasks, setTasks] = useState<Task[]>(defaultTasks);
@@ -76,7 +78,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     energy: [],
   });
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const { toast } = useToast();
@@ -431,6 +433,39 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
       {children ? <div className="text-base text-foreground">{children}</div> : <p className="text-base text-foreground">{value || 'Non défini'}</p>}
     </div>
   );
+  
+  const KanbanBoard = () => {
+    const kanbanColumns: { title: string, status: Task['status'] }[] = [
+        { title: 'À faire', status: 'todo' },
+        { title: 'En cours', status: 'active' },
+        { title: 'En attente', status: 'frozen' },
+        { title: 'Terminé', status: 'done' },
+    ];
+    
+    const allTasks = sortedGroupKeys.flatMap(key => filteredAndGroupedTasks[key]);
+
+    const tasksByStatus = kanbanColumns.reduce((acc, col) => {
+        acc[col.status!] = allTasks.filter(task => (task.status || 'todo') === col.status);
+        return acc;
+    }, {} as Record<string, Task[]>);
+
+    return (
+      <div className="flex gap-6 pb-4">
+        {kanbanColumns.map(col => (
+          <div key={col.status} className="flex-1 min-w-[300px]">
+            <h3 className="text-lg font-semibold mb-4 sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10">{col.title} ({tasksByStatus[col.status!]?.length || 0})</h3>
+            <div className="space-y-4">
+              {tasksByStatus[col.status!]?.map(task => (
+                <div key={task.id} onClick={() => handleTaskClick(task)}>
+                  <ReservoirTaskCard task={task} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
 
   return (
@@ -455,6 +490,8 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                 <Button variant="outline" size="icon">
                     {viewMode === 'list' && <List className="h-5 w-5" />}
                     {viewMode === 'grid' && <Grid className="h-5 w-5" />}
+                    {viewMode === 'masonry' && <LayoutGrid className="h-5 w-5" />}
+                    {viewMode === 'kanban' && <KanbanSquare className="h-5 w-5" />}
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -466,11 +503,11 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                     <Grid className="mr-2 h-4 w-4" />
                     Grille
                 </DropdownMenuItem>
-                 <DropdownMenuItem disabled>
+                 <DropdownMenuItem onClick={() => setViewMode('masonry')}>
                     <LayoutGrid className="mr-2 h-4 w-4" />
                     Masonry
                 </DropdownMenuItem>
-                <DropdownMenuItem disabled>
+                <DropdownMenuItem onClick={() => setViewMode('kanban')}>
                     <KanbanSquare className="mr-2 h-4 w-4" />
                     Kanban
                 </DropdownMenuItem>
@@ -513,83 +550,27 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
         <BatchActionMenu />
       )}
 
-      {/* Task List */}
+      {/* Task Views */}
       <ScrollArea className="flex-1 -mx-4 sm:-mx-8 px-4 sm:px-8">
         {sortedGroupKeys.length > 0 ? (
-          <div className="space-y-8 pr-4 pb-4">
-             {sortedGroupKeys.map(dateKey => {
-                const tasksForDay = filteredAndGroupedTasks[dateKey];
-                if (!tasksForDay || tasksForDay.length === 0) return null;
+          viewMode === 'kanban' ? <KanbanBoard /> : (
+            <div className="space-y-8 pr-4 pb-4">
+              {sortedGroupKeys.map(dateKey => {
+                  const tasksForDay = filteredAndGroupedTasks[dateKey];
+                  if (!tasksForDay || tasksForDay.length === 0) return null;
 
-                const isUnplanned = dateKey === 'unplanned';
-                const groupDate = isUnplanned ? null : new Date(dateKey);
-                const title = isUnplanned ? 'Non planifié' : format(groupDate!, 'EEEE d MMMM', { locale: fr });
-                
-                return (
-                  <div key={dateKey}>
-                    <h2 className="text-lg font-bold sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10 capitalize">{title}</h2>
-                    {viewMode === 'grid' ? (
-                      // Grid View
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-                        {tasksForDay.map(task => (
-                          <div 
-                            key={task.id} 
-                            onClick={() => {
-                              if (selectedTasks.length > 0) {
-                                toggleTaskSelection(task.id);
-                              } else {
-                                handleTaskClick(task);
-                              }
-                            }}
-                            className={`relative ${selectedTasks.includes(task.id) ? 'ring-2 ring-primary rounded-3xl' : ''}`}
-                          >
-                            <ReservoirTaskCard task={task} />
-                            {selectedTasks.length > 0 && (
-                              <div 
-                                className="absolute top-2 left-2 z-20"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleTaskSelection(task.id);
-                                }}
-                              >
-                                <Checkbox checked={selectedTasks.includes(task.id)} />
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      // List View
-                      <Table className="mt-4">
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-12">
-                              <Checkbox 
-                                checked={selectedTasks.length > 0 && tasksForDay.every(t => selectedTasks.includes(t.id))}
-                                onCheckedChange={(checked) => {
-                                  const dayTaskIds = tasksForDay.map(t => t.id);
-                                  if (checked) {
-                                    setSelectedTasks([...new Set([...selectedTasks, ...dayTaskIds])]);
-                                  } else {
-                                    const dayTaskIdsSet = new Set(dayTaskIds);
-                                    setSelectedTasks(selectedTasks.filter(id => !dayTaskIdsSet.has(id)));
-                                  }
-                                }}
-                              />
-                            </TableHead>
-                            <TableHead className="w-1/3">Contenu</TableHead>
-                            <TableHead>Deadline</TableHead>
-                            <TableHead>Priorité</TableHead>
-                            <TableHead>Effort</TableHead>
-                            <TableHead>Énergie</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
+                  const isUnplanned = dateKey === 'unplanned';
+                  const groupDate = isUnplanned ? null : new Date(dateKey);
+                  const title = isUnplanned ? 'Non planifié' : format(groupDate!, 'EEEE d MMMM', { locale: fr });
+                  
+                  return (
+                    <div key={dateKey}>
+                      <h2 className="text-lg font-bold sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10 capitalize">{title}</h2>
+                      {viewMode === 'grid' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
                           {tasksForDay.map(task => (
-                            <TableRow 
-                              key={task.id}
-                              className={`cursor-pointer ${selectedTasks.includes(task.id) ? 'bg-muted' : ''}`}
+                            <div 
+                              key={task.id} 
                               onClick={() => {
                                 if (selectedTasks.length > 0) {
                                   toggleTaskSelection(task.id);
@@ -597,41 +578,107 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
                                   handleTaskClick(task);
                                 }
                               }}
+                              className={`relative ${selectedTasks.includes(task.id) ? 'ring-2 ring-primary rounded-3xl' : ''}`}
                             >
-                              <TableCell>
-                                <Checkbox 
-                                  checked={selectedTasks.includes(task.id)}
-                                  onCheckedChange={() => toggleTaskSelection(task.id)}
-                                />
-                              </TableCell>
-                              <TableCell className="font-medium">{task.name}</TableCell>
-                              <TableCell>{formatDeadline(task.scheduledDate)}</TableCell>
-                              <TableCell>
-                                {task.priority && getPriorityDisplay(task.priority)}
-                              </TableCell>
-                              <TableCell>{getEffortDisplay(task.effort)}</TableCell>
-                              <TableCell>{getEnergyBadge(task.energyRequired)}</TableCell>
-                              <TableCell className="text-right">
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon"
+                              <ReservoirTaskCard task={task} />
+                              {selectedTasks.length > 0 && (
+                                <div 
+                                  className="absolute top-2 left-2 z-20"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleTaskClick(task);
+                                    toggleTaskSelection(task.id);
                                   }}
                                 >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
+                                  <Checkbox checked={selectedTasks.includes(task.id)} />
+                                </div>
+                              )}
+                            </div>
                           ))}
-                        </TableBody>
-                      </Table>
-                    )}
-                  </div>
-                )
-             })}
-          </div>
+                        </div>
+                      )}
+                      {viewMode === 'masonry' && (
+                        <div className="mt-4" style={{ columnCount: 3, columnGap: '1.5rem' }}>
+                          {tasksForDay.map(task => (
+                            <div key={task.id} className="mb-6 break-inside-avoid" onClick={() => handleTaskClick(task)}>
+                              <ReservoirTaskCard task={task} />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {viewMode === 'list' && (
+                        <Table className="mt-4">
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-12">
+                                <Checkbox 
+                                  checked={selectedTasks.length > 0 && tasksForDay.every(t => selectedTasks.includes(t.id))}
+                                  onCheckedChange={(checked) => {
+                                    const dayTaskIds = tasksForDay.map(t => t.id);
+                                    if (checked) {
+                                      setSelectedTasks([...new Set([...selectedTasks, ...dayTaskIds])]);
+                                    } else {
+                                      const dayTaskIdsSet = new Set(dayTaskIds);
+                                      setSelectedTasks(selectedTasks.filter(id => !dayTaskIdsSet.has(id)));
+                                    }
+                                  }}
+                                />
+                              </TableHead>
+                              <TableHead className="w-1/3">Contenu</TableHead>
+                              <TableHead>Deadline</TableHead>
+                              <TableHead>Priorité</TableHead>
+                              <TableHead>Effort</TableHead>
+                              <TableHead>Énergie</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {tasksForDay.map(task => (
+                              <TableRow 
+                                key={task.id}
+                                className={`cursor-pointer ${selectedTasks.includes(task.id) ? 'bg-muted' : ''}`}
+                                onClick={() => {
+                                  if (selectedTasks.length > 0) {
+                                    toggleTaskSelection(task.id);
+                                  } else {
+                                    handleTaskClick(task);
+                                  }
+                                }}
+                              >
+                                <TableCell>
+                                  <Checkbox 
+                                    checked={selectedTasks.includes(task.id)}
+                                    onCheckedChange={() => toggleTaskSelection(task.id)}
+                                  />
+                                </TableCell>
+                                <TableCell className="font-medium">{task.name}</TableCell>
+                                <TableCell>{formatDeadline(task.scheduledDate)}</TableCell>
+                                <TableCell>
+                                  {task.priority && getPriorityDisplay(task.priority)}
+                                </TableCell>
+                                <TableCell>{getEffortDisplay(task.effort)}</TableCell>
+                                <TableCell>{getEnergyBadge(task.energyRequired)}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleTaskClick(task);
+                                    }}
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </div>
+                  )
+              })}
+            </div>
+          )
         ) : (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
                 <p className="font-semibold">Aucune tâche ne correspond à vos filtres.</p>
@@ -839,3 +886,5 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     </div>
   );
 }
+
+    
