@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## [0.3.0] - 2025-12-24
+
+### 🚀 Phase 7 : Gouvernance, Souveraineté & Autorité
+- **Authority Contract** : Implémentation du cadre contractuel entre l'utilisateur et le système.
+- **Protective Mode** : Gestionnaire de mode de protection anti-burnout automatique.
+- **Conflict Resolution** : Nouveau moteur de consensus (SPLIT, DELAYED, EXTERNAL) pour résoudre les désaccords utilisateur/système.
+- **Governance Dashboard** : Rapport d'intégrité de l'autonomie et monitoring du risque de burnout.
+- **Cost Engine** : Calcul du coût cognitif et budgétaire pour les overrides utilisateur.
+
+### 🧠 Phase 6 : Adaptation & Apprentissage
+- **Adaptation Engine** : Moteur d'apprentissage automatique basé sur les signaux comportementaux.
+- **Adaptation Memory** : Persistance des signaux d'adaptation et historique des ajustements.
+- **Anti-Overfitting Engine** : Protection contre l'adaptation prématurée via validation temporelle.
+- **Parameter Rollback** : Système de réversibilité totale des adaptations algorithmiques.
+- **Transparency Budget** : Limitation des adaptations automatiques pour garantir la stabilité psychologique.
+
+### 📁 Nouveaux Modules SOTA
+- `src/lib/phase7Main.ts` : Point d'entrée de la gouvernance.
+- `src/lib/adaptation/` : Suite complète d'apprentissage machine.
+- `src/lib/burnout/burnoutDetection.ts` : Nouveau moteur de détection multi-signaux.
+- `src/components/dashboard/governance-panel.tsx` : UI de pilotage éthique.
+
+---
+
 ## [0.2.0] - 2025-12-23
 
 ### 🚀 Major Improvements

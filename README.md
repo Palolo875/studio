@@ -1,185 +1,96 @@
-# KairuFlow - Assistant Intelligent de Gestion de Tâches
+# 🌀 KairuFlow — L'Architecte de votre Productivité SOTA
 
-KairuFlow est un assistant intelligent de productivité qui transforme votre langage naturel en tâches structurées avec une intelligence contextuelle avancée.
+KairuFlow n'est pas une simple "To-Do List". C'est un **système d'exploitation cognitif** conçu pour aligner vos actions sur votre énergie biologique, tout en garantissant une souveraineté totale et une résilience à toute épreuve.
 
-## 🚀 Fonctionnalités Principales
+> **SOTA (State-of-the-Art) Implementation** : Pipelines IA locaux, Gouvernance Éthique, Protection contre le Burnout et Apprentissage Adaptatif.
 
-### 🧠 Intelligence NLP State-of-the-Art
-- **Détection de langue SOTA** : Support multilingue (FR/EN/ES) avec précision >95%
-- **Extraction structurelle** : Transformation du texte en tâches avec scores de confiance
-- **Classification mmBERT** : Analyse énergie/effort/sentiment avec modèle quantifié INT8
-- **Génération automatique de tags** : Catégorisation contextuelle intelligente
+---
 
-### 📋 Génération de Playlist Dynamique
-- **Algorithme de scoring pondéré** :
-  - Énergie (40%), Impact (15%), Priorité (20%), Effort (15%), Patterns (10%)
-  - Sélection optimale de 3-5 tâches par jour
-  - Intégration d'habitudes clés (keystone habits)
-- **Apprentissage adaptatif** : Ajustement des poids basé sur l'historique
-- **Feedback & fallback intelligent** : Quick wins en cas de faible impact
+## 🚀 Piliers du Système
 
-### ⚡ Performance Optimisée
-- **Temps de réponse <1s** : Pipeline complet optimisé
-- **Stockage Dexie** : Base de données locale ultra-rapide
-- **Memoization** : Cache intelligent pour les calculs récurrents
-- **Mobile-first** : Expérience fluide sur tous les appareils
+### 🧠 1. Intelligence Artificielle Locale & Privée (Phases 1-3)
+*   **Pipeline NLP Quad-Core** : Détection de langue, Extraction structurelle (winkNLP), Classification contextuelle (mmBERT Int8) et Fusion sémantique en moins de 1.1s.
+*   **Analyse d'Impact & Momentum** : Évaluation automatique de la valeur réelle de chaque tâche pour éviter le "faux travail".
+*   **Zéro Cloud** : Tout le traitement IA se fait dans votre navigateur. Vos données ne quittent jamais votre appareil.
 
-## 🛠️ Stack Technologique
+### 🛡️ 2. Résilience & Performance Critique (Phases 4-5)
+*   **Architecture à Haute Disponibilité** : Web Workers pour le parallélisme, Fallbacks progressifs en cas de surcharge CPU/RAM.
+*   **Intégrité Totale** : Monitoring en temps réel de la corruption de base de données (IndexedDB) avec protocoles d'auto-réparation et snapshots atomiques.
+*   **Storage Guard** : Gestion préventive des quotas de stockage pour éviter les pertes de données système.
 
-### Frontend
-- **Next.js 15** : Framework React moderne
-- **React 19** : Interface utilisateur déclarative
-- **TypeScript** : Typage statique pour la fiabilité
-- **Tailwind CSS** : Styling utility-first
-- **Radix UI** : Composants accessibles
-- **Zustand** : Gestion d'état légère
+### 📈 3. Auto-Apprentissage & Adaptation (Phase 6)
+*   **Adaptation Memory** : KairuFlow apprend de vos patterns (tâches forcées, reports, succès) pour ajuster ses algorithmes de suggestion.
+*   **Anti-Overfitting Engine** : Le système utilise des mécanismes de validation temporelle pour ne pas s'adapter à des anomalies passagères.
+*   **Rollback de Paramètres** : Chaque ajustement du système est réversible en un clic si l'adaptation ne vous convient pas.
 
-### Intelligence Artificielle
-- **winkNLP** : Extraction linguistique avancée
-- **mmBERT-small** : Classification énergie/effort/sentiment
-- **Modèles quantifiés INT8** : Performance optimisée (<45MB)
+### ⚖️ 4. Gouvernance, Souveraineté & Éthique (Phase 7)
+*   **Contrat d'Autorité** : Un cadre formel définit qui a le dernier mot (Utilisateur vs Système) selon le contexte.
+*   **Protection contre le Burnout** : Détection de signaux faibles (dette de sommeil, surcharge chronique) déclenchant un **Mode Protectif** non-négociable.
+*   **Résolution de Conflits** : En cas de désaccord, un moteur de consensus propose des solutions (Découpage de tâches, Arbitrage tiers, Report sans coût).
 
-### Stockage & Données
-- **Dexie.js** : Wrapper IndexedDB pour stockage local
-- **bulkGet optimisé** : Accès aux données rapides
+---
 
-## 📁 Architecture du Projet
+## 🛠️ Stack Technologique SOTA
 
-```
-src/
-├── app/                 # Pages Next.js et routing
-├── components/          # Composants React réutilisables
-├── hooks/               # Hooks personnalisés
-├── lib/
-│   ├── nlp/            # Pipeline NLP complet
-│   ├── playlistGenerator.ts  # Algorithme de génération
-│   ├── scoringRules.ts       # Règles de scoring
-│   └── types.ts              # Interfaces TypeScript
-└── stores/              # Gestion d'état (Zustand)
-```
+*   **Core** : Next.js 15 (App Router), React 19, TypeScript (Strict Mode).
+*   **IA & NLP** : wink-nlp, mmBERT-small-int8 (ONNX/WASM), Pipeline de classification personnalisé.
+*   **Données** : Dexie.js (IndexedDB), Stratégie de Snapshotting & Migration Atomique.
+*   **UI/UX** : Tailwind CSS, Framer Motion (Micro-animations), Radix UI (Accessibilité).
+*   **Gouvernance** : Moteur d'Invariants Formels (XLII à LV).
 
-## 🚀 Installation
+---
+
+## 📂 Organisation du Code (Architecture SOTA)
 
 ```bash
-# Cloner le repository
-git clone [url-du-repository]
-cd kairuflow
+src/
+├── app/                 # Next.js Routes & Dashboard
+├── components/          # UI Premium & Dashboard Widgets
+├── hooks/               # Logique réutilisable & Sync
+├── lib/
+│   ├── nlp/            # Intelligence linguistique locales
+│   ├── taskEngine/     # Moteur d'exécution & Sessions
+│   ├── burnout/        # Détection de signaux de surcharge
+│   ├── adaptation/     # Apprentissage & Mémoire (Phase 6)
+│   ├── database/       # Persistance résiliente & Snapshots
+│   └── phase7Main.ts   # Moteur de Gouvernance & Autorité
+```
 
-# Installer les dépendances
+---
+
+## 🧪 Installation & Développement
+
+```bash
+# 1. Clone & Install
+git clone https://github.com/Palolo875/studio.git
 npm install
 
-# Démarrer le serveur de développement
+# 2. Run Dev Server
 npm run dev
+
+# 3. Tests de Résilience (Vitest)
+npm test
 ```
 
-## 🧪 Pipeline NLP Complet
+---
 
-1. **Détection de langue** (<1ms)
-2. **Extraction structurelle** (<200ms)
-3. **Classification mmBERT** (<800ms)
-4. **Fusion & stockage** (<50ms)
+## 📊 Roadmap : De l'Idée à la Souveraineté
 
-### Exemple d'utilisation
-```text
-Input: "Appeler Marc demain 15h urgent, écrire rapport Q4 complexe"
+- [x] **Phase 1-3** : Fondation IA & NLP 
+- [x] **Phase 4** : Performance & Robustesse (Workers, Fallbacks)
+- [x] **Phase 5** : Résilience & Gestion de Données (Anti-corruption)
+- [x] **Phase 6** : Adaptation & Mémoire (Auto-apprentissage)
+- [x] **Phase 7** : Gouvernance & Autorité (Protection Burnout)
+- [ ] **Phase 8** : Expansion Mobile & Sync Multi-appareils (PWA+)
 
-Output:
-[
-  {
-    content: "Appeler Marc",
-    energy: "relationnel",
-    effort: "S",
-    priority: "high",
-    urgency: 0.85,
-    tags: ["appeler", "relationnel", "deadline"]
-  },
-  {
-    content: "Écrire rapport Q4",
-    energy: "focus",
-    effort: "L",
-    tags: ["écrire", "focus", "rapport Q4"]
-  }
-]
-```
+---
 
-## 📊 Algorithmique
+## 👥 Auteur
 
-### Scoring Dynamique Pondéré
-- **Énergie (40%)** : Correspondance avec le niveau d'énergie de l'utilisateur
-- **Impact (15%)** : Valeur perçue et momentum passé
-- **Priorité (20%)** : Échéances et importance relative
-- **Effort (15%)** : Complexité estimée
-- **Patterns (10%)** : Historique d'interaction et apprentissage
+- **Palolo875** - *Vision & Architecture*
 
-### Apprentissage Adaptatif
-- Suivi des tâches ignorées/complétées
-- Ajustement des poids après >2 shuffles
-- Intégration des habitudes clés basées sur les jours
+---
 
-## 🔧 Dépendances Clés
+## 📄 Licence
 
-```json
-{
-  "dependencies": {
-    "next": "^15.3.6",
-    "react": "^19.2.1",
-    "typescript": "^5.0.0",
-    "dexie": "^3.2.0",
-    "zustand": "^4.5.0",
-    "wink-nlp": "^2.0.0",
-    "@radix-ui/react-*": "^1.0.0",
-    "tailwindcss": "^3.4.0"
-  }
-}
-```
-
-## 📱 Composants Clés
-
-### Capture NLP
-Interface de saisie vocale/textuelle qui transforme le langage naturel en tâches structurées.
-
-### Dashboard
-Visualisation de la playlist quotidienne avec scoring et recommandations.
-
-### Focus Mode
-Environnement de travail optimisé avec timer Pomodoro intégré.
-
-### Analytics
-Suivi des habitudes, productivité et patterns d'utilisation.
-
-## 🎯 Cas d'Utilisation
-
-- **Professionnels** : Gestion de projet et organisation quotidienne
-- **Étudiants** : Planification des études et devoirs
-- **Freelancers** : Suivi des tâches et deadlines clients
-- **Personnel** : Organisation de la vie quotidienne
-
-## 📈 Roadmap
-
-- [ ] Intégration IA générative pour suggestions contextuelles
-- [ ] Synchronisation cross-appareils
-- [ ] Extensions navigateur
-- [ ] API REST pour intégrations tierces
-- [ ] Widgets système (Windows/macOS)
-
-## 🤝 Contribution
-
-1. Fork le repository
-2. Créer une branche feature (`git checkout -b feature/AmazingFeature`)
-3. Commit les changements (`git commit -m 'Add some AmazingFeature'`)
-4. Push vers la branche (`git push origin feature/AmazingFeature`)
-5. Ouvrir une Pull Request
-
-## 📄 License
-
-MIT License - voir le fichier [LICENSE.md](LICENSE.md) pour plus de détails.
-
-## 👥 Auteurs
-
-- **Palolo875** - *Développeur principal* - [GitHub](https://github.com/Palolo875)
-
-## 🙏 Remerciements
-
-- Modèles linguistiques Xenova pour mmBERT
-- Équipe winkNLP pour les outils NLP
-- Communauté Next.js et React
+Ce projet est sous licence MIT. KairuFlow est conçu avec une éthique de respect radical de la vie privée.
