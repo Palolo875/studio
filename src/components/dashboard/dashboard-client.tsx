@@ -1,9 +1,7 @@
-
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
 import type { DailyRituals, Task } from '@/lib/types';
-import { initialTasks } from '@/lib/data';
 import { Recommendations } from './recommendations';
 import { TaskList } from './task-list';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,7 +39,7 @@ import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { EnergyCheckIn } from './energy-check-in';
 import { GovernancePanel } from './governance-panel';
-import { phase7Manager, UserState } from '@/lib/phase7Main';
+import { phase7Manager } from '@/lib/phase7Main';
 import { SovereigntyMode } from '@/lib/phase7Implementation';
 import { ConflictResolutionModal } from './conflict-resolution-modal';
 import { OverrideConfirmation } from './override-confirmation';
@@ -52,6 +50,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  getAllTasks,
+  upsertTasks,
+  completeTask as completeDbTask,
+  updateTask as updateDbTask,
+  type DBTask,
+} from '@/lib/database';
 
 
 type EnergyState =
@@ -69,6 +74,47 @@ const dynamicMessages: Record<string, string> = {
   focused: 'Mode concentration activé. Voici vos objectifs pour rester dans la zone :',
   creative: "L'inspiration est là ! Voici comment la canaliser et créer quelque chose de génial :",
 };
+
+function toDbTask(task: Task): DBTask {
+  const now = new Date();
+  return {
+    id: task.id,
+    title: task.name,
+    description: task.description,
+    duration: task.estimatedDuration ?? 30,
+    effort: (task.energyRequired as DBTask['effort']) ?? 'medium',
+    urgency: (task.priority as DBTask['urgency']) ?? 'medium',
+    impact: 'medium',
+    deadline: task.scheduledDate ? new Date(task.scheduledDate) : undefined,
+    scheduledTime: undefined,
+    category: (task.tags && task.tags[0]) || 'general',
+    status: task.completed ? 'done' : 'todo',
+    activationCount: 0,
+    lastActivated: task.lastAccessed ? new Date(task.lastAccessed) : now,
+    createdAt: now,
+    updatedAt: now,
+    completedAt: task.completedAt ? new Date(task.completedAt) : undefined,
+    tags: task.tags,
+  };
+}
+
+function fromDbTask(dbTask: DBTask): Task {
+  return {
+    id: dbTask.id,
+    name: dbTask.title,
+    completed: dbTask.status === 'done',
+    subtasks: [],
+    lastAccessed: (dbTask.lastActivated ?? dbTask.updatedAt ?? new Date()).toISOString(),
+    completionRate: dbTask.completedAt ? 100 : 0,
+    description: dbTask.description,
+    priority: dbTask.urgency as Task['priority'],
+    energyRequired: dbTask.effort,
+    estimatedDuration: dbTask.duration,
+    tags: dbTask.tags,
+    completedAt: dbTask.completedAt?.toISOString(),
+    scheduledDate: dbTask.deadline?.toISOString(),
+  };
+}
 
 export function DashboardClient() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -110,22 +156,22 @@ export function DashboardClient() {
       setShowMorningRitual(true);
     } else {
       setMorningRitualCompleted(true);
-      // Load tasks from somewhere if ritual is already done
       const storedEnergy = localStorage.getItem('todayEnergyLevel') as EnergyState;
       const storedIntention = localStorage.getItem('todayIntention');
       if (storedEnergy) setEnergyLevel(storedEnergy);
       if (storedIntention) setIntention(storedIntention);
 
-      // For demo, we'll just load initial tasks. In a real app, you'd fetch the user's playlist for the day.
-      const storedTasks = localStorage.getItem('dailyTasks');
-      if (storedTasks) {
-        const parsedTasks = JSON.parse(storedTasks);
-        setTasks(parsedTasks);
-        setInitialTaskCount(parsedTasks.length);
-      } else {
-        setTasks(initialTasks);
-        setInitialTaskCount(initialTasks.length);
-      }
+      // Charger depuis Dexie
+      getAllTasks()
+        .then(dbTasks => {
+          const adapted = dbTasks.map(fromDbTask);
+          setTasks(adapted);
+          setInitialTaskCount(adapted.length);
+        })
+        .catch(() => {
+          setTasks([]);
+          setInitialTaskCount(0);
+        });
     }
   }, []);
 
@@ -148,11 +194,12 @@ export function DashboardClient() {
   };
 
 
-  const handleSetTasks = (newTasks: Task[]) => {
+  const persistTasks = async (newTasks: Task[], options: { incrementShuffle?: boolean } = {}) => {
     setTasks(newTasks);
     setInitialTaskCount(newTasks.length);
-    localStorage.setItem('dailyTasks', JSON.stringify(newTasks));
-    if (newTasks !== initialTasks) {
+    const dbTasks = newTasks.map(toDbTask);
+    await upsertTasks(dbTasks);
+    if (options.incrementShuffle) {
       setDailyRituals((prev: DailyRituals) => ({
         ...prev,
         playlistShuffledCount: prev.playlistShuffledCount + 1,
@@ -199,7 +246,7 @@ export function DashboardClient() {
           description: response.message,
         });
       } else {
-        handleSetTasks(response.tasks);
+        await persistTasks(response.tasks, { incrementShuffle: true });
         if (response.playlistShuffledCount) {
           setDailyRituals((prev: DailyRituals) => ({
             ...prev,
@@ -245,19 +292,17 @@ export function DashboardClient() {
       setDailyRituals(newDailyRituals);
 
       if (completedTask.completed) {
+        completeDbTask(taskId).catch(() => null);
         setTimeout(() => {
           const updatedTasks = newTasks.filter((t: Task) => t.id !== taskId);
           setTasks(updatedTasks);
-          localStorage.setItem('dailyTasks', JSON.stringify(updatedTasks));
-
-
           const remainingTasks = updatedTasks.filter((t: Task) => !t.completed);
           if (remainingTasks.length === 0) {
             setTimeout(() => handleAllTasksCompleted(newDailyRituals), 2000);
           }
         }, 800);
       } else {
-        localStorage.setItem('dailyTasks', JSON.stringify(newTasks));
+        updateDbTask(taskId, { status: 'todo', completedAt: undefined }).catch(() => null);
       }
     }
   };
@@ -285,7 +330,7 @@ export function DashboardClient() {
     };
     const newTasks = [...tasks, bonusTask];
     setTasks(newTasks);
-    localStorage.setItem('dailyTasks', JSON.stringify(newTasks));
+    persistTasks(newTasks).catch(() => null);
     setShowBonusCard(false);
   };
 
@@ -352,8 +397,7 @@ export function DashboardClient() {
         description: `"${newTask.name}" est maintenant en haut de votre liste.`,
       });
     }
-    setTasks(newTasks);
-    localStorage.setItem('dailyTasks', JSON.stringify(newTasks));
+    persistTasks(newTasks).catch(() => null);
     setUrgentTaskName('');
     setReplaceTask(false);
     setIsPanicModalOpen(false);

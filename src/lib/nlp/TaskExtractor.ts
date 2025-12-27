@@ -4,6 +4,8 @@
  */
 import { LanguageDetector } from '@/lib/nlp/LanguageDetector';
 import { RawTaskWithContract, createTaskWithContract } from '@/lib/nlp/NLPContract';
+export type { RawTaskWithContract } from '@/lib/nlp/NLPContract';
+
 import { cohesionAnalyzer } from '@/lib/nlp/CohesionAnalyzer';
 import { linguisticFatigueDetector } from '@/lib/nlp/LinguisticFatigueDetector';
 
@@ -26,20 +28,20 @@ const ENTITY_PATTERNS = {
     person: /\b(Marc|Jean|Marie|Paul|Sophie|Thomas|Camille|Antoine|Julie|Pierre)\b/i,
     time: /\b(\d{1,2}h(?:\d{2})?|\d{1,2}[:h]\d{2}|midi|minuit)\b/i,
     date: /\b(demain|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|aujourd'hui)\b/i,
-    project: /\b(rapport|présentation|projet|document|fichier|dossier)\b/i
+    project: /\b(rapport|présentation|projet|document|fichier|dossier)\b/i,
   },
   en: {
     person: /\b(John|Mary|James|Patricia|Robert|Jennifer|Michael|Linda|William|Elizabeth)\b/i,
     time: /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)?|\d{1,2}[:h]\d{2}|noon|midnight)\b/i,
     date: /\b(tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|today)\b/i,
-    project: /\b(report|presentation|project|document|file|folder)\b/i
+    project: /\b(report|presentation|project|document|file|folder)\b/i,
   },
   es: {
     person: /\b(Juan|María|Pedro|Ana|Luis|Carmen|Carlos|Isabel|José|Laura)\b/i,
     time: /\b(\d{1,2}h(?:\d{2})?|\d{1,2}[:h]\d{2}|mediodía|medianoche)\b/i,
     date: /\b(mañana|lunes|martes|miércoles|jueves|viernes|sábado|domingo|hoy)\b/i,
-    project: /\b(informe|presentación|proyecto|documento|archivo|carpeta)\b/i
-  }
+    project: /\b(informe|presentación|proyecto|documento|archivo|carpeta)\b/i,
+  },
 };
 
 // Verbes d'action par langue avec poids

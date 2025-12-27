@@ -38,6 +38,31 @@ export interface DBTask {
     tags?: string[];
 }
 
+/**
+ * Upsert en masse des tâches (utilisé pour synchroniser depuis le Brain/playlist)
+ */
+export async function upsertTasks(tasks: DBTask[]): Promise<void> {
+    try {
+        await db.tasks.bulkPut(tasks);
+        logger.debug('Tasks upserted', { count: tasks.length });
+    } catch (error) {
+        logger.error('Failed to upsert tasks', error as Error);
+        throw error;
+    }
+}
+
+/**
+ * Récupère toutes les tâches (tous statuts)
+ */
+export async function getAllTasks(): Promise<DBTask[]> {
+    try {
+        return await db.tasks.toArray();
+    } catch (error) {
+        logger.error('Failed to get all tasks', error as Error);
+        return [];
+    }
+}
+
 export interface DBSession {
     id: string;
     timestamp: number;
@@ -87,6 +112,43 @@ export interface DBSleepData {
     createdAt: Date;
 }
 
+export interface DBBrainDecision {
+    id: string;
+    timestamp: number;
+    brainVersion: string;
+    input: unknown;
+    output: unknown;
+    trace?: unknown;
+}
+
+export interface DBDecisionExplanation {
+    id: string;
+    decisionId: string;
+    timestamp: number;
+    explanation: unknown;
+}
+
+export interface DBAdaptationSignal {
+    id?: number;
+    timestamp: number;
+    type: string;
+    payload: unknown;
+}
+
+export interface DBAdaptationHistory {
+    id?: number;
+    timestamp: number;
+    change: unknown;
+    reverted?: boolean;
+}
+
+export interface DBSnapshot {
+    id?: number;
+    name?: string;
+    timestamp: number;
+    snapshot: unknown;
+}
+
 // ============================================
 // Classe de base de données
 // ============================================
@@ -99,6 +161,12 @@ class KairuFlowDatabase extends Dexie {
     overrides!: Table<DBOverride, number>;
     sleepData!: Table<DBSleepData, number>;
 
+    brainDecisions!: Table<DBBrainDecision, string>;
+    decisionExplanations!: Table<DBDecisionExplanation, string>;
+    adaptationSignals!: Table<DBAdaptationSignal, number>;
+    adaptationHistory!: Table<DBAdaptationHistory, number>;
+    snapshots!: Table<DBSnapshot, number>;
+
     constructor() {
         super('KairuFlowDB');
 
@@ -110,6 +178,22 @@ class KairuFlowDatabase extends Dexie {
             userPatterns: 'id, userId, patternType, updatedAt',
             overrides: '++id, timestamp',
             sleepData: '++id, date, createdAt',
+        });
+
+        // Version 2: Tables manquantes pour snapshots / replays / adaptation
+        this.version(2).stores({
+            tasks: 'id, status, urgency, deadline, category, createdAt, updatedAt',
+            sessions: 'id, timestamp, state, createdAt',
+            taskHistory: '++id, taskId, action, timestamp',
+            userPatterns: 'id, userId, patternType, updatedAt',
+            overrides: '++id, timestamp',
+            sleepData: '++id, date, createdAt',
+
+            brainDecisions: 'id, timestamp, brainVersion',
+            decisionExplanations: 'id, decisionId, timestamp',
+            adaptationSignals: '++id, timestamp, type',
+            adaptationHistory: '++id, timestamp',
+            snapshots: '++id, timestamp, name',
         });
 
         logger.info('Database initialized');
@@ -158,7 +242,7 @@ export async function getUrgentTasks(): Promise<DBTask[]> {
         return await db.tasks
             .where('urgency')
             .equals('urgent')
-            .and(task => task.status !== 'done' && task.status !== 'cancelled')
+            .and((task: DBTask) => task.status !== 'done' && task.status !== 'cancelled')
             .toArray();
     } catch (error) {
         logger.error('Failed to get urgent tasks', error as Error);
@@ -179,7 +263,7 @@ export async function getTodayTasks(): Promise<DBTask[]> {
         return await db.tasks
             .where('deadline')
             .between(today, tomorrow, true, false)
-            .and(task => task.status !== 'done' && task.status !== 'cancelled')
+            .and((task: DBTask) => task.status !== 'done' && task.status !== 'cancelled')
             .toArray();
     } catch (error) {
         logger.error('Failed to get today tasks', error as Error);
