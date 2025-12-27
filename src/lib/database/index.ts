@@ -198,6 +198,28 @@ class KairuFlowDatabase extends Dexie {
 
         logger.info('Database initialized');
     }
+
+    /**
+     * Nettoie les données anciennes pour libérer de l'espace
+     * @param days Nombre de jours à conserver
+     * @returns Nombre d'entrées supprimées
+     */
+    async pruneData(days: number): Promise<number> {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
+
+        const initialCount = await this.taskHistory.count();
+        await this.taskHistory
+            .where('timestamp')
+            .below(cutoffDate)
+            .delete();
+
+        const finalCount = await this.taskHistory.count();
+        const removedCount = initialCount - finalCount;
+        
+        console.log(`[Database] Nettoyage : ${removedCount} entrées d'historique supprimées (> ${days} jours)`);
+        return removedCount;
+    }
 }
 
 // Instance singleton
