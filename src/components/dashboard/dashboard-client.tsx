@@ -38,7 +38,6 @@ import { TimelineView } from './timeline-view';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { EnergyCheckIn } from './energy-check-in';
-import { GovernancePanel } from './governance-panel';
 import { phase7Manager } from '@/lib/phase7Main';
 import { SovereigntyMode } from '@/lib/phase7Implementation';
 import { ConflictResolutionModal } from './conflict-resolution-modal';
@@ -207,6 +206,10 @@ export function DashboardClient() {
     }
   };
 
+  const handleSetTasks = (newTasks: Task[]) => {
+    persistTasks(newTasks).catch(() => null);
+  };
+
   const handleRegeneratePlaylist = (isFirstGeneration = false) => {
     if (!isFirstGeneration && dailyRituals.playlistShuffledCount >= 2) {
       toast({
@@ -349,19 +352,12 @@ export function DashboardClient() {
     };
 
     // Phase 7 : Vérification des Lignes Rouges (Non-Negotiables)
-    const userState: any = {
-      energy: energyLevel === 'energized' ? 'HIGH' : energyLevel === 'slow' ? 'LOW' : 'MEDIUM',
-      dailyBudget: { remaining: 5, total: 10 }, // Simulation
-      burnoutScore: 0.8, // Simulation pour déclencher le conflit
-      overridesLast2h: 1,
-      sessions: [],
-      tasks: tasks,
-      overrides: [],
-      decisions: 10,
-      sleepData: []
-    };
-
-    const violations = phase7Manager.checkNonNegotiables(userState);
+    let violations: string[] = [];
+    try {
+      violations = await phase7Manager.checkNonNegotiables();
+    } catch {
+      violations = [];
+    }
 
     if (violations.length > 0 || (phase7Manager.getSovereigntyManager().currentMode === SovereigntyMode.PROTECTIVE)) {
       // Déclencher le ConflictResolutionModal
@@ -403,23 +399,22 @@ export function DashboardClient() {
     setIsPanicModalOpen(false);
   };
 
-  const handleResolveConflict = (choice: number) => {
+  const handleResolveConflict = async (choice: number) => {
     setIsConflictModalOpen(false);
 
     if (choice === 1) { // Forcer
-      const cost = phase7Manager.calculateOverrideCost(pendingTask!, {
-        energy: "MEDIUM",
-        dailyBudget: { remaining: 0.5, total: 1 },
-        burnoutScore: 0.8,
-        overridesLast2h: 1,
-        sessions: [],
-        tasks: [],
-        overrides: [],
-        decisions: 1,
-        sleepData: []
-      } as any);
-      setOverrideCost(cost);
-      setIsOverrideModalOpen(true);
+      if (!pendingTask) return;
+      try {
+        const cost = await phase7Manager.calculateOverrideCost(pendingTask as any);
+        setOverrideCost(cost);
+        setIsOverrideModalOpen(true);
+      } catch {
+        toast({
+          variant: 'destructive',
+          title: 'Erreur',
+          description: "Impossible de calculer le coût de l'override.",
+        });
+      }
     } else if (choice === 2) { // Micro-tâches
       toast({ title: "Tâche découpée", description: "Vérifiez vos sous-tâches pour commencer doucement." });
       // Logique micro-tâches ici

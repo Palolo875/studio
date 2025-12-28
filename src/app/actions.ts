@@ -1,15 +1,10 @@
 "use server";
 
-import { generateDailyPlaylist } from "@/ai/flows/daily-playlist-generation";
-import { personalizedTaskRecommendations } from "@/ai/flows/personalized-task-recommendations";
 import { analyzeCapture, type AnalyzeCaptureOutput } from "@/ai/flows/analyze-capture-flow";
 import type { DailyRituals, Task } from "@/lib/types";
-import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { generateMagicalPlaylist, type TaskScore } from "@/lib/magical-playlist-algorithm";
-
-// Import du cerveau décisionnel Phase 3
-import { decideSessionWithTrace, BrainInput } from "@/lib/taskEngine";
+import { generateMagicalPlaylist } from "@/lib/magical-playlist-algorithm";
+import { getAllTasks, type DBTask } from "@/lib/database";
 
 const generatePlaylistSchema = z.object({
   goals: z.string().min(3, "Goals must be at least 3 characters long."),
@@ -44,11 +39,6 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
       };
     }
 
-    // Utiliser l'algorithme de playlist magique au lieu de l'IA
-    // Utiliser les tâches existantes du système au lieu de simuler des tâches
-    // Dans une vraie application, ces tâches viendraient d'une base de données
-    // Pour cet exemple, nous utilisons un ensemble de tâches plus réaliste
-    
     // Obtenir les paramètres depuis formData
     const energyLevel = formData.get("energyLevel") as "high" | "medium" | "low";
     const intention = formData.get("intention") as "focus" | "learning" | "creativity" | "planning";
@@ -62,153 +52,32 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
       };
     }
     
-    // Simuler un ensemble de tâches plus réaliste
-    // Dans une vraie application, ces tâches viendraient de la base de données utilisateur
-    const sampleTasks: Task[] = [
-      {
-        id: "task-1",
-        name: "Finaliser le prototype de l'interface utilisateur",
-        completed: false,
-        subtasks: [],
-        lastAccessed: new Date(Date.now() - 86400000 * 2).toISOString(), // Il y a 2 jours
-        completionRate: 75,
-        priority: "high",
-        energyRequired: "high",
-        tags: ["Development", "UI/UX", "Frontend"],
-        scheduledDate: new Date(Date.now() + 86400000 * 3).toISOString(), // Dans 3 jours
-        effort: "M", // 15 min - 2 heures
-        deadlineDisplay: "Dans 3 jours"
-      },
-      {
-        id: "task-2",
-        name: "Préparer la présentation trimestrielle",
-        completed: false,
-        subtasks: [],
-        lastAccessed: new Date(Date.now() - 86400000 * 1).toISOString(), // Hier
-        completionRate: 40,
-        priority: "high",
-        energyRequired: "medium",
-        tags: ["Presentation", "Communication", "Reporting"],
-        scheduledDate: new Date(Date.now() + 86400000 * 1).toISOString(), // Demain
-        effort: "L", // > 2 heures
-        deadlineDisplay: "Demain"
-      },
-      {
-        id: "task-3",
-        name: "Lire le nouveau livre sur l'innovation",
-        completed: false,
-        subtasks: [],
-        lastAccessed: new Date(Date.now() - 86400000 * 10).toISOString(), // Il y a 10 jours
-        completionRate: 90,
-        priority: "medium",
-        energyRequired: "low",
-        tags: ["Learning", "Reading", "Innovation"],
-        scheduledDate: new Date(Date.now() + 86400000 * 7).toISOString(), // Dans 1 semaine
-        effort: "S", // < 15 minutes
-        deadlineDisplay: "Dans 1 semaine"
-      },
-      {
-        id: "task-4",
-        name: "Planifier les congés d'été",
-        completed: false,
-        subtasks: [],
-        lastAccessed: new Date(Date.now() - 86400000 * 30).toISOString(), // Il y a 1 mois
-        completionRate: 20,
-        priority: "low",
-        energyRequired: "low",
-        tags: ["Personal", "Planning", "Schedule"],
-        scheduledDate: new Date(Date.now() + 86400000 * 60).toISOString(), // Dans 2 mois
-        effort: "S", // < 15 minutes
-        deadlineDisplay: "Dans 2 mois"
-      },
-      {
-        id: "task-5",
-        name: "Session de brainstorming pour le nouveau produit",
-        completed: false,
-        subtasks: [],
-        lastAccessed: new Date(Date.now() - 86400000 * 5).toISOString(), // Il y a 5 jours
-        completionRate: 85,
-        priority: "medium",
-        energyRequired: "high",
-        tags: ["Creativity", "Ideation", "Product"],
-        scheduledDate: new Date(Date.now() + 86400000 * 2).toISOString(), // Dans 2 jours
-        effort: "M", // 15 min - 2 heures
-        deadlineDisplay: "Dans 2 jours"
-      },
-      {
-        id: "task-6",
-        name: "Mettre à jour la documentation technique",
-        completed: false,
-        subtasks: [],
-        lastAccessed: new Date(Date.now() - 86400000 * 7).toISOString(), // Il y a 1 semaine
-        completionRate: 60,
-        priority: "medium",
-        energyRequired: "medium",
-        tags: ["Documentation", "Technical", "Writing"],
-        scheduledDate: new Date(Date.now() + 86400000 * 5).toISOString(), // Dans 5 jours
-        effort: "M", // 15 min - 2 heures
-        deadlineDisplay: "Dans 5 jours"
-      },
-      {
-        id: "task-7",
-        name: "Répondre aux emails importants",
-        completed: false,
-        subtasks: [],
-        lastAccessed: new Date().toISOString(), // Aujourd'hui
-        completionRate: 95,
-        priority: "high",
-        energyRequired: "low",
-        tags: ["Communication", "Email", "Administration"],
-        scheduledDate: new Date(Date.now() + 86400000 * 1).toISOString(), // Demain
-        effort: "S", // < 15 minutes
-        deadlineDisplay: "Demain"
-      }
-    ];
-
-    // Créer les entrées du cerveau décisionnel
-    const brainInput: BrainInput = {
-      tasks: sampleTasks,
-      userState: {
-        energy: energyLevel,
-        stability: "stable", // Valeur par défaut, pourrait être dynamique
-        linguisticFatigue: false // Valeur par défaut
-      },
-      temporal: {
-        currentTime: new Date(),
-        availableTime: 120, // 2 heures par défaut
-        timeOfDay: "morning" // Valeur par défaut, pourrait être dynamique
-      },
-      budget: {
-        daily: {
-          maxLoad: 100,
-          usedLoad: 30,
-          remaining: 70,
-          lockThreshold: 20
-        },
-        session: {
-          maxDuration: 120,
-          maxTasks: 5,
-          maxComplexity: 10
-        }
-      },
-      constraints: [],
-      history: []
-    };
-
-    // Utiliser le cerveau décisionnel Phase 3
-    const brainDecision = decideSessionWithTrace(brainInput);
-
-    // Convertir les résultats en tâches
-    const tasks: Task[] = brainDecision.outputs.session.allowedTasks.map((task, index) => ({
-      ...task,
-      id: `brain-${task.id}-${Date.now()}-${index}`,
-      selectionReason: `Sélectionnée par le cerveau décisionnel`
+    // Récupérer les tâches réelles depuis Dexie
+    const dbTasks: DBTask[] = await getAllTasks();
+    const tasks: Task[] = dbTasks.map(t => ({
+      id: t.id,
+      name: t.title,
+      completed: t.status === "done",
+      subtasks: [],
+      lastAccessed: (t.lastActivated ?? t.updatedAt ?? new Date()).toISOString(),
+      completionRate: t.completedAt ? 100 : 0,
+      priority: t.urgency as Task["priority"],
+      energyRequired: t.effort,
+      estimatedDuration: t.duration,
+      tags: t.tags,
+      scheduledDate: t.deadline?.toISOString(),
     }));
+
+    // Appliquer l’algorithme local (deterministe) sur les données réelles
+    const scored = generateMagicalPlaylist(tasks, {
+      energyLevel,
+      intention,
+    });
 
     return {
       message: "Playlist magique générée avec succès.",
       errors: null,
-      tasks,
+      tasks: scored,
       playlistShuffledCount: dailyRituals.playlistShuffledCount + 1,
     };
   } catch (error) {
@@ -250,15 +119,16 @@ export async function handleGetRecommendations(formData: FormData) {
 
     const timeOfDay = new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening";
     
-    const result = await personalizedTaskRecommendations({
-      energyLevel,
-      intention,
-      focus,
-      timeOfDay,
-      tasks: tasks.map(t => ({...t, subtasks: t.subtasks.length, lastAccessed: t.lastAccessed.toString(), completionRate: t.completionRate / 100})),
-    });
-    
-    return { recommendations: result.recommendedTasks, error: null };
+    // Pas d'appel Genkit : stub local simple basé sur la priorité
+    const recommended = tasks
+      .map(t => ({
+        ...t,
+        score: (t.priority === "high" ? 3 : t.priority === "medium" ? 2 : 1) + (t.completed ? -2 : 0),
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+
+    return { recommendations: recommended, error: null };
   } catch (error) {
     console.error(error);
     return { recommendations: [], error: "Failed to get recommendations." };

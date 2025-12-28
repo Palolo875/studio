@@ -39,6 +39,7 @@ export function GovernancePanel({
   onModeChange,
   onConflictResolve
 }: GovernancePanelProps) {
+
   // États locaux
   const [metrics, setMetrics] = useState<GovernanceMetrics | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -50,7 +51,11 @@ export function GovernancePanel({
 
   const handleRefresh = async () => {
     setIsLoading(true);
-    await phase7Manager.checkBurnoutAndProtect();
+    try {
+      await phase7Manager.checkBurnoutAndProtect();
+    } catch {
+      setError('Impossible de rafraîchir la gouvernance.');
+    }
     setIsLoading(false);
   };
 
@@ -64,11 +69,16 @@ export function GovernancePanel({
     });
 
     // Lancer une première vérification immédiate
-    phase7Manager.checkBurnoutAndProtect();
+    phase7Manager.checkBurnoutAndProtect().catch(() => {
+      setError('Impossible de charger la gouvernance.');
+      setIsLoading(false);
+    });
 
     // Vérifier périodiquement (toutes les minutes)
     const interval = setInterval(() => {
-      phase7Manager.checkBurnoutAndProtect();
+      phase7Manager.checkBurnoutAndProtect().catch(() => {
+        setError('Impossible de mettre à jour la gouvernance.');
+      });
     }, 60000);
 
     return () => {
