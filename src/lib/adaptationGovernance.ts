@@ -49,7 +49,7 @@ export class AdaptationGovernanceManager {
   
   // Générer un ID unique
   private generateId(): string {
-    return 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    return 'log_' + Date.now();
   }
   
   // Afficher un message à l'utilisateur

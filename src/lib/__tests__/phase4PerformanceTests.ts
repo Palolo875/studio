@@ -180,7 +180,7 @@ export class Phase4PerformanceTests {
         await new Promise(resolve => setTimeout(resolve, 10)); // 10ms entre chaque action
         
         // Enregistrer des métriques de performance
-        performanceTracker.record('session_action', Math.random() * 100);
+        performanceTracker.record('session_action', (i % 100));
         
         // Vérifier la mémoire périodiquement
         if (i % 10 === 0) {
@@ -361,7 +361,8 @@ export class Phase4PerformanceTests {
         await new Promise(resolve => setTimeout(resolve, 50));
         
         // Vérifier l'intégrité des données (simulation)
-        const dataIntegrity = Math.random() > 0.1; // 90% de chances d'intégrité
+        const dataIntegrity = i % 10 !== 0;
+        
         if (!dataIntegrity) {
           dataIntegrityIssues++;
         }

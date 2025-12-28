@@ -161,7 +161,7 @@ export class OverrideSoftLimiter {
     
     // Cela dépendrait de l'implémentation réelle du système d'overrides
     // Pour l'instant, nous retournons un nombre simulé
-    return Math.floor(Math.random() * 3); // Simulation
+    return 0;
   }
 }
 

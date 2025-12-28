@@ -15,21 +15,26 @@ describe('Brain Contracts - Phase 3', () => {
   // Données de test
   const mockTask: Task = {
     id: "task-1",
-    name: "Tâche de test",
-    completed: false,
-    subtasks: [],
-    lastAccessed: new Date().toISOString(),
-    completionRate: 80,
-    priority: "high",
-    energyRequired: "medium",
-    estimatedDuration: 30,
-    tags: ["test"]
+    title: "Tâche de test",
+    description: undefined,
+    duration: 30,
+    effort: 'medium',
+    urgency: 'high',
+    impact: 'medium',
+    deadline: undefined,
+    scheduledTime: undefined,
+    completionHistory: [],
+    category: 'test',
+    createdAt: new Date(),
+    origin: 'self_chosen',
+    hasTangibleResult: true,
   };
 
   describe('BrainInput', () => {
     it('devrait définir la structure correcte pour les entrées', () => {
       const input: BrainInput = {
         tasks: [mockTask],
+
         userState: {
           energy: "medium",
           stability: "stable",
@@ -41,6 +46,7 @@ describe('Brain Contracts - Phase 3', () => {
           timeOfDay: "morning"
         },
         budget: {
+
           daily: {
             maxLoad: 100,
             usedLoad: 30,
@@ -54,7 +60,12 @@ describe('Brain Contracts - Phase 3', () => {
           }
         },
         constraints: [],
-        history: []
+        history: [],
+        decisionPolicy: {
+          level: 'STRICT',
+          userConsent: true,
+          overrideCostVisible: true,
+        },
       };
 
       expect(input).toBeDefined();
@@ -99,7 +110,7 @@ describe('Brain Contracts - Phase 3', () => {
           brainVersion: "1.0.0",
           policy: {
             level: "STRICT",
-            consentRequired: true,
+            userConsent: true,
             overrideCostVisible: true
           },
           overrideEvents: []
@@ -118,17 +129,17 @@ describe('Brain Contracts - Phase 3', () => {
       const policies: DecisionPolicy[] = [
         {
           level: "STRICT",
-          consentRequired: true,
+          userConsent: true,
           overrideCostVisible: true
         },
         {
           level: "ASSISTED",
-          consentRequired: true,
+          userConsent: true,
           overrideCostVisible: true
         },
         {
           level: "EMERGENCY",
-          consentRequired: true,
+          userConsent: true,
           overrideCostVisible: true
         }
       ];
@@ -136,7 +147,7 @@ describe('Brain Contracts - Phase 3', () => {
       policies.forEach(policy => {
         expect(policy).toBeDefined();
         expect(['STRICT', 'ASSISTED', 'EMERGENCY']).toContain(policy.level);
-        expect(policy.consentRequired).toBe(true);
+        expect(policy.userConsent).toBe(true);
       });
     });
   });

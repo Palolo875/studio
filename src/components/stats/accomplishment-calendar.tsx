@@ -28,7 +28,9 @@ const generateHeatmapData = (date: Date) => {
   const data = {} as Record<string, number>
   for (let i = 1; i <= daysInMonth; i++) {
     const dayKey = format(new Date(date.getFullYear(), date.getMonth(), i), "yyyy-MM-dd")
-    data[dayKey] = Math.floor(Math.random() * 4)
+    let hash = 0
+    for (let j = 0; j < dayKey.length; j++) hash = (hash * 31 + dayKey.charCodeAt(j)) | 0
+    data[dayKey] = Math.abs(hash) % 4
   }
   return data
 }

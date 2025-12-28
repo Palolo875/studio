@@ -128,6 +128,14 @@ export interface DBDecisionExplanation {
     explanation: unknown;
 }
 
+export interface DBBrainVersion {
+    id: string;
+    algorithmVersion: string;
+    rulesHash: string;
+    modelId: string;
+    releasedAt: Date;
+}
+
 export interface DBAdaptationSignal {
     id?: number;
     timestamp: number;
@@ -162,6 +170,7 @@ class KairuFlowDatabase extends Dexie {
     sleepData!: Table<DBSleepData, number>;
 
     brainDecisions!: Table<DBBrainDecision, string>;
+    brainVersions!: Table<DBBrainVersion, string>;
     decisionExplanations!: Table<DBDecisionExplanation, string>;
     adaptationSignals!: Table<DBAdaptationSignal, number>;
     adaptationHistory!: Table<DBAdaptationHistory, number>;
@@ -190,6 +199,23 @@ class KairuFlowDatabase extends Dexie {
             sleepData: '++id, date, createdAt',
 
             brainDecisions: 'id, timestamp, brainVersion',
+            decisionExplanations: 'id, decisionId, timestamp',
+            adaptationSignals: '++id, timestamp, type',
+            adaptationHistory: '++id, timestamp',
+            snapshots: '++id, timestamp, name',
+        });
+
+        // Version 3: table dédiée pour les versions du cerveau
+        this.version(3).stores({
+            tasks: 'id, status, urgency, deadline, category, createdAt, updatedAt',
+            sessions: 'id, timestamp, state, createdAt',
+            taskHistory: '++id, taskId, action, timestamp',
+            userPatterns: 'id, userId, patternType, updatedAt',
+            overrides: '++id, timestamp',
+            sleepData: '++id, date, createdAt',
+
+            brainDecisions: 'id, timestamp, brainVersion',
+            brainVersions: 'id, releasedAt',
             decisionExplanations: 'id, decisionId, timestamp',
             adaptationSignals: '++id, timestamp, type',
             adaptationHistory: '++id, timestamp',

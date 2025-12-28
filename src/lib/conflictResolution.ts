@@ -128,7 +128,7 @@ export class ConflictResolver {
 
   // Générer un ID unique
   private generateId(): string {
-    return Math.random().toString(36).substr(2, 9);
+    return `conflict_${Date.now()}`;
   }
 
   // Simuler l'arbitrage externe
@@ -139,8 +139,6 @@ export class ConflictResolver {
     // Simulation d'un délai de réponse
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Pour cet exemple, nous simulons une décision aléatoire
-    // Dans une implémentation réelle, cela viendrait de l'arbitre externe
     const choices = [
       ConsensusMode.USER_WINS,
       ConsensusMode.SYSTEM_WINS,
@@ -148,9 +146,14 @@ export class ConflictResolver {
       ConsensusMode.DELAYED_DECISION
     ];
     
-    const randomChoice = choices[Math.floor(Math.random() * choices.length)];
+    const key = `${userRequest.id}:${systemRejection.reason}`;
+    let hash = 0;
+    for (let i = 0; i < key.length; i += 1) {
+      hash = (hash * 31 + key.charCodeAt(i)) | 0;
+    }
+    const choice = choices[Math.abs(hash) % choices.length];
     
-    switch (randomChoice) {
+    switch (choice) {
       case ConsensusMode.USER_WINS:
         return {
           consensus: ConsensusMode.USER_WINS,

@@ -24,6 +24,7 @@ export class WorkerCommunication {
   private pendingMessages: Map<string, { resolve: Function, reject: Function, timeoutId: ReturnType<typeof setTimeout> }>;
   private encoder = new TextEncoder();
   private decoder = new TextDecoder();
+  private messageSeq = 0;
 
   constructor(worker: Worker) {
     this.worker = worker;
@@ -35,7 +36,8 @@ export class WorkerCommunication {
    * Envoie un message avec zéro copie (Transferable)
    */
   async sendMessage(type: WorkerMessageType, payload: any): Promise<any> {
-    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    this.messageSeq += 1;
+    const messageId = `msg_${Date.now()}_${this.messageSeq}`;
 
     // Sérialisation performante
     const jsonStr = JSON.stringify({ id: messageId, type, payload });

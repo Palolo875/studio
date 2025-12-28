@@ -80,7 +80,15 @@ export async function initClassifier() {
   classifier = {
     classify: async (text: string, labels: string[]) => {
       // Simulation de classification basée sur le contenu du texte
-      const scores = labels.map(() => Math.random());
+      const scores = labels.map((label, idx) => {
+        const key = `${text}::${label}::${idx}`;
+        let hash = 0;
+        for (let i = 0; i < key.length; i += 1) {
+          hash = (hash * 31 + key.charCodeAt(i)) | 0;
+        }
+        const n = (hash >>> 0) % 1000;
+        return (n + 1) / 1000;
+      });
       // Normaliser les scores pour qu'ils summent à 1
       const sum = scores.reduce((a, b) => a + b, 0);
       const normalizedScores = scores.map(score => score / sum);

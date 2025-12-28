@@ -81,9 +81,9 @@ export class AntiOverfittingEngine {
     return sum / samples.length;
   }
   
-  // Décider aléatoirement de préserver certaines décisions
+  // Décider de préserver certaines décisions
   shouldPreserveRandomly(): boolean {
-    return Math.random() < this.config.randomPreservationRate;
+    return this.config.randomPreservationRate >= 1;
   }
   
   // Obtenir la configuration actuelle

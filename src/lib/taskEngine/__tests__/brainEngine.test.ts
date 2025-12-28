@@ -1,5 +1,6 @@
 // Tests pour le moteur décisionnel du cerveau - Phase 3
-import { decideSession, decideSessionWithTrace } from '../brainEngine';
+import { decideSession, decideSessionWithTrace, replayDecisionAsync } from '../brainEngine';
+
 import { BrainInput, BrainOutput } from '../brainContracts';
 import { Task } from '../types';
 
@@ -8,37 +9,47 @@ describe('Brain Engine - Phase 3', () => {
   const mockTasks: Task[] = [
     {
       id: "task-1",
-      name: "Tâche importante",
-      completed: false,
-      subtasks: [],
-      lastAccessed: new Date().toISOString(),
-      completionRate: 80,
-      priority: "high",
-      energyRequired: "medium",
-      estimatedDuration: 30,
-      tags: ["work"]
+      title: "Tâche importante",
+      description: undefined,
+      duration: 30,
+      effort: 'medium',
+      urgency: 'high',
+      impact: 'high',
+      deadline: undefined,
+      scheduledTime: undefined,
+      completionHistory: [],
+      category: 'work',
+      createdAt: new Date(),
+      origin: 'self_chosen',
+      hasTangibleResult: true,
     },
     {
       id: "task-2",
-      name: "Tâche simple",
-      completed: false,
-      subtasks: [],
-      lastAccessed: new Date().toISOString(),
-      completionRate: 90,
-      priority: "low",
-      energyRequired: "low",
-      estimatedDuration: 10,
-      tags: ["personal"]
+      title: "Tâche simple",
+      description: undefined,
+      duration: 10,
+      effort: 'low',
+      urgency: 'low',
+      impact: 'low',
+      deadline: undefined,
+      scheduledTime: undefined,
+      completionHistory: [],
+      category: 'personal',
+      createdAt: new Date(),
+      origin: 'self_chosen',
+      hasTangibleResult: false,
     }
   ];
 
   const mockInput: BrainInput = {
     tasks: mockTasks,
+
     userState: {
       energy: "medium",
       stability: "stable",
       linguisticFatigue: false
     },
+
     temporal: {
       currentTime: new Date(),
       availableTime: 120,
@@ -58,7 +69,12 @@ describe('Brain Engine - Phase 3', () => {
       }
     },
     constraints: [],
-    history: []
+    history: [],
+    decisionPolicy: {
+      level: 'STRICT',
+      userConsent: true,
+      overrideCostVisible: true,
+    },
   };
 
   describe('decideSession', () => {

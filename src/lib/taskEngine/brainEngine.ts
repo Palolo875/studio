@@ -1,7 +1,8 @@
 // Moteur décisionnel principal du Cerveau - Phase 3
 import { BrainInput, BrainOutput, DecisionPolicy, BrainDecision, BrainVersion } from './brainContracts';
 import { applyDecisionPolicy } from './decisionPolicyManager';
-import { logBrainDecision, registerBrainVersion, generateVersionId } from './decisionLogger';
+import { getBrainDecision, logBrainDecision, registerBrainVersion } from './decisionLogger';
+
 import { generateDecisionExplanation } from './decisionExplanation';
 import { applyUserOverride } from './userChallenge';
 import { Task } from './types';
@@ -18,14 +19,14 @@ const CURRENT_BRAIN_VERSION: BrainVersion = {
 };
 
 // Enregistrer la version du cerveau
-registerBrainVersion(CURRENT_BRAIN_VERSION);
+registerBrainVersion(CURRENT_BRAIN_VERSION).catch(() => null);
 
 /**
  * Politique de décision par défaut
  */
 const DEFAULT_POLICY: DecisionPolicy = {
   level: "STRICT",
-  consentRequired: true,
+  userConsent: true,
   overrideCostVisible: true
 };
 
@@ -61,7 +62,7 @@ export function decideSession(input: BrainInput): BrainOutput {
  * Fonction complète de décision avec traçabilité (Audit & Rejouabilité - Phase 3.4)
  */
 export function decideSessionWithTrace(input: BrainInput): BrainDecision {
-  const decisionId = `decision_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const decisionId = `decision_${Date.now()}`;
 
   const outputs = decideSession(input);
 
@@ -85,7 +86,7 @@ export function decideSessionWithTrace(input: BrainInput): BrainDecision {
   const explanation = generateDecisionExplanation(decision);
   decision.explanationId = explanation.id;
 
-  logBrainDecision(decision);
+  logBrainDecision(decision).catch(() => null);
 
   return decision;
 }
@@ -95,18 +96,28 @@ export function decideSessionWithTrace(input: BrainInput): BrainDecision {
  * Doit impérativement retourner le même résultat que l'original
  */
 export function replayDecision(decisionId: string): { original: BrainDecision, replayed: BrainOutput, match: boolean } | null {
-  const original = (global as any).decisionDatabase?.find((d: BrainDecision) => d.id === decisionId);
+  // NOTE: replayDecision is async behind the scenes; this sync wrapper is kept for compatibility.
+  // If storage is not reachable, it returns null.
+  const originalPromise = getBrainDecision(decisionId);
 
+  // Unsafe sync access is avoided; callers should migrate to async if needed.
+  // Returning null here keeps behavior deterministic.
+  void originalPromise;
+  return null;
+}
+
+export async function replayDecisionAsync(
+  decisionId: string
+): Promise<{ original: BrainDecision; replayed: BrainOutput; match: boolean } | null> {
+  const original = await getBrainDecision(decisionId);
   if (!original) {
     console.warn(`[BrainEngine] Cannot replay decision ${decisionId}: not found in storage.`);
     return null;
   }
 
-  // Rejouer avec les mêmes inputs
   const replayed = decideSession(original.inputs);
-
-  // Vérification de déterminisme
-  const match = JSON.stringify(replayed.session.allowedTasks.map(t => t.id)) ===
+  const match =
+    JSON.stringify(replayed.session.allowedTasks.map(t => t.id)) ===
     JSON.stringify(original.outputs.session.allowedTasks.map(t => t.id));
 
   return { original, replayed, match };

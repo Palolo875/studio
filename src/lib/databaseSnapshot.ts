@@ -12,13 +12,13 @@ export interface DatabaseSnapshot {
   data: {
     tasks: any[];
     sessions: any[];
+    taskHistory: any[];
+    overrides: any[];
+    sleepData: any[];
     brainDecisions: any[];
     decisionExplanations: any[];
     adaptationSignals: any[];
     adaptationHistory: any[];
-    overrides: any[];
-    sleepData: any[];
-    taskHistory: any[];
   };
   metadata: {
     totalRecords: number;
@@ -43,70 +43,70 @@ export class DatabaseSnapshotManager {
       const [
         tasks,
         sessions,
+        overrides,
+        sleepData,
+        taskHistory,
         brainDecisions,
         decisionExplanations,
         adaptationSignals,
         adaptationHistory,
-        overrides,
-        sleepData,
-        taskHistory,
       ] = await Promise.all([
         db.tasks.toArray(),
         db.sessions.toArray(),
+        db.overrides.toArray(),
+        db.sleepData.toArray(),
+        db.taskHistory.toArray(),
         db.brainDecisions.toArray(),
         db.decisionExplanations.toArray(),
         db.adaptationSignals.toArray(),
         db.adaptationHistory.toArray(),
-        db.overrides.toArray(),
-        db.sleepData.toArray(),
-        db.taskHistory.toArray(),
       ]);
 
       const snapshot: DatabaseSnapshot = {
-        version: db.verno,
+        version: (db as any).verno ?? 0,
         timestamp: new Date(),
         data: {
           tasks,
           sessions,
+          overrides,
+          sleepData,
+          taskHistory,
           brainDecisions,
           decisionExplanations,
           adaptationSignals,
           adaptationHistory,
-          overrides,
-          sleepData,
-          taskHistory
         },
         metadata: {
           totalRecords: tasks.length +
             sessions.length +
+            overrides.length +
+            sleepData.length +
+            taskHistory.length +
             brainDecisions.length +
             decisionExplanations.length +
             adaptationSignals.length +
-            adaptationHistory.length +
-            overrides.length +
-            sleepData.length +
-            taskHistory.length,
+            adaptationHistory.length,
           estimatedSize: this.estimateSize({
             tasks,
             sessions,
+            overrides,
+            sleepData,
+            taskHistory,
             brainDecisions,
             decisionExplanations,
             adaptationSignals,
             adaptationHistory,
-            overrides,
-            sleepData,
-            taskHistory,
           }),
           checksum: this.calculateChecksum({
             tasks,
             sessions,
+            overrides,
+            sleepData,
+            taskHistory,
             brainDecisions,
             decisionExplanations,
             adaptationSignals,
             adaptationHistory,
-            overrides,
-            sleepData,
-            taskHistory,
           })
         }
       };
@@ -128,40 +128,40 @@ export class DatabaseSnapshotManager {
       console.log('[Snapshot] Restauration de la base de données...');
 
       // Transaction atomique: soit tout est restauré, soit rien.
-      await db.transaction(
+      await (db as any).transaction(
         'rw',
         db.tasks,
         db.sessions,
+        db.overrides,
+        db.sleepData,
+        db.taskHistory,
         db.brainDecisions,
         db.decisionExplanations,
         db.adaptationSignals,
         db.adaptationHistory,
-        db.overrides,
-        db.sleepData,
-        db.taskHistory,
         async () => {
           await Promise.all([
             db.tasks.clear(),
             db.sessions.clear(),
+            db.overrides.clear(),
+            db.sleepData.clear(),
+            db.taskHistory.clear(),
             db.brainDecisions.clear(),
             db.decisionExplanations.clear(),
             db.adaptationSignals.clear(),
             db.adaptationHistory.clear(),
-            db.overrides.clear(),
-            db.sleepData.clear(),
-            db.taskHistory.clear(),
           ]);
 
           await Promise.all([
             db.tasks.bulkAdd(snapshot.data.tasks),
             db.sessions.bulkAdd(snapshot.data.sessions),
+            db.overrides.bulkAdd(snapshot.data.overrides),
+            db.sleepData.bulkAdd(snapshot.data.sleepData),
+            db.taskHistory.bulkAdd(snapshot.data.taskHistory),
             db.brainDecisions.bulkAdd(snapshot.data.brainDecisions),
             db.decisionExplanations.bulkAdd(snapshot.data.decisionExplanations),
             db.adaptationSignals.bulkAdd(snapshot.data.adaptationSignals),
             db.adaptationHistory.bulkAdd(snapshot.data.adaptationHistory),
-            db.overrides.bulkAdd(snapshot.data.overrides),
-            db.sleepData.bulkAdd(snapshot.data.sleepData),
-            db.taskHistory.bulkAdd(snapshot.data.taskHistory),
           ]);
         }
       );

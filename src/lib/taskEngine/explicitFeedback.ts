@@ -46,7 +46,7 @@ export class ExplicitFeedbackManager {
     // Créer le feedback complet
     const fullFeedback: UserFeedback = {
       ...feedback,
-      id: `feedback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `feedback_${Date.now()}`,
       timestamp: new Date()
     };
     

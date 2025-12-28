@@ -63,7 +63,7 @@ describe('Drift Monitor', () => {
     
     // Simulate stable parameters for 30 days
     for (let i = 0; i < 30; i++) {
-      monitor.track({ strictness: 0.6 + (Math.random() - 0.5) * 0.1, maxTasks: 5, coachFrequency: 1/30, coachEnabled: true, energyForecastMode: "ACCURATE", defaultMode: "STRICT", sessionBuffer: 10, estimationFactor: 1.0 }); // Small variations
+      monitor.track({ strictness: 0.6 + ((i % 3) - 1) * 0.02, maxTasks: 5, coachFrequency: 1/30, coachEnabled: true, energyForecastMode: "ACCURATE", defaultMode: "STRICT", sessionBuffer: 10, estimationFactor: 1.0 });
     }
     
     const drift = monitor.detectDrift();

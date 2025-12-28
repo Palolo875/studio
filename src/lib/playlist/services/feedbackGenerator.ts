@@ -347,23 +347,13 @@ export class FeedbackGenerator {
       .filter(([_, data]) => data.efficiencyScore > 80)
       .map(([taskId, _]) => taskId);
     
-    return this.userHistory.filter(task => 
-      highMomentumIds.includes(task.id) && task.name
-    );
-  }
-
-  private analyzeProductivityPattern(): 'early-bird' | 'night-owl' | 'consistent' {
-    // Cette analyse nécessiterait des données horaires détaillées
-    // Pour l'instant, nous retournons un pattern aléatoire
-    const patterns: ('early-bird' | 'night-owl' | 'consistent')[] = ['early-bird', 'night-owl', 'consistent'];
-    return patterns[Math.floor(Math.random() * patterns.length)];
+    return this.userHistory.filter(task => highMomentumIds.includes(task.id) && task.name);
   }
 
   private generateTagBasedRecommendations(): FeedbackMessage[] {
     const feedback: FeedbackMessage[] = [];
-    const tagCounts: Map<string, number> = new Map();
-    
-    // Compter les occurrences de chaque tag
+    const tagCounts = new Map<string, number>();
+
     this.userHistory.forEach(task => {
       if (task.tags) {
         task.tags.forEach(tag => {
@@ -372,11 +362,9 @@ export class FeedbackGenerator {
         });
       }
     });
-    
-    // Trouver les tags les plus fréquents
-    const sortedTags = Array.from(tagCounts.entries())
-      .sort((a, b) => b[1] - a[1]);
-    
+
+    const sortedTags = Array.from(tagCounts.entries()).sort((a, b) => b[1] - a[1]);
+
     if (sortedTags.length > 0) {
       const mostFrequentTag = sortedTags[0][0];
       feedback.push({
@@ -385,10 +373,10 @@ export class FeedbackGenerator {
         message: `Vous créez souvent des tâches liées à "${mostFrequentTag}".`,
         priority: 2,
         actionable: true,
-        suggestedAction: `Continuez à développer vos compétences dans "${mostFrequentTag}"`
+        suggestedAction: `Continuez à développer vos compétences dans "${mostFrequentTag}"`,
       });
     }
-    
+
     return feedback;
   }
 

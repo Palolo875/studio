@@ -1,5 +1,6 @@
 // Tests pour le gestionnaire de politique de décision - Phase 3.2
 import { applyStrictPolicy, applyAssistedPolicy, applyEmergencyPolicy } from '../decisionPolicyManager';
+
 import { BrainInput } from '../brainContracts';
 import { Task } from '../types';
 
@@ -8,15 +9,19 @@ describe('Decision Policy Manager - Phase 3.2', () => {
   const mockTasks: Task[] = [
     {
       id: "task-1",
-      name: "Tâche importante",
-      completed: false,
-      subtasks: [],
-      lastAccessed: new Date().toISOString(),
-      completionRate: 80,
-      priority: "high",
-      energyRequired: "medium",
-      estimatedDuration: 30,
-      tags: ["work"]
+      title: "Tâche importante",
+      description: undefined,
+      duration: 30,
+      effort: 'medium',
+      urgency: 'high',
+      impact: 'high',
+      deadline: undefined,
+      scheduledTime: undefined,
+      completionHistory: [],
+      category: 'work',
+      createdAt: new Date(),
+      origin: 'self_chosen',
+      hasTangibleResult: true,
     }
   ];
 
@@ -46,7 +51,12 @@ describe('Decision Policy Manager - Phase 3.2', () => {
       }
     },
     constraints: [],
-    history: []
+    history: [],
+    decisionPolicy: {
+      level: 'STRICT',
+      userConsent: true,
+      overrideCostVisible: true,
+    },
   };
 
   describe('applyStrictPolicy', () => {
@@ -59,7 +69,7 @@ describe('Decision Policy Manager - Phase 3.2', () => {
       
       // Vérifier la politique
       expect(result.metadata.policy.level).toBe("STRICT");
-      expect(result.metadata.policy.consentRequired).toBe(true);
+      expect(result.metadata.policy.userConsent).toBe(true);
       
       // Vérifier les garanties
       expect(result.guarantees.usedAIdecision).toBe(false);
@@ -77,7 +87,7 @@ describe('Decision Policy Manager - Phase 3.2', () => {
       
       // Vérifier la politique
       expect(result.metadata.policy.level).toBe("ASSISTED");
-      expect(result.metadata.policy.consentRequired).toBe(true);
+      expect(result.metadata.policy.userConsent).toBe(true);
       
       // Vérifier que des tâches sont sélectionnées
       expect(result.session.allowedTasks.length).toBeGreaterThanOrEqual(0);
@@ -94,7 +104,7 @@ describe('Decision Policy Manager - Phase 3.2', () => {
       
       // Vérifier la politique
       expect(result.metadata.policy.level).toBe("EMERGENCY");
-      expect(result.metadata.policy.consentRequired).toBe(true);
+      expect(result.metadata.policy.userConsent).toBe(true);
       
       // Vérifier les avertissements
       expect(result.warnings.length).toBeGreaterThan(0);

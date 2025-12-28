@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect, useTransition } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Bot, Mic, Sparkles, PlusCircle } from 'lucide-react';
@@ -11,6 +11,8 @@ import type { AnalyzeCaptureOutput } from '@/ai/flows/analyze-capture-flow';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
+import { upsertTasks, type DBTask } from '@/lib/database';
+import { useToast } from '@/hooks/use-toast';
 
 const initialState: { analysis: AnalyzeCaptureOutput | null; error: string | null } = {
   analysis: null,
@@ -21,16 +23,50 @@ export function CaptureClient() {
   const [content, setContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [state, formAction, isPending] = useActionState(handleAnalyzeCapture, initialState);
+  const { toast } = useToast();
 
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
   
-  const handleAddToTasks = () => {
-    // In a real app, this would add the tasks to the Reservoir
-    console.log("Adding tasks:", state.analysis?.tasks);
-    console.log("Adding notes:", state.analysis?.notes);
-    // Maybe clear the analysis after adding
+  const handleAddToTasks = async () => {
+    if (!state.analysis) return;
+
+    const now = new Date();
+    const tasks: DBTask[] = state.analysis.tasks.map((t, index) => ({
+      id: `capture_${now.getTime()}_${index}`,
+      title: t.title,
+      description: state.analysis?.notes ?? undefined,
+      duration: 30,
+      effort: 'medium',
+      urgency: t.priority ?? 'medium',
+      impact: 'medium',
+      deadline: undefined,
+      scheduledTime: undefined,
+      category: 'capture',
+      status: 'todo',
+      activationCount: 0,
+      lastActivated: now,
+      createdAt: now,
+      updatedAt: now,
+      completedAt: undefined,
+      tags: ['capture'],
+    }));
+
+    try {
+      await upsertTasks(tasks);
+      toast({
+        title: 'Ajouté',
+        description: `${tasks.length} tâche(s) ajoutée(s) à la bibliothèque.`,
+      });
+      setContent('');
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: "Impossible d'ajouter les tâches.",
+      });
+    }
   };
 
 

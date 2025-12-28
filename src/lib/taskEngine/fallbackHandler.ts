@@ -87,9 +87,7 @@ export function handleInconsistentHistoryFallback(tasks: Task[]): TaskPlaylist |
   // Si aucune tâche avec historique cohérent, utiliser toutes les tâches
   const tasksToUse = consistentTasks.length > 0 ? consistentTasks : tasks;
   
-  // Prendre 3 tâches aléatoires
-  const shuffled = [...tasksToUse].sort(() => 0.5 - Math.random());
-  const selectedTasks = shuffled.slice(0, 3);
+  const selectedTasks = tasksToUse.slice(0, 3);
   
   return {
     tasks: selectedTasks,
@@ -106,9 +104,7 @@ export function handleInconsistentHistoryFallback(tasks: Task[]): TaskPlaylist |
  * @returns Playlist de fallback par défaut
  */
 export function handleDefaultFallback(tasks: Task[]): TaskPlaylist {
-  // Prendre 3 tâches aléatoires
-  const shuffled = [...tasks].sort(() => 0.5 - Math.random());
-  const selectedTasks = shuffled.slice(0, 3);
+  const selectedTasks = tasks.slice(0, 3);
   
   return {
     tasks: selectedTasks,

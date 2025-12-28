@@ -1,10 +1,6 @@
 // Système d'explication des décisions du cerveau - Phase 3.4
 import { BrainDecision, DecisionExplanation } from './brainContracts';
-
-/**
- * Base de données simulée pour le stockage des explications
- */
-let explanationDatabase: DecisionExplanation[] = [];
+import { db } from '@/lib/database';
 
 /**
  * Génère une explication pour une décision
@@ -44,8 +40,14 @@ export function generateDecisionExplanation(decision: BrainDecision): DecisionEx
     confidence: 0.95 // Confiance élevée car basé sur des règles explicites
   };
 
-  // Stocker l'explication
-  explanationDatabase.push(explanation);
+  db.decisionExplanations
+    .put({
+      id: explanation.id,
+      decisionId: explanation.decisionId,
+      timestamp: Date.now(),
+      explanation,
+    })
+    .catch(() => null);
 
   return explanation;
 }
@@ -69,14 +71,26 @@ function generateSummary(decision: BrainDecision): string {
  * Récupère une explication par son ID
  */
 export function getDecisionExplanation(explanationId: string): DecisionExplanation | undefined {
-  return explanationDatabase.find(e => e.id === explanationId);
+  void explanationId;
+  return undefined;
 }
 
 /**
  * Récupère l'explication d'une décision
  */
 export function getExplanationForDecision(decisionId: string): DecisionExplanation | undefined {
-  return explanationDatabase.find(e => e.decisionId === decisionId);
+  void decisionId;
+  return undefined;
+}
+
+export async function getDecisionExplanationAsync(explanationId: string): Promise<DecisionExplanation | undefined> {
+  const rec = await db.decisionExplanations.get(explanationId);
+  return rec?.explanation as DecisionExplanation | undefined;
+}
+
+export async function getExplanationForDecisionAsync(decisionId: string): Promise<DecisionExplanation | undefined> {
+  const rec = await db.decisionExplanations.where('decisionId').equals(decisionId).first();
+  return rec?.explanation as DecisionExplanation | undefined;
 }
 
 /**

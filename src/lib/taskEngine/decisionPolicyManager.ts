@@ -68,7 +68,7 @@ export function applyStrictPolicy(input: BrainInput): BrainOutput {
       decisionId: generateDecisionId(),
       timestamp: new Date(),
       brainVersion: "1.1.0",
-      policy: { level: "STRICT", consentRequired: true, overrideCostVisible: true },
+      policy: { level: "STRICT", userConsent: true, overrideCostVisible: true },
       overrideEvents: []
     }
   };
@@ -124,7 +124,7 @@ export function applyAssistedPolicy(input: BrainInput): BrainOutput {
       decisionId: generateDecisionId(),
       timestamp: new Date(),
       brainVersion: "1.1.0",
-      policy: { level: "ASSISTED", consentRequired: true, overrideCostVisible: true },
+      policy: { level: "ASSISTED", userConsent: true, overrideCostVisible: true },
       overrideEvents: []
     }
   };
@@ -177,7 +177,7 @@ export function applyEmergencyPolicy(input: BrainInput): BrainOutput {
       decisionId: generateDecisionId(),
       timestamp: new Date(),
       brainVersion: "1.1.0",
-      policy: { level: "EMERGENCY", consentRequired: true, overrideCostVisible: true },
+      policy: { level: "EMERGENCY", userConsent: true, overrideCostVisible: true },
       overrideEvents: []
     }
   };
@@ -187,7 +187,7 @@ export function applyEmergencyPolicy(input: BrainInput): BrainOutput {
  * Génère un ID de décision unique
  */
 function generateDecisionId(): string {
-  return `decision_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `decision_${Date.now()}`;
 }
 
 /**

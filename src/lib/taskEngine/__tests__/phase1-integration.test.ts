@@ -46,7 +46,7 @@ import { Task, EnergyState } from '../types';
 function createTestTask(overrides: Partial<Task> = {}): Task {
   const now = new Date();
   return {
-    id: `task-${Math.random().toString(36).substr(2, 9)}`,
+    id: `task-${now.getTime()}`,
     title: 'Test task',
     duration: 30,
     effort: 'medium',

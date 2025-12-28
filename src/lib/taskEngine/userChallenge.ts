@@ -49,7 +49,7 @@ export function getChallengesForDecision(decisionId: string): UserChallenge[] {
  * Génère un ID de contestation unique
  */
 function generateChallengeId(): string {
-  return `challenge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `challenge_${Date.now()}`;
 }
 
 /**

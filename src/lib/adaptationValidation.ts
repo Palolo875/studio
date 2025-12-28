@@ -71,7 +71,7 @@ export class AdaptationValidationManager {
   
   // Générer un ID unique
   private generateId(): string {
-    return 'adapt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    return 'adapt_' + Date.now();
   }
   
   // Afficher le modal de proposition d'adaptation

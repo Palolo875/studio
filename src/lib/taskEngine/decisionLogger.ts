@@ -1,96 +1,95 @@
 // Système de logging des décisions du cerveau - Phase 3.4
 import { BrainDecision, BrainVersion } from './brainContracts';
-
-/**
- * Base de données simulée pour le stockage des décisions
- */
-export let decisionDatabase: BrainDecision[] = [];
-(global as any).decisionDatabase = decisionDatabase; // Exposition globale pour le replay
-
-let versionDatabase: BrainVersion[] = [];
+import { db, type DBBrainDecision } from '@/lib/database';
 
 /**
  * Loggue une décision du cerveau
  */
-export function logBrainDecision(decision: BrainDecision): void {
-  decisionDatabase.push(decision);
-  console.log(`[BrainDecision] Décision logguée: ${decision.id} (Total: ${decisionDatabase.length})`);
+export async function logBrainDecision(decision: BrainDecision): Promise<void> {
+  const record: DBBrainDecision = {
+    id: decision.id,
+    timestamp: decision.timestamp.getTime(),
+    brainVersion: decision.brainVersion.id,
+    input: decision.inputs,
+    output: decision.outputs,
+    trace: decision,
+  };
+
+  await db.brainDecisions.put(record);
 }
 
 /**
  * Récupère une décision par son ID
  */
-export function getBrainDecision(decisionId: string): BrainDecision | undefined {
-  return decisionDatabase.find(d => d.id === decisionId);
+export async function getBrainDecision(decisionId: string): Promise<BrainDecision | undefined> {
+  const record = await db.brainDecisions.get(decisionId);
+  return (record?.trace as BrainDecision | undefined) ?? undefined;
 }
 
 /**
  * Récupère toutes les décisions
  */
-export function getAllBrainDecisions(): BrainDecision[] {
-  return [...decisionDatabase];
+export async function getAllBrainDecisions(): Promise<BrainDecision[]> {
+  const records = await db.brainDecisions.toArray();
+  return records
+    .map(r => r.trace as BrainDecision)
+    .filter(Boolean);
 }
 
 /**
  * Rejoue une décision précédente
  */
-export function replayDecision(decisionId: string): BrainDecision | null {
-  const decision = getBrainDecision(decisionId);
+export async function replayDecision(decisionId: string): Promise<BrainDecision | null> {
+  const decision = await getBrainDecision(decisionId);
   if (!decision) {
     console.warn(`[BrainDecision] Décision ${decisionId} non trouvée pour le replay`);
     return null;
   }
-
-  // Dans une vraie implémentation, cela rechargerait le cerveau 
-  // avec la version exacte utilisée à l'origine
-  console.log(`[BrainDecision] Rejeu de la décision: ${decisionId}`);
   return decision;
 }
 
 /**
  * Enregistre une version du cerveau
  */
-export function registerBrainVersion(version: BrainVersion): void {
-  versionDatabase.push(version);
-  console.log(`[BrainVersion] Version enregistrée: ${version.id}`);
+export async function registerBrainVersion(version: BrainVersion): Promise<void> {
+  await db.brainVersions.put(version);
 }
 
 /**
  * Récupère une version du cerveau par son ID
  */
-export function getBrainVersion(versionId: string): BrainVersion | undefined {
-  return versionDatabase.find(v => v.id === versionId);
+export async function getBrainVersion(versionId: string): Promise<BrainVersion | undefined> {
+  return db.brainVersions.get(versionId);
 }
 
 /**
  * Génère un ID de version basé sur le hash des règles
  */
 export function generateVersionId(rules: any): string {
-  // Dans une vraie implémentation, cela utiliserait un vrai hash
-  return `version_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const payload = JSON.stringify(rules ?? {});
+  let hash = 5381;
+  for (let i = 0; i < payload.length; i += 1) {
+    hash = (hash * 33) ^ payload.charCodeAt(i);
+  }
+  return `version_${(hash >>> 0).toString(16)}`;
 }
 
 /**
  * Nettoie l'historique des décisions (pour éviter l'explosion mémoire)
  */
-export function pruneDecisionHistory(maxAgeDays: number = 30): void {
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
+export async function pruneDecisionHistory(maxAgeDays: number = 30): Promise<number> {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - maxAgeDays);
+  const cutoffTs = cutoff.getTime();
 
-  const initialLength = decisionDatabase.length;
-  decisionDatabase = decisionDatabase.filter(d => d.timestamp > cutoffDate);
-
-  console.log(`[BrainDecision] Nettoyage effectué: ${initialLength - decisionDatabase.length} décisions supprimées`);
+  const deleted = await db.brainDecisions.where('timestamp').below(cutoffTs).delete();
+  return deleted;
 }
 
 /**
  * Archive les décisions anciennes
  */
-export function archiveOldDecisions(maxAgeDays: number = 7): void {
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
-
-  const oldDecisions = decisionDatabase.filter(d => d.timestamp <= cutoffDate);
-  // Dans une vraie implémentation, cela les déplacerait dans un stockage d'archive
-  console.log(`[BrainDecision] ${oldDecisions.length} décisions archivées`);
+export async function archiveOldDecisions(maxAgeDays: number = 7): Promise<number> {
+  // Pour l’instant, on “archive” en supprimant (pas de table d’archive dédiée).
+  return pruneDecisionHistory(maxAgeDays);
 }
