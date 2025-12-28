@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
@@ -52,6 +51,17 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '../ui/progress';
+import {
+  getAllTasks,
+  createTask,
+  updateTask as updateDbTask,
+  deleteTask as deleteDbTask,
+  completeTask as completeDbTask,
+  type DBTask,
+} from '@/lib/database';
+
+type ReservoirStatus = 'todo' | 'active' | 'frozen' | 'done';
+type ReservoirTask = Task & { status?: ReservoirStatus };
 
 type Filters = {
   status: 'all' | 'completed' | 'not_completed';
@@ -62,15 +72,47 @@ type Filters = {
 };
 
 type GroupedTasks = {
-  [key: string]: Task[];
+  [key: string]: ReservoirTask[];
 };
 
 type ViewMode = 'list' | 'grid' | 'masonry' | 'kanban';
 
+function dbToUiTask(t: DBTask): ReservoirTask {
+  const uiEffort: ReservoirTask['effort'] = t.duration <= 15 ? 'S' : t.duration <= 120 ? 'M' : 'L';
+  return {
+    id: t.id,
+    name: t.title,
+    completed: t.status === 'done',
+    status: t.status === 'done' ? 'done' : 'todo',
+    subtasks: [],
+    lastAccessed: (t.updatedAt || t.createdAt).toISOString(),
+    completionRate: t.status === 'done' ? 100 : 0,
+    description: t.description,
+    priority: t.urgency === 'urgent' ? 'high' : (t.urgency as any),
+    energyRequired: t.effort as any,
+    estimatedDuration: t.duration,
+    effort: uiEffort,
+    tags: t.tags,
+    completedAt: t.completedAt ? t.completedAt.toISOString() : undefined,
+    scheduledDate: t.deadline ? t.deadline.toISOString() : undefined,
+  };
+}
 
-export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: Task[] }) {
-  const [tasks, setTasks] = useState<Task[]>(defaultTasks);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+function uiPriorityToUrgency(priority?: Task['priority']): DBTask['urgency'] {
+  if (!priority) return 'medium';
+  if (priority === 'high') return 'high';
+  if (priority === 'low') return 'low';
+  return 'medium';
+}
+
+function uiEnergyToEffort(energy?: Task['energyRequired']): DBTask['effort'] {
+  if (!energy) return 'medium';
+  return energy as any;
+}
+
+export function ReservoirClient() {
+  const [tasks, setTasks] = useState<ReservoirTask[]>([]);
+  const [selectedTask, setSelectedTask] = useState<ReservoirTask | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
@@ -87,8 +129,25 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const { toast } = useToast();
 
-  const [sheetTaskData, setSheetTaskData] = useState<Partial<Task>>({});
+  const [sheetTaskData, setSheetTaskData] = useState<Partial<ReservoirTask>>({});
   const [newSubtask, setNewSubtask] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const dbTasks = await getAllTasks();
+        if (cancelled) return;
+        setTasks(dbTasks.map(dbToUiTask));
+      } catch {
+        if (cancelled) return;
+        setTasks([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
 
   // Debounce search term
@@ -102,7 +161,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
 
   const dateRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
 
-  const handleTaskClick = (task: Task) => {
+  const handleTaskClick = (task: ReservoirTask) => {
     setSelectedTask(task);
     setSheetTaskData(task);
     setIsEditing(false); // Start in read-only mode
@@ -110,13 +169,14 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
   };
 
   const handleAddNewClick = () => {
-    const newTaskTemplate: Partial<Task> = {
+    const newTaskTemplate: Partial<ReservoirTask> = {
       name: '',
       description: '',
       priority: 'medium',
       subtasks: [],
       completionRate: 0,
       autoSelected: true,
+      status: 'todo',
     };
     setSelectedTask(null);
     setSheetTaskData(newTaskTemplate);
@@ -132,27 +192,39 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
   };
 
   const handleDeleteTask = (taskId: string) => {
-    setTasks(tasks.filter((task) => task.id !== taskId));
-    handleSheetClose();
+    void (async () => {
+      await deleteDbTask(taskId);
+      setTasks(current => current.filter((task) => task.id !== taskId));
+      handleSheetClose();
+    })();
   };
 
   const handleBatchDelete = () => {
-    setTasks(tasks.filter((task) => !selectedTasks.includes(task.id)));
-    setSelectedTasks([]);
+    void (async () => {
+      await Promise.all(selectedTasks.map(id => deleteDbTask(id)));
+      setTasks(current => current.filter((task) => !selectedTasks.includes(task.id)));
+      setSelectedTasks([]);
+    })();
   };
 
   const handleBatchArchive = () => {
-    setTasks(tasks.map(task => 
-      selectedTasks.includes(task.id) ? { ...task, completed: true } : task
-    ));
-    setSelectedTasks([]);
+    void (async () => {
+      await Promise.all(selectedTasks.map(id => completeDbTask(id)));
+      setTasks(current => current.map(task => (
+        selectedTasks.includes(task.id) ? { ...task, completed: true, completionRate: 100, completedAt: new Date().toISOString() } : task
+      )));
+      setSelectedTasks([]);
+    })();
   };
 
   const handleBatchPriorityChange = (priority: 'low' | 'medium' | 'high') => {
-    setTasks(tasks.map(task => 
-      selectedTasks.includes(task.id) ? { ...task, priority } : task
-    ));
-    setSelectedTasks([]);
+    void (async () => {
+      await Promise.all(selectedTasks.map(id => updateDbTask(id, { urgency: uiPriorityToUrgency(priority) })));
+      setTasks(current => current.map(task => (
+        selectedTasks.includes(task.id) ? { ...task, priority } : task
+      )));
+      setSelectedTasks([]);
+    })();
   };
 
   const handleSaveTask = (e: React.FormEvent<HTMLFormElement>) => {
@@ -167,23 +239,53 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     
     finalTaskData.completed = finalTaskData.completionRate === 100;
 
-    if (!selectedTask) { // Creating a new task
-      const newTask: Task = {
-        id: `task-${Date.now()}`,
-        lastAccessed: new Date().toISOString(),
-        ...finalTaskData,
-      } as Task;
-      setTasks([newTask, ...tasks]);
-    } else { // Updating an existing task
-      const updatedTasks = tasks.map((task) =>
-        task.id === selectedTask.id ? { ...task, ...finalTaskData } as Task : task
-      );
-      setTasks(updatedTasks);
-    }
-    handleSheetClose();
+    void (async () => {
+      const now = new Date();
+
+      if (!selectedTask) {
+        const id = `task_${now.getTime()}`;
+        const created: Omit<DBTask, 'createdAt' | 'updatedAt' | 'activationCount'> = {
+          id,
+          title: (finalTaskData.name || '').trim() || 'Sans titre',
+          description: finalTaskData.description,
+          duration: finalTaskData.estimatedDuration ?? 30,
+          effort: uiEnergyToEffort(finalTaskData.energyRequired),
+          urgency: uiPriorityToUrgency(finalTaskData.priority),
+          impact: 'medium',
+          deadline: finalTaskData.scheduledDate ? new Date(finalTaskData.scheduledDate) : undefined,
+          scheduledTime: undefined,
+          category: 'reservoir',
+          status: finalTaskData.completed ? 'done' : 'todo',
+          lastActivated: undefined,
+          completedAt: finalTaskData.completed ? now : undefined,
+          tags: finalTaskData.tags,
+        };
+        const newDbTask = await createTask(created);
+        const newUiTask = dbToUiTask(newDbTask);
+        setTasks(current => [newUiTask, ...current]);
+      } else {
+        await updateDbTask(selectedTask.id, {
+          title: (finalTaskData.name || '').trim() || selectedTask.name,
+          description: finalTaskData.description,
+          duration: finalTaskData.estimatedDuration ?? 30,
+          effort: uiEnergyToEffort(finalTaskData.energyRequired),
+          urgency: uiPriorityToUrgency(finalTaskData.priority),
+          deadline: finalTaskData.scheduledDate ? new Date(finalTaskData.scheduledDate) : undefined,
+          tags: finalTaskData.tags,
+          status: finalTaskData.completed ? 'done' : 'todo',
+          completedAt: finalTaskData.completed ? now : undefined,
+        });
+
+        setTasks(current => current.map((task) =>
+          task.id === selectedTask.id ? { ...task, ...finalTaskData, lastAccessed: now.toISOString() } as ReservoirTask : task
+        ));
+      }
+
+      handleSheetClose();
+    })();
   };
   
-  const handleSheetDataChange = (field: keyof Task, value: any) => {
+  const handleSheetDataChange = (field: keyof ReservoirTask, value: any) => {
     setSheetTaskData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -462,7 +564,7 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
   );
   
   const KanbanBoard = () => {
-    const kanbanColumns: { title: string, status: Task['status'] }[] = [
+    const kanbanColumns: { title: string, status: ReservoirStatus }[] = [
         { title: 'À faire', status: 'todo' },
         { title: 'En cours', status: 'active' },
         { title: 'En attente', status: 'frozen' },
@@ -472,9 +574,9 @@ export function ReservoirClient({ initialTasks: defaultTasks }: { initialTasks: 
     const allTasks = sortedGroupKeys.flatMap(key => filteredAndGroupedTasks[key]);
 
     const tasksByStatus = kanbanColumns.reduce((acc, col) => {
-        acc[col.status!] = allTasks.filter(task => (task.status || 'todo') === col.status);
+        acc[col.status] = allTasks.filter(task => (task.status || 'todo') === col.status);
         return acc;
-    }, {} as Record<string, Task[]>);
+    }, {} as Record<ReservoirStatus, ReservoirTask[]>);
 
     return (
       <div className="flex gap-6 pb-4">

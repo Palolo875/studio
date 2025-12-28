@@ -14,7 +14,7 @@ interface FocusModeProps {
   taskName: string;
   taskId: string;
   onClose?: () => void;
-  onTaskComplete?: (taskId: string) => void;
+  onTaskComplete?: (taskId: string) => void | Promise<void>;
 }
 
 export function FocusMode({ 
@@ -48,9 +48,8 @@ export function FocusMode({
     }
   };
 
-  const handleTaskComplete = () => {
-    // Marquer la tâche comme terminée
-    onTaskComplete?.(taskId);
+  const handleTaskComplete = async () => {
+    await Promise.resolve(onTaskComplete?.(taskId));
     
     // Afficher le toast de félicitations
     toast({
@@ -86,7 +85,7 @@ export function FocusMode({
             <Button 
             variant="ghost" 
             size="sm" 
-            onClick={handleTaskComplete}
+            onClick={() => void handleTaskComplete()}
             className="rounded-full text-green-600 hover:text-green-700 hover:bg-green-50"
             >
             <Check className="h-5 w-5" />

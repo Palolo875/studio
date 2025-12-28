@@ -3,21 +3,7 @@
  * Gère le stockage en masse, les statistiques et le rafraîchissement de l'UI
  */
 
-// Simulation de Dexie pour éviter les problèmes d'import
-class Dexie {
-  table(name: string) {
-    return {
-      bulkAdd: (items: any[]) => Promise.resolve(items),
-      bulkPut: (items: any[]) => Promise.resolve(items),
-      get: (key: string) => Promise.resolve({}),
-      update: (key: string, updates: any) => Promise.resolve()
-    };
-  }
-  
-  transaction(mode: string, table: any, callback: () => Promise<any>) {
-    return callback();
-  }
-}
+import { upsertTasks, type DBTask } from '@/lib/database';
 
 export class NlpTaskStorage {
   private db: any;
@@ -25,10 +11,7 @@ export class NlpTaskStorage {
 
   constructor(db: any) {
     this.db = db;
-    // Simulation de l'accès à la table tasks
-    this.tasks = {
-      bulkPut: (items: any[]) => Promise.resolve(items)
-    };
+    this.tasks = db?.tasks;
   }
 
   async bulkStoreTasks(tasks: any[]): Promise<void> {
@@ -36,15 +19,14 @@ export class NlpTaskStorage {
     // Note: Dans une vraie implémentation, nous utiliserions:
     // await this.db.transaction('rw', this.tasks, async () => {
     console.log('Stockage en masse des tâches NLP:', tasks.length);
-    
+
     try {
-      // 1. Bulk insert avec conflit update
-      // await this.tasks.bulkPut(tasks, { allKeys: true });
-      console.log('Tâches stockées avec succès');
-      
+      const dbTasks = tasks as DBTask[];
+      await upsertTasks(dbTasks);
+
       // 2. Update stats quotidiennes
       await this.updateDailyStats(tasks);
-      
+
       // 3. Trigger playlist refresh si aujourd'hui
       if (tasks.some(t => this.isTodayTask(t))) {
         await this.triggerPlaylistRefresh();

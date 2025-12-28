@@ -258,6 +258,34 @@ export class FeedbackGenerator {
     return feedback.sort((a, b) => b.priority - a.priority);
   }
 
+  private analyzeProductivityPattern(): 'early-bird' | 'night-owl' | 'consistent' {
+    const completed = this.userHistory.filter(t => t.completedAt);
+    if (completed.length < 5) return 'consistent';
+
+    let morning = 0;
+    let evening = 0;
+
+    for (const task of completed) {
+      const ts = task.completedAt || task.lastAccessed;
+      if (!ts) continue;
+      const d = new Date(ts);
+      if (Number.isNaN(d.getTime())) continue;
+
+      const hour = d.getHours();
+      if (hour >= 6 && hour < 12) morning += 1;
+      else if (hour >= 18 || hour < 2) evening += 1;
+    }
+
+    const considered = morning + evening;
+    if (considered === 0) return 'consistent';
+
+    const morningRatio = morning / considered;
+    const eveningRatio = evening / considered;
+    if (morningRatio >= 0.6) return 'early-bird';
+    if (eveningRatio >= 0.6) return 'night-owl';
+    return 'consistent';
+  }
+
   /**
    * Génère tous les feedbacks combinés
    */

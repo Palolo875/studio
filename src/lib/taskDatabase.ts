@@ -1,6 +1,10 @@
-// Import temporaire en attendant l'installation de Dexie
-// import Dexie, { type Table } from 'dexie';
-import type { Task } from '@/lib/types';
+import type { Task, UserPatterns } from '@/lib/types';
+import {
+  getTodoTasksBulk as getTodoTasksBulkDexie,
+  getTaskHistoryBulk as getTaskHistoryBulkDexie,
+  updateUserPatternsInDB as updateUserPatternsInDBDexie,
+  getUserPatternsFromDB as getUserPatternsFromDBDexie,
+} from '@/lib/database';
 
 // Interface pour l'historique des tâches
 export interface TaskHistoryEntry {
@@ -10,62 +14,7 @@ export interface TaskHistoryEntry {
   completed: boolean;
 }
 
-// Simulation de la classe Dexie en attendant son installation
-class TaskDatabase {
-  tasks: any[] = [];
-  taskHistory: TaskHistoryEntry[] = [];
-  meta: any[] = [];
-  brainDecisions: any[] = [];
-  overrides: any[] = [];
-
-  version(versionNumber: number) {
-    return {
-      stores: (schema: any) => {
-        // Simulation de la méthode stores
-      }
-    };
-  }
-
-  /**
-   * Snapshot complet (Phase 5.3)
-   */
-  async createSnapshot(): Promise<string> {
-    const data = {
-      tasks: this.tasks,
-      history: this.taskHistory,
-      decisions: this.brainDecisions,
-      overrides: this.overrides
-    };
-    return JSON.stringify(data);
-  }
-
-  async restoreSnapshot(snapshot: string): Promise<void> {
-    const data = JSON.parse(snapshot);
-    this.tasks = data.tasks || [];
-    this.taskHistory = data.history || [];
-    this.brainDecisions = data.decisions || [];
-    this.overrides = data.overrides || [];
-  }
-
-  /**
-   * Nettoie les données anciennes pour libérer de l'espace (Phase 4.2)
-   */
-  async pruneData(days: number): Promise<number> {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-
-    const initialCount = this.taskHistory.length;
-    this.taskHistory = this.taskHistory.filter(entry =>
-      new Date(entry.timestamp) > cutoffDate
-    );
-
-    const removedCount = initialCount - this.taskHistory.length;
-    console.log(`[Database] Nettoyage : ${removedCount} entrées d'historique supprimées (> ${days} jours)`);
-    return removedCount;
-  }
-}
-
-export const db = new TaskDatabase();
+export const db = {} as const;
 
 /**
  * Récupère toutes les tâches 'todo' avec bulkGet
@@ -73,8 +22,7 @@ export const db = new TaskDatabase();
  */
 export async function getTodoTasksBulk(): Promise<Task[]> {
   try {
-    // Simulation de la récupération des tâches
-    return [];
+    return await getTodoTasksBulkDexie();
   } catch (error) {
     console.error('Erreur lors de la récupération des tâches todo:', error);
     return [];
@@ -86,8 +34,12 @@ export async function getTodoTasksBulk(): Promise<Task[]> {
  */
 export async function getTaskHistoryBulk(): Promise<TaskHistoryEntry[]> {
   try {
-    // Simulation de la récupération de l'historique
-    return [];
+    const completedTasks = await getTaskHistoryBulkDexie();
+    return completedTasks.map((t: Task) => ({
+      taskId: t.id,
+      timestamp: new Date(t.completedAt || t.lastAccessed),
+      completed: true,
+    }));
   } catch (error) {
     console.error('Erreur lors de la récupération de l\'historique:', error);
     return [];
@@ -97,9 +49,9 @@ export async function getTaskHistoryBulk(): Promise<TaskHistoryEntry[]> {
 /**
  * Met à jour les patterns utilisateur dans la base de données
  */
-export async function updateUserPatternsInDB(patterns: any): Promise<void> {
+export async function updateUserPatternsInDB(patterns: UserPatterns): Promise<void> {
   try {
-    localStorage.setItem('userPatterns', JSON.stringify(patterns));
+    await updateUserPatternsInDBDexie(patterns);
   } catch (error) {
     console.error('Erreur lors de la mise à jour des patterns:', error);
   }
@@ -108,10 +60,9 @@ export async function updateUserPatternsInDB(patterns: any): Promise<void> {
 /**
  * Récupère les patterns utilisateur depuis la base de données
  */
-export async function getUserPatternsFromDB(): Promise<any> {
+export async function getUserPatternsFromDB(): Promise<UserPatterns | null> {
   try {
-    const patternsStr = localStorage.getItem('userPatterns');
-    return patternsStr ? JSON.parse(patternsStr) : null;
+    return await getUserPatternsFromDBDexie();
   } catch (error) {
     console.error('Erreur lors de la récupération des patterns:', error);
     return null;

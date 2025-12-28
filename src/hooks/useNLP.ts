@@ -12,6 +12,7 @@ import { NlpTaskStorage } from '@/lib/nlp/TaskStorage';
 import { nlpTelemetryService } from '@/lib/nlp/TelemetryService';
 import { createNLPContractResult } from '@/lib/nlp/NLPContract';
 import { basicRawCapture } from '@/lib/nlp/basicRawCapture';
+import { db, type DBTask } from '@/lib/database';
 
 // Type pour les tâches créées
 interface CreatedTask {
@@ -44,24 +45,6 @@ const useTaskStore = (): TaskStore => {
     }
   };
 };
-
-// Simulation de la base de données Dexie
-class Dexie {
-  table(name: string) {
-    return {
-      bulkAdd: (items: any[]) => Promise.resolve(items),
-      bulkPut: (items: any[]) => Promise.resolve(items),
-      get: (key: string) => Promise.resolve({}),
-      update: (key: string, updates: any) => Promise.resolve()
-    };
-  }
-  
-  transaction(mode: string, table: any, callback: () => Promise<any>) {
-    return callback();
-  }
-}
-
-const db = new Dexie();
 
 export function useNLP() {
   const { settings } = useSettingsStore();
@@ -98,7 +81,7 @@ export function useNLP() {
       );
       
       // ÉTAPE 4 : Fusion + Stockage ✅ NOUVEAU
-      const fullTasks = classifiedTasks.map(({ raw, classification }) => 
+      const fullTasks: DBTask[] = classifiedTasks.map(({ raw, classification }) => 
         createFullTask(raw, classification)
       );
       
@@ -107,7 +90,7 @@ export function useNLP() {
       
       // Stockage optimisé
       const storage = new NlpTaskStorage(db);
-      await storage.bulkStoreTasks(fullTasks as any);
+      await storage.bulkStoreTasks(fullTasks);
       
       // Refresh UI
       window.dispatchEvent(new CustomEvent('nlptasks:processed', {

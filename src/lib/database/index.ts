@@ -11,6 +11,7 @@
 
 import Dexie, { type Table } from 'dexie';
 import { createLogger } from '@/lib/logger';
+import type { Task as LegacyTask, UserPatterns as LegacyUserPatterns } from '@/lib/types';
 
 const logger = createLogger('Database');
 
@@ -94,6 +95,23 @@ export interface DBUserPattern {
     data: Record<string, unknown>;
     createdAt: Date;
     updatedAt: Date;
+}
+
+function toLegacyTask(task: DBTask): LegacyTask {
+    return {
+        id: task.id,
+        name: task.title,
+        completed: task.status === 'done',
+        subtasks: [],
+        lastAccessed: (task.updatedAt || task.createdAt).toISOString(),
+        completionRate: task.status === 'done' ? 100 : 0,
+        description: task.description,
+        priority: task.urgency === 'urgent' ? 'high' : (task.urgency as any),
+        energyRequired: task.effort as any,
+        estimatedDuration: task.duration,
+        tags: task.tags,
+        completedAt: task.completedAt ? task.completedAt.toISOString() : undefined,
+    };
 }
 
 export interface DBOverride {
@@ -278,6 +296,27 @@ export async function getTodoTasks(): Promise<DBTask[]> {
             .toArray();
     } catch (error) {
         logger.error('Failed to get todo tasks', error as Error);
+        return [];
+    }
+}
+
+/**
+ * Compat legacy: utilisé par l'ancien playlistGenerator (src/lib/playlistGenerator.ts)
+ */
+export async function getTodoTasksBulk(): Promise<LegacyTask[]> {
+    const tasks = await getTodoTasks();
+    return tasks.map(toLegacyTask);
+}
+
+/**
+ * Compat legacy: renvoie un historique approximé basé sur les tâches complétées.
+ */
+export async function getTaskHistoryBulk(): Promise<LegacyTask[]> {
+    try {
+        const doneTasks = await db.tasks.where('status').equals('done').toArray();
+        return doneTasks.map(toLegacyTask);
+    } catch (error) {
+        logger.error('Failed to get task history bulk', error as Error);
         return [];
     }
 }
@@ -519,6 +558,35 @@ export async function saveUserPattern(pattern: DBUserPattern): Promise<void> {
     } catch (error) {
         logger.error('Failed to save user pattern', error as Error);
         throw error;
+    }
+}
+
+/**
+ * Compat legacy: ancien API playlistGenerator.
+ */
+export async function updateUserPatternsInDB(patterns: LegacyUserPatterns): Promise<void> {
+    const now = new Date();
+    await saveUserPattern({
+        id: 'local_playlist',
+        userId: 'local',
+        patternType: 'playlist',
+        data: patterns as unknown as Record<string, unknown>,
+        createdAt: now,
+        updatedAt: now,
+    });
+}
+
+/**
+ * Compat legacy: ancien API playlistGenerator.
+ */
+export async function getUserPatternsFromDB(): Promise<LegacyUserPatterns | null> {
+    try {
+        const row = await db.userPatterns.get('local_playlist');
+        if (!row) return null;
+        return row.data as unknown as LegacyUserPatterns;
+    } catch (error) {
+        logger.error('Failed to get user patterns (legacy)', error as Error);
+        return null;
     }
 }
 

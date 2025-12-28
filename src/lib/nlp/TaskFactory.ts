@@ -4,39 +4,33 @@
  */
 import type { RawTaskWithContract } from '@/lib/nlp/NLPContract';
 import type { TaskClassification } from './TaskClassifier';
-import type { Task } from '@/lib/types';
+import type { DBTask } from '@/lib/database';
 
 export function createFullTask(
   rawTask: RawTaskWithContract,
   classification: TaskClassification & { isUncertain: boolean; unknown?: boolean }
-): Task {
+): DBTask {
   const baseContent = `${rawTask.action} ${rawTask.object}`.trim();
+  const now = new Date();
 
   return {
     id: rawTask.id,
     title: baseContent,
-
-    // Propriétés de base
-    createdAt: new Date(),
+    description: buildNlpNotes(rawTask, classification),
     duration: effortToMinutes(classification.effort),
     effort: mapEffort(classification.effort),
     urgency: mapUrgency(classification.urgency),
-    impact: 'medium', // Défaut Phase 1
+    impact: 'medium',
+    deadline: undefined,
+    scheduledTime: undefined,
     category: classification.energyType,
     status: 'todo',
-    completionHistory: [],
-
-    // Métadonnées NLP (Phase 2 - Zone de Quarantaine)
-    nlpMetadata: {
-      detectedLang: rawTask.metadata.detectedLang,
-      energySuggestion: classification.energyType,
-      effortSuggestion: classification.effort,
-      confidence: Math.min(rawTask.confidence, classification.energyConfidence),
-      isUncertain: classification.isUncertain || (classification.unknown ?? false),
-      rawText: rawTask.rawText
-    },
-
-    description: buildNlpNotes(rawTask, classification),
+    activationCount: 0,
+    lastActivated: undefined,
+    createdAt: now,
+    updatedAt: now,
+    completedAt: undefined,
+    tags: classification.autoTags,
   };
 }
 
