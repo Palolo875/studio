@@ -7,15 +7,14 @@ import { ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
+import { setSetting } from '@/lib/database';
 
 export default function OnboardingWelcomePage() {
   const [name, setName] = useState('');
   const router = useRouter();
 
   const handleNext = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('onboardingName', name);
-    }
+    void setSetting('onboarding.name', name);
     router.push('/onboarding/energy-quiz');
   };
 

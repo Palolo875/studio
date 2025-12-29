@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { LanguageDetector } from '@/lib/nlp/LanguageDetector';
+import { createLogger } from '@/lib/logger';
+import { getSetting, setSetting } from '@/lib/database';
+
+const logger = createLogger('useSettingsStore');
 
 // Interface pour les paramètres de l'application
 interface Settings {
@@ -37,65 +41,77 @@ export function useSettingsStore() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Charger les paramètres depuis localStorage
+  // Charger les paramètres depuis Dexie (remplace localStorage)
   useEffect(() => {
-    try {
-      const savedSettings = localStorage.getItem('appSettings');
-      if (savedSettings) {
-        const parsedSettings = JSON.parse(savedSettings);
-        
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const parsedSettings = await getSetting<Partial<Settings>>('appSettings');
+        if (!parsedSettings) {
+          return;
+        }
+
         // Valider les paramètres
         const validatedSettings: Settings = {
-          workDuration: typeof parsedSettings.workDuration === 'number' 
-            ? parsedSettings.workDuration 
+          workDuration: typeof parsedSettings.workDuration === 'number'
+            ? parsedSettings.workDuration
             : DEFAULT_SETTINGS.workDuration,
-          breakDuration: typeof parsedSettings.breakDuration === 'number' 
-            ? parsedSettings.breakDuration 
+          breakDuration: typeof parsedSettings.breakDuration === 'number'
+            ? parsedSettings.breakDuration
             : DEFAULT_SETTINGS.breakDuration,
-          autoSaveNotes: typeof parsedSettings.autoSaveNotes === 'boolean' 
-            ? parsedSettings.autoSaveNotes 
+          autoSaveNotes: typeof parsedSettings.autoSaveNotes === 'boolean'
+            ? parsedSettings.autoSaveNotes
             : DEFAULT_SETTINGS.autoSaveNotes,
-          soundEnabled: typeof parsedSettings.soundEnabled === 'boolean' 
-            ? parsedSettings.soundEnabled 
+          soundEnabled: typeof parsedSettings.soundEnabled === 'boolean'
+            ? parsedSettings.soundEnabled
             : DEFAULT_SETTINGS.soundEnabled,
           language: typeof parsedSettings.language === 'string' && ['fr', 'en', 'es'].includes(parsedSettings.language)
-            ? parsedSettings.language as 'fr' | 'en' | 'es'
+            ? (parsedSettings.language as 'fr' | 'en' | 'es')
             : DEFAULT_SETTINGS.language,
-          autoDetectLanguage: typeof parsedSettings.autoDetectLanguage === 'boolean' 
-            ? parsedSettings.autoDetectLanguage 
+          autoDetectLanguage: typeof parsedSettings.autoDetectLanguage === 'boolean'
+            ? parsedSettings.autoDetectLanguage
             : DEFAULT_SETTINGS.autoDetectLanguage,
-          languageConfidenceThreshold: typeof parsedSettings.languageConfidenceThreshold === 'number' 
-            ? Math.max(0, Math.min(1, parsedSettings.languageConfidenceThreshold)) // Entre 0 et 1
+          languageConfidenceThreshold: typeof parsedSettings.languageConfidenceThreshold === 'number'
+            ? Math.max(0, Math.min(1, parsedSettings.languageConfidenceThreshold))
             : DEFAULT_SETTINGS.languageConfidenceThreshold,
-          preferredLanguages: Array.isArray(parsedSettings.preferredLanguages) 
+          preferredLanguages: Array.isArray(parsedSettings.preferredLanguages)
             ? parsedSettings.preferredLanguages.filter((lang: string) => ['fr', 'en', 'es'].includes(lang)) as ('fr' | 'en' | 'es')[]
             : DEFAULT_SETTINGS.preferredLanguages,
-          enableAdvancedLanguageDetection: typeof parsedSettings.enableAdvancedLanguageDetection === 'boolean' 
-            ? parsedSettings.enableAdvancedLanguageDetection 
+          enableAdvancedLanguageDetection: typeof parsedSettings.enableAdvancedLanguageDetection === 'boolean'
+            ? parsedSettings.enableAdvancedLanguageDetection
             : DEFAULT_SETTINGS.enableAdvancedLanguageDetection,
         };
-        
-        setSettings(validatedSettings);
+
+        if (!cancelled) {
+          setSettings(validatedSettings);
+        }
+      } catch (error) {
+        logger.error('Erreur lors du chargement des paramètres', error as Error);
+        if (!cancelled) {
+          setSettings(DEFAULT_SETTINGS);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
-    } catch (error) {
-      console.error('Erreur lors du chargement des paramètres:', error);
-      // Utiliser les paramètres par défaut en cas d'erreur
-      setSettings(DEFAULT_SETTINGS);
-    } finally {
-      setIsLoading(false);
     }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Sauvegarder les paramètres dans localStorage
+  // Sauvegarder les paramètres dans Dexie (remplace localStorage)
   const updateSettings = (newSettings: Partial<Settings>) => {
     const updatedSettings = { ...settings, ...newSettings };
     setSettings(updatedSettings);
     
-    try {
-      localStorage.setItem('appSettings', JSON.stringify(updatedSettings));
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde des paramètres:', error);
-    }
+    void setSetting('appSettings', updatedSettings).catch((error) => {
+      logger.error('Erreur lors de la sauvegarde des paramètres', error as Error);
+    });
   };
 
   // Détecter la langue d'un texte avec paramètres SOTA

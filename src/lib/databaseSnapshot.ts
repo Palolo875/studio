@@ -3,7 +3,10 @@
  * Fournit les fonctionnalités createSnapshot() et restoreSnapshot() manquantes
  */
 
+import { createLogger } from '@/lib/logger';
 import { db } from './database/index';
+
+const logger = createLogger('DatabaseSnapshot');
 
 // Interface pour un snapshot de base de données
 export interface DatabaseSnapshot {
@@ -16,6 +19,7 @@ export interface DatabaseSnapshot {
     overrides: any[];
     sleepData: any[];
     eveningEntries: any[];
+    settings: any[];
     brainDecisions: any[];
     decisionExplanations: any[];
     adaptationSignals: any[];
@@ -38,7 +42,7 @@ export class DatabaseSnapshotManager {
    */
   static async createSnapshot(): Promise<DatabaseSnapshot> {
     try {
-      console.log('[Snapshot] Création du snapshot de la base de données...');
+      logger.info('Création du snapshot de la base de données');
       
       // Récupérer toutes les données de toutes les tables
       const [
@@ -48,6 +52,7 @@ export class DatabaseSnapshotManager {
         sleepData,
         taskHistory,
         eveningEntries,
+        settings,
         brainDecisions,
         decisionExplanations,
         adaptationSignals,
@@ -59,6 +64,7 @@ export class DatabaseSnapshotManager {
         db.sleepData.toArray(),
         db.taskHistory.toArray(),
         (db as any).eveningEntries?.toArray?.() ?? Promise.resolve([]),
+        (db as any).settings?.toArray?.() ?? Promise.resolve([]),
         db.brainDecisions.toArray(),
         db.decisionExplanations.toArray(),
         db.adaptationSignals.toArray(),
@@ -75,6 +81,7 @@ export class DatabaseSnapshotManager {
           sleepData,
           taskHistory,
           eveningEntries,
+          settings,
           brainDecisions,
           decisionExplanations,
           adaptationSignals,
@@ -87,6 +94,7 @@ export class DatabaseSnapshotManager {
             sleepData.length +
             taskHistory.length +
             eveningEntries.length +
+            settings.length +
             brainDecisions.length +
             decisionExplanations.length +
             adaptationSignals.length +
@@ -98,6 +106,7 @@ export class DatabaseSnapshotManager {
             sleepData,
             taskHistory,
             eveningEntries,
+            settings,
             brainDecisions,
             decisionExplanations,
             adaptationSignals,
@@ -110,6 +119,7 @@ export class DatabaseSnapshotManager {
             sleepData,
             taskHistory,
             eveningEntries,
+            settings,
             brainDecisions,
             decisionExplanations,
             adaptationSignals,
@@ -118,10 +128,10 @@ export class DatabaseSnapshotManager {
         }
       };
 
-      console.log(`[Snapshot] Snapshot créé avec ${snapshot.metadata.totalRecords} enregistrements`);
+      logger.info('Snapshot créé', { totalRecords: snapshot.metadata.totalRecords });
       return snapshot;
     } catch (error) {
-      console.error('[Snapshot] Erreur lors de la création du snapshot:', error);
+      logger.error('Erreur lors de la création du snapshot', error as Error);
       throw error;
     }
   }
@@ -132,7 +142,7 @@ export class DatabaseSnapshotManager {
    */
   static async restoreSnapshot(snapshot: DatabaseSnapshot): Promise<void> {
     try {
-      console.log('[Snapshot] Restauration de la base de données...');
+      logger.info('Restauration de la base de données');
 
       // Transaction atomique: soit tout est restauré, soit rien.
       await (db as any).transaction(
@@ -143,6 +153,7 @@ export class DatabaseSnapshotManager {
         db.sleepData,
         db.taskHistory,
         (db as any).eveningEntries,
+        (db as any).settings,
         db.brainDecisions,
         db.decisionExplanations,
         db.adaptationSignals,
@@ -155,6 +166,7 @@ export class DatabaseSnapshotManager {
             db.sleepData.clear(),
             db.taskHistory.clear(),
             (db as any).eveningEntries?.clear?.(),
+            (db as any).settings?.clear?.(),
             db.brainDecisions.clear(),
             db.decisionExplanations.clear(),
             db.adaptationSignals.clear(),
@@ -168,6 +180,7 @@ export class DatabaseSnapshotManager {
             db.sleepData.bulkAdd(snapshot.data.sleepData),
             db.taskHistory.bulkAdd(snapshot.data.taskHistory),
             (db as any).eveningEntries?.bulkAdd?.(snapshot.data.eveningEntries ?? []),
+            (db as any).settings?.bulkAdd?.(snapshot.data.settings ?? []),
             db.brainDecisions.bulkAdd(snapshot.data.brainDecisions),
             db.decisionExplanations.bulkAdd(snapshot.data.decisionExplanations),
             db.adaptationSignals.bulkAdd(snapshot.data.adaptationSignals),
@@ -176,9 +189,9 @@ export class DatabaseSnapshotManager {
         }
       );
 
-      console.log(`[Snapshot] Restauration terminée avec ${snapshot.metadata.totalRecords} enregistrements`);
+      logger.info('Restauration terminée', { totalRecords: snapshot.metadata.totalRecords });
     } catch (error) {
-      console.error('[Snapshot] Erreur lors de la restauration du snapshot:', error);
+      logger.error('Erreur lors de la restauration du snapshot', error as Error);
       throw error;
     }
   }
@@ -208,7 +221,7 @@ export class DatabaseSnapshotManager {
 
       return snapshot;
     } catch (error) {
-      console.error('[Snapshot] Erreur lors de l\'import du snapshot:', error);
+      logger.error("Erreur lors de l'import du snapshot", error as Error);
       throw error;
     }
   }
@@ -241,70 +254,51 @@ export class DatabaseSnapshotManager {
   }
 
   /**
-   * Liste tous les snapshots stockés dans localStorage
-   * @returns Tableau des snapshots disponibles
+   * Liste tous les snapshots stockés dans Dexie
+   * @returns Tableau des snapshots disponibles (noms)
    */
-  static listStoredSnapshots(): string[] {
-    const snapshots: string[] = [];
-    
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('db_snapshot_')) {
-        snapshots.push(key);
-      }
-    }
-    
-    return snapshots;
+  static async listStoredSnapshots(): Promise<string[]> {
+    const rows = await (db as any).snapshots.orderBy('timestamp').reverse().toArray();
+    return rows.map((r: any) => r.name ?? String(r.timestamp));
   }
 
   /**
-   * Sauvegarde un snapshot dans localStorage
+   * Sauvegarde un snapshot dans Dexie
    * @param snapshot Snapshot à sauvegarder
    * @param name Nom optionnel pour le snapshot
    */
-  static saveSnapshotToStorage(snapshot: DatabaseSnapshot, name?: string): void {
-    const key = name ? `db_snapshot_${name}` : `db_snapshot_${snapshot.timestamp.getTime()}`;
-    const jsonString = this.exportSnapshot(snapshot);
-    
-    try {
-      localStorage.setItem(key, jsonString);
-      console.log(`[Snapshot] Snapshot sauvegardé avec la clé: ${key}`);
-    } catch (error) {
-      console.error('[Snapshot] Erreur lors de la sauvegarde du snapshot:', error);
-      throw error;
-    }
+  static async saveSnapshotToStorage(snapshot: DatabaseSnapshot, name?: string): Promise<void> {
+    const now = Date.now();
+    const finalName = name ?? `snapshot_${now}`;
+
+    await (db as any).snapshots.add({
+      name: finalName,
+      timestamp: now,
+      snapshot,
+    });
+
+    logger.info('Snapshot sauvegardé', { name: finalName });
   }
 
   /**
-   * Charge un snapshot depuis localStorage
-   * @param key Clé du snapshot
+   * Charge un snapshot depuis Dexie
+   * @param name Nom du snapshot
    * @returns Snapshot chargé
    */
-  static loadSnapshotFromStorage(key: string): DatabaseSnapshot {
-    try {
-      const jsonString = localStorage.getItem(key);
-      if (!jsonString) {
-        throw new Error(`Snapshot non trouvé: ${key}`);
-      }
-      
-      return this.importSnapshot(jsonString);
-    } catch (error) {
-      console.error('[Snapshot] Erreur lors du chargement du snapshot:', error);
-      throw error;
+  static async loadSnapshotFromStorage(name: string): Promise<DatabaseSnapshot> {
+    const row = await (db as any).snapshots.where('name').equals(name).first();
+    if (!row?.snapshot) {
+      throw new Error(`Snapshot non trouvé: ${name}`);
     }
+    return row.snapshot as DatabaseSnapshot;
   }
 
   /**
-   * Supprime un snapshot du localStorage
-   * @param key Clé du snapshot à supprimer
+   * Supprime un snapshot de Dexie
+   * @param name Nom du snapshot à supprimer
    */
-  static deleteSnapshotFromStorage(key: string): void {
-    try {
-      localStorage.removeItem(key);
-      console.log(`[Snapshot] Snapshot supprimé: ${key}`);
-    } catch (error) {
-      console.error('[Snapshot] Erreur lors de la suppression du snapshot:', error);
-      throw error;
-    }
+  static async deleteSnapshotFromStorage(name: string): Promise<void> {
+    await (db as any).snapshots.where('name').equals(name).delete();
+    logger.info('Snapshot supprimé', { name });
   }
 }

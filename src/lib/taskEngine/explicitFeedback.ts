@@ -1,5 +1,8 @@
 // Système de feedback explicite - Phase 3.7
 import { BrainDecision } from './brainContracts';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('ExplicitFeedback');
 
 /**
  * Types de feedback utilisateur
@@ -39,7 +42,7 @@ export class ExplicitFeedbackManager {
     
     // Vérifier le cooldown
     if (now - this.lastFeedbackTimestamp < this.feedbackCooldown) {
-      console.log("[ExplicitFeedback] Feedback refusé - cooldown actif");
+      logger.debug('Feedback refusé - cooldown actif');
       return false;
     }
     
@@ -54,7 +57,7 @@ export class ExplicitFeedbackManager {
     this.feedbacks.push(fullFeedback);
     this.lastFeedbackTimestamp = now;
     
-    console.log(`[ExplicitFeedback] Feedback collecté: ${feedback.question} -> ${feedback.answer}`);
+    logger.info('Feedback collecté', { question: feedback.question, answer: feedback.answer });
     return true;
   }
   
@@ -70,13 +73,13 @@ export class ExplicitFeedbackManager {
     );
     
     if (recentFeedback) {
-      console.log("[ExplicitFeedback] Question déjà posée récemment");
+      logger.debug('Question déjà posée récemment');
       return false;
     }
     
     // Dans une vraie application, cela afficherait une interface utilisateur
     // Pour l'instant, nous simulons la collecte
-    console.log(`[ExplicitFeedback] Question posée: ${question}`);
+    logger.debug('Question posée', { question, contextId });
     return true;
   }
   
@@ -182,13 +185,13 @@ export class FeedbackIntegrator {
       return;
     }
     
-    console.log(`[FeedbackIntegrator] Intégration de ${feedbacks.length} feedback(s) pour la décision ${decision.id}`);
+    logger.info('Intégration feedbacks', { feedbacksCount: feedbacks.length, decisionId: decision.id });
     
     // Analyser les feedbacks
     const negativeFeedbacks = feedbacks.filter(f => f.answer === "NO" || f.answer === "PARTIALLY");
     
     if (negativeFeedbacks.length > 0) {
-      console.log(`[FeedbackIntegrator] ${negativeFeedbacks.length} feedback(s) négatif(s) détecté(s)`);
+      logger.info('Feedbacks négatifs détectés', { negativeFeedbacksCount: negativeFeedbacks.length, decisionId: decision.id });
       
       // Marquer la décision pour révision
       // Dans une implémentation complète, cela déclencherait un processus d'analyse plus approfondi

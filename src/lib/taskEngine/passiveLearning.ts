@@ -1,6 +1,9 @@
 // Système d'apprentissage passif - Phase 3.7
 import { BrainDecision } from './brainContracts';
 import { TaskOutcome } from './taskOutcome';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('PassiveLearning');
 
 /**
  * Types d'insights appris
@@ -103,7 +106,7 @@ export class PassiveLearningEngine {
     );
 
     if (isForbidden) {
-      console.log(`[PassiveLearning] Insight bloqué par garde-fou SOTA: ${description}`);
+      logger.info('Insight bloqué par garde-fou SOTA', { description });
       return null;
     }
 
@@ -150,7 +153,7 @@ export class PassiveLearningEngine {
     };
 
     this.history.push(change);
-    console.log(`[PassiveLearning] Changement appliqué et historisé: ${change.id}`);
+    logger.info('Changement appliqué et historisé', { changeId: change.id });
     return change;
   }
 }

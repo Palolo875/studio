@@ -64,6 +64,48 @@ export async function getAllTasks(): Promise<DBTask[]> {
     }
 }
 
+// ============================================
+// Fonctions Settings (remplace localStorage)
+// ============================================
+
+export async function getSetting<T>(key: string): Promise<T | undefined> {
+    try {
+        const row = await db.settings.get(key);
+        return row?.value as T | undefined;
+    } catch (error) {
+        logger.error('Failed to get setting', error as Error);
+        return undefined;
+    }
+}
+
+export async function setSetting(key: string, value: unknown): Promise<void> {
+    try {
+        const now = new Date();
+        const existing = await db.settings.get(key);
+
+        const payload: DBSetting = {
+            key,
+            value,
+            createdAt: existing?.createdAt ?? now,
+            updatedAt: now,
+        };
+
+        await db.settings.put(payload);
+    } catch (error) {
+        logger.error('Failed to set setting', error as Error);
+        throw error;
+    }
+}
+
+export async function deleteSetting(key: string): Promise<void> {
+    try {
+        await db.settings.delete(key);
+    } catch (error) {
+        logger.error('Failed to delete setting', error as Error);
+        throw error;
+    }
+}
+
 export interface DBSession {
     id: string;
     timestamp: number;
@@ -185,6 +227,13 @@ export interface DBEveningEntry {
     updatedAt: Date;
 }
 
+export interface DBSetting {
+    key: string;
+    value: unknown;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
 // ============================================
 // Classe de base de données
 // ============================================
@@ -204,6 +253,7 @@ class KairuFlowDatabase extends Dexie {
     adaptationHistory!: Table<DBAdaptationHistory, number>;
     snapshots!: Table<DBSnapshot, number>;
     eveningEntries!: Table<DBEveningEntry, string>;
+    settings!: Table<DBSetting, string>;
 
     constructor() {
         super('KairuFlowDB');
@@ -268,6 +318,26 @@ class KairuFlowDatabase extends Dexie {
             snapshots: '++id, timestamp, name',
 
             eveningEntries: 'id, timestamp, updatedAt',
+        });
+
+        // Version 5: settings (remplace localStorage)
+        this.version(5).stores({
+            tasks: 'id, status, urgency, deadline, category, createdAt, updatedAt',
+            sessions: 'id, timestamp, state, createdAt',
+            taskHistory: '++id, taskId, action, timestamp',
+            userPatterns: 'id, userId, patternType, updatedAt',
+            overrides: '++id, timestamp',
+            sleepData: '++id, date, createdAt',
+
+            brainDecisions: 'id, timestamp, brainVersion',
+            brainVersions: 'id, releasedAt',
+            decisionExplanations: 'id, decisionId, timestamp',
+            adaptationSignals: '++id, timestamp, type',
+            adaptationHistory: '++id, timestamp',
+            snapshots: '++id, timestamp, name',
+
+            eveningEntries: 'id, timestamp, updatedAt',
+            settings: 'key, updatedAt',
         });
 
         logger.info('Database initialized');

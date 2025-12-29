@@ -1,6 +1,9 @@
 // Séparation de l'apprentissage et de l'application - Phase 3.7
 import { LearnedInsight, SuggestedAdjustment, isAdjustmentAllowed, LearningConstraints } from './passiveLearning';
 import { BrainDecision } from './brainContracts';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('LearnApplySeparation');
 
 /**
  * État d'une proposition d'ajustement
@@ -67,13 +70,13 @@ export class LearnApplySeparator {
     
     // Vérifier si l'ajustement est autorisé
     if (!isAdjustmentAllowed(adjustment, this.constraints)) {
-      console.log(`[LearnApplySeparation] Ajustement non autorisé: ${adjustment.proposal}`);
+      logger.info('Ajustement non autorisé', { proposal: adjustment.proposal });
       return null;
     }
     
     // Ajouter à la liste des ajustements suivis
     this.trackedAdjustments.push(adjustment);
-    console.log(`[LearnApplySeparation] Nouvel ajustement proposé: ${adjustment.proposal}`);
+    logger.info('Nouvel ajustement proposé', { proposal: adjustment.proposal });
     
     return adjustment;
   }
@@ -85,7 +88,7 @@ export class LearnApplySeparator {
     const adjustment = this.trackedAdjustments.find(a => a.insightId === adjustmentId);
     
     if (!adjustment) {
-      console.warn(`[LearnApplySeparation] Ajustement non trouvé: ${adjustmentId}`);
+      logger.warn('Ajustement non trouvé', { adjustmentId });
       return false;
     }
     
@@ -94,7 +97,7 @@ export class LearnApplySeparator {
     adjustment.approvedAt = new Date();
     adjustment.userId = userId;
     
-    console.log(`[LearnApplySeparation] Ajustement approuvé: ${adjustment.proposal}`);
+    logger.info('Ajustement approuvé', { proposal: adjustment.proposal });
     return true;
   }
   
@@ -105,14 +108,14 @@ export class LearnApplySeparator {
     const adjustment = this.trackedAdjustments.find(a => a.insightId === adjustmentId);
     
     if (!adjustment) {
-      console.warn(`[LearnApplySeparation] Ajustement non trouvé: ${adjustmentId}`);
+      logger.warn('Ajustement non trouvé', { adjustmentId });
       return false;
     }
     
     // Mettre à jour le statut
     adjustment.status = "REJECTED";
     
-    console.log(`[LearnApplySeparation] Ajustement rejeté: ${adjustment.proposal}`);
+    logger.info('Ajustement rejeté', { proposal: adjustment.proposal });
     return true;
   }
   
@@ -123,13 +126,13 @@ export class LearnApplySeparator {
     const adjustment = this.trackedAdjustments.find(a => a.insightId === adjustmentId);
     
     if (!adjustment) {
-      console.warn(`[LearnApplySeparation] Ajustement non trouvé: ${adjustmentId}`);
+      logger.warn('Ajustement non trouvé', { adjustmentId });
       return false;
     }
     
     // Vérifier que l'ajustement est approuvé
     if (adjustment.status !== "APPROVED") {
-      console.warn(`[LearnApplySeparation] Ajustement non approuvé: ${adjustmentId}`);
+      logger.warn('Ajustement non approuvé', { adjustmentId });
       return false;
     }
     
@@ -149,7 +152,7 @@ export class LearnApplySeparator {
     
     this.appliedChanges.push(change);
     
-    console.log(`[LearnApplySeparation] Ajustement appliqué: ${adjustment.proposal}`);
+    logger.info('Ajustement appliqué', { proposal: adjustment.proposal });
     return true;
   }
   

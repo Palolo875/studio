@@ -9,6 +9,7 @@ import { ArrowRight, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
+import { setSetting } from '@/lib/database';
 
 export default function SchedulePage() {
   const [startTime, setStartTime] = useState([9]);
@@ -16,9 +17,7 @@ export default function SchedulePage() {
   const router = useRouter();
 
   const handleNext = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('onboardingHours', productiveHours.toString());
-    }
+    void setSetting('onboarding.hours', productiveHours.toString());
     router.push('/onboarding/summary');
   };
 

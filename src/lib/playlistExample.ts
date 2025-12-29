@@ -1,6 +1,10 @@
 import { generatePlaylist } from "./playlistGenerator";
 import type { Task } from "@/lib/types";
 import { getUserPatternsFromDB } from "./database/index"; // Import correct
+import { createLogger } from '@/lib/logger';
+import { getSetting } from '@/lib/database';
+
+const logger = createLogger('playlistExample');
 
 /**
  * Exemple d'utilisation de l'algorithme de génération de playlist
@@ -9,6 +13,7 @@ import { getUserPatternsFromDB } from "./database/index"; // Import correct
  */
 export async function generateDailyPlaylist(): Promise<any> {
   try {
+
     // 1. Récupérer les tâches depuis la base de données
     // const tasks = await db.tasks.toArray(); // À décommenter quand Dexie sera installé
     
@@ -24,8 +29,8 @@ export async function generateDailyPlaylist(): Promise<any> {
     // 3. Récupérer les patterns utilisateur
     const userPatterns = await getUserPatternsFromDB();
     
-    // 4. Obtenir le niveau d'énergie de l'utilisateur (par exemple depuis localStorage)
-    const energyLevel = (localStorage.getItem('todayEnergyLevel') || 'medium') as any;
+    // 4. Obtenir le niveau d'énergie de l'utilisateur (Dexie settings)
+    const energyLevel = (await getSetting<any>('morning.todayEnergyLevel')) || 'medium';
     
     // 5. Générer la playlist
     const playlist = await generatePlaylist(tasks, {
@@ -44,7 +49,7 @@ export async function generateDailyPlaylist(): Promise<any> {
       message: `Playlist générée avec ${playlist.length} tâches`
     };
   } catch (error) {
-    console.error("Erreur lors de la génération de la playlist:", error);
+    logger.error('Erreur lors de la génération de la playlist', error as Error);
     return {
       success: false,
       playlist: [],
@@ -168,9 +173,10 @@ export async function generateSamplePlaylist() {
     workdayHours: 8
   });
   
-  console.log("Playlist générée:");
+  logger.info('Playlist générée', { count: playlist.length });
+  
   playlist.forEach((item, index) => {
-    console.log(`${index + 1}. ${item.task.name} (Score: ${item.score}) - ${item.reason}`);
+    logger.info(`${index + 1}. ${item.task.name} (Score: ${item.score}) - ${item.reason}`);
   });
   
   return playlist;

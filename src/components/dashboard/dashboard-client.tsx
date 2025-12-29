@@ -55,6 +55,8 @@ import {
   completeTask as completeDbTask,
   updateTask as updateDbTask,
   type DBTask,
+  getSetting,
+  setSetting,
 } from '@/lib/database';
 
 
@@ -149,14 +151,24 @@ export function DashboardClient() {
   const [morningRitualCompleted, setMorningRitualCompleted] = useState(false);
 
   useEffect(() => {
-    const lastCheckin = localStorage.getItem('lastMorningCheckin');
-    const today = new Date().toISOString().split('T')[0];
-    if (lastCheckin !== today) {
-      setShowMorningRitual(true);
-    } else {
+    let cancelled = false;
+
+    async function load() {
+      const today = new Date().toISOString().split('T')[0];
+      const lastCheckin = await getSetting<string>('morning.lastCheckin');
+
+      if (cancelled) return;
+
+      if (lastCheckin !== today) {
+        setShowMorningRitual(true);
+        return;
+      }
+
       setMorningRitualCompleted(true);
-      const storedEnergy = localStorage.getItem('todayEnergyLevel') as EnergyState;
-      const storedIntention = localStorage.getItem('todayIntention');
+
+      const storedEnergy = await getSetting<EnergyState>('morning.todayEnergyLevel');
+      const storedIntention = await getSetting<string>('morning.todayIntention');
+      if (cancelled) return;
       if (storedEnergy) setEnergyLevel(storedEnergy);
       if (storedIntention) setIntention(storedIntention);
 
@@ -164,14 +176,23 @@ export function DashboardClient() {
       getAllTasks()
         .then(dbTasks => {
           const adapted = dbTasks.map(fromDbTask);
-          setTasks(adapted);
-          setInitialTaskCount(adapted.length);
+          if (!cancelled) {
+            setTasks(adapted);
+            setInitialTaskCount(adapted.length);
+          }
         })
         .catch(() => {
-          setTasks([]);
-          setInitialTaskCount(0);
+          if (!cancelled) {
+            setTasks([]);
+            setInitialTaskCount(0);
+          }
         });
     }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleMorningRitualSubmit = () => {
@@ -186,9 +207,9 @@ export function DashboardClient() {
     setShowMorningRitual(false);
     setMorningRitualCompleted(true);
     const today = new Date().toISOString().split('T')[0];
-    localStorage.setItem('lastMorningCheckin', today);
-    localStorage.setItem('todayEnergyLevel', energyLevel);
-    if (intention) localStorage.setItem('todayIntention', intention);
+    void setSetting('morning.lastCheckin', today);
+    void setSetting('morning.todayEnergyLevel', energyLevel);
+    void setSetting('morning.todayIntention', intention || '');
     handleRegeneratePlaylist(true);
   };
 

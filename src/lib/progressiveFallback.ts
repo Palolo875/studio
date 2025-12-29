@@ -3,6 +3,10 @@
  * Implémente une dégradation graduelle des fonctionnalités en cas de problème
  */
 
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('ProgressiveFallback');
+
 // Niveaux de fallback
 export enum FallbackLevel {
   LEVEL_0 = "Normal",        // Tous systèmes actifs
@@ -78,7 +82,7 @@ export class ProgressiveFallback {
       const oldLevel = this.currentLevel;
       this.currentLevel = newLevel;
       
-      console.log(`[ProgressiveFallback] Changement de niveau: ${oldLevel} → ${newLevel}`);
+      logger.info('Changement de niveau', { from: oldLevel, to: newLevel });
       
       // Appeler le callback si défini
       if (this.onLevelChangeCallback) {
@@ -97,11 +101,11 @@ export class ProgressiveFallback {
   private applyLevelChanges(level: FallbackLevel): void {
     switch (level) {
       case FallbackLevel.LEVEL_0:
-        console.log('[ProgressiveFallback] Mode Normal: Tous les systèmes actifs');
+        logger.info('Mode Normal: Tous les systèmes actifs');
         break;
         
       case FallbackLevel.LEVEL_1:
-        console.log('[ProgressiveFallback] Mode Optimized: Désactivation du Coach proactif, cache agressif');
+        logger.info('Mode Optimized: Désactivation du Coach proactif, cache agressif');
         // Implémenter les changements spécifiques au niveau 1
         this.disableProactiveCoach();
         this.enableAggressiveCaching();
@@ -109,7 +113,7 @@ export class ProgressiveFallback {
         break;
         
       case FallbackLevel.LEVEL_2:
-        console.log('[ProgressiveFallback] Mode Simple: Brain en mode règles, NLP heuristique');
+        logger.info('Mode Simple: Brain en mode règles, NLP heuristique');
         // Implémenter les changements spécifiques au niveau 2
         this.enableSimpleBrainMode();
         this.enableHeuristicNLP();
@@ -117,7 +121,7 @@ export class ProgressiveFallback {
         break;
         
       case FallbackLevel.LEVEL_3:
-        console.log('[ProgressiveFallback] Mode Survival: Aucune IA, mode readonly');
+        logger.info('Mode Survival: Aucune IA, mode readonly');
         // Implémenter les changements spécifiques au niveau 3
         this.disableAllAI();
         this.enableReadOnlyMode();
@@ -131,7 +135,7 @@ export class ProgressiveFallback {
    */
   private disableProactiveCoach(): void {
     // Implémentation spécifique à l'application
-    console.log('[ProgressiveFallback] Coach proactif désactivé');
+    logger.debug('Coach proactif désactivé');
   }
   
   /**
@@ -139,7 +143,7 @@ export class ProgressiveFallback {
    */
   private enableAggressiveCaching(): void {
     // Implémentation spécifique à l'application
-    console.log('[ProgressiveFallback] Cache agressif activé');
+    logger.debug('Cache agressif activé');
   }
   
   /**
@@ -147,7 +151,7 @@ export class ProgressiveFallback {
    */
   private reduceSnapshotFrequency(): void {
     // Implémentation spécifique à l'application
-    console.log('[ProgressiveFallback] Fréquence des snapshots réduite');
+    logger.debug('Fréquence des snapshots réduite');
   }
   
   /**
@@ -155,7 +159,7 @@ export class ProgressiveFallback {
    */
   private enableSimpleBrainMode(): void {
     // Implémentation spécifique à l'application
-    console.log('[ProgressiveFallback] Mode cerveau simple activé');
+    logger.debug('Mode cerveau simple activé');
   }
   
   /**
@@ -163,7 +167,7 @@ export class ProgressiveFallback {
    */
   private enableHeuristicNLP(): void {
     // Implémentation spécifique à l'application
-    console.log('[ProgressiveFallback] NLP heuristique activé');
+    logger.debug('NLP heuristique activé');
   }
   
   /**
@@ -172,7 +176,7 @@ export class ProgressiveFallback {
    */
   private limitTaskCount(maxTasks: number): void {
     // Implémentation spécifique à l'application
-    console.log(`[ProgressiveFallback] Nombre de tâches limité à ${maxTasks}`);
+    logger.debug('Nombre de tâches limité', { maxTasks });
   }
   
   /**
@@ -180,7 +184,7 @@ export class ProgressiveFallback {
    */
   private disableAllAI(): void {
     // Implémentation spécifique à l'application
-    console.log('[ProgressiveFallback] Toute l\'IA désactivée');
+    logger.debug("Toute l'IA désactivée");
   }
   
   /**
@@ -188,7 +192,7 @@ export class ProgressiveFallback {
    */
   private enableReadOnlyMode(): void {
     // Implémentation spécifique à l'application
-    console.log('[ProgressiveFallback] Mode lecture seule activé');
+    logger.debug('Mode lecture seule activé');
   }
   
   /**
@@ -196,7 +200,7 @@ export class ProgressiveFallback {
    */
   private simplifyTaskList(): void {
     // Implémentation spécifique à l'application
-    console.log('[ProgressiveFallback] Liste des tâches simplifiée');
+    logger.debug('Liste des tâches simplifiée');
   }
   
   /**
@@ -223,7 +227,7 @@ export class ProgressiveFallback {
     const oldLevel = this.currentLevel;
     this.currentLevel = level;
     
-    console.log(`[ProgressiveFallback] Niveau forcé: ${oldLevel} → ${level}`);
+    logger.info('Niveau forcé', { from: oldLevel, to: level });
     
     // Appeler le callback si défini
     if (this.onLevelChangeCallback) {
@@ -254,7 +258,7 @@ export class ProgressiveFallback {
       ui_lag_count: 0
     };
     
-    console.log('[ProgressiveFallback] Système réinitialisé');
+    logger.info('Système réinitialisé');
   }
 }
 

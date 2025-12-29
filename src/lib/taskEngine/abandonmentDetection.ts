@@ -1,5 +1,7 @@
 // Système de détection d'abandon - Phase 3.8
-import { BrainDecision } from './brainContracts';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('AbandonmentDetection');
 
 /**
  * État d'inactivité utilisateur
@@ -75,7 +77,7 @@ export class AbandonmentDetector {
     // Phase 3.5.3/3.8.3 : Silent Recovery Mode trigger (48h)
     if (diffHours >= 48 && diffDays < this.thresholds.pausedToDormantDays) {
       this.inactivityState.status = "PAUSED";
-      console.log("[AbandonmentDetection] Mode SILENCE activé (48h d'inactivité)");
+      logger.info("Mode SILENCE activé (48h d'inactivité)");
     } else if (diffDays >= this.thresholds.pausedToDormantDays) {
       this.inactivityState.status = "DORMANT";
     } else {
@@ -95,7 +97,7 @@ export class AbandonmentDetector {
     };
 
     this.returnSessions.push(session);
-    console.log("[AbandonmentDetection] Session RECOVERY préparée (Zéro punition)");
+    logger.info('Session RECOVERY préparée (Zéro punition)');
     return session;
   }
 
@@ -104,6 +106,14 @@ export class AbandonmentDetector {
    */
   checkLongAbsence(): boolean {
     return this.inactivityState.inactivityDurationDays >= 90;
+  }
+
+  applyReturnPolicy(policy: ReturnPolicy): void {
+    // TO DO: implement return policy application
+  }
+
+  getInactivityState(): InactivityState {
+    return this.inactivityState;
   }
 }
 
@@ -131,12 +141,12 @@ export function checkAndHandleInactivity(): void {
       break;
 
     case "PAUSED":
-      console.log(`[AbandonmentDetection] Utilisateur inactif depuis ${state.inactivityDurationDays} jours`);
+      logger.info('Utilisateur inactif', { inactivityDurationDays: state.inactivityDurationDays });
       // Possibilité d'envoyer une notification passive
       break;
 
     case "DORMANT":
-      console.log(`[AbandonmentDetection] Utilisateur dormant depuis ${state.inactivityDurationDays} jours`);
+      logger.info('Utilisateur dormant', { inactivityDurationDays: state.inactivityDurationDays });
       // Préparer une session de retour
       abandonmentDetector.prepareReturnSession();
       break;
@@ -147,7 +157,7 @@ export function checkAndHandleInactivity(): void {
  * Gère le retour de l'utilisateur après une période d'inactivité
  */
 export function handleUserReturn(): void {
-  console.log("[AbandonmentDetection] Gestion du retour utilisateur");
+  logger.info('Gestion du retour utilisateur');
 
   // Appliquer la politique de retour
   abandonmentDetector.applyReturnPolicy(DEFAULT_RETURN_POLICY);
@@ -155,5 +165,5 @@ export function handleUserReturn(): void {
   // Préparer une session de retour
   const returnSession = abandonmentDetector.prepareReturnSession();
 
-  console.log(`[AbandonmentDetection] Session de retour créée: ${JSON.stringify(returnSession)}`);
+  logger.info('Session de retour créée', { returnSession });
 }

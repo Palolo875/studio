@@ -2,6 +2,9 @@
 import { Task } from './types';
 import { ReturnSession } from './abandonmentDetection';
 import { TaskOutcome } from './taskOutcome';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('ImmediateReentry');
 
 /**
  * Résultat d'une session de ré-entrée
@@ -19,7 +22,7 @@ export interface ReentryResult {
  */
 export interface QuickWinCriteria {
   maxDurationMinutes: number; // Durée maximale
-  maxEffort: "S" | "M"; // Niveau d'effort maximum
+  maxEffort: 'low' | 'medium'; // Niveau d'effort maximum
   requiresResult: boolean; // Doit produire un résultat tangible
 }
 
@@ -32,7 +35,7 @@ export class ImmediateReentryManager {
   constructor(criteria?: QuickWinCriteria) {
     this.quickWinCriteria = criteria || {
       maxDurationMinutes: 15,
-      maxEffort: "S",
+      maxEffort: 'low',
       requiresResult: true
     };
   }
@@ -43,24 +46,26 @@ export class ImmediateReentryManager {
   identifyQuickWins(tasks: Task[]): Task[] {
     return tasks.filter(task => {
       // Vérifier que la tâche n'est pas déjà terminée
-      if (task.completed) {
+      if (task.status === 'done') {
         return false;
       }
       
       // Vérifier la durée
-      if (task.duration && task.duration > this.quickWinCriteria.maxDurationMinutes) {
+      if (task.duration > this.quickWinCriteria.maxDurationMinutes) {
         return false;
       }
       
       // Vérifier l'effort
-      if (task.effort && task.effort > this.quickWinCriteria.maxEffort) {
+      if (task.effort === 'high') {
+        return false;
+      }
+      if (task.effort === 'medium' && this.quickWinCriteria.maxEffort === 'low') {
         return false;
       }
       
       // Vérifier si un résultat tangible est requis
       if (this.quickWinCriteria.requiresResult) {
-        // Pour cet exemple, nous considérons qu'une tâche avec un deadline a un résultat tangible
-        if (!task.deadlineDisplay) {
+        if (!task.hasTangibleResult) {
           return false;
         }
       }
@@ -102,7 +107,7 @@ export class ImmediateReentryManager {
       message = `Voici ${immediateTasks.length} tâches faisables immédiatement.`;
     }
     
-    console.log(`[ImmediateReentry] Session préparée avec ${immediateTasks.length} tâches immédiates`);
+    logger.debug('Session préparée', { immediateTasksCount: immediateTasks.length });
     
     return {
       session,
@@ -117,18 +122,18 @@ export class ImmediateReentryManager {
    * Optimise l'ordre des tâches pour la ré-entrée
    */
   optimizeTaskOrder(tasks: Task[]): Task[] {
-    // Trier par priorité puis par effort croissant
+    // Trier par urgence puis par effort croissant
     return [...tasks].sort((a, b) => {
-      // Priorité : high > medium > low
-      const priorityOrder: Record<string, number> = { "high": 3, "medium": 2, "low": 1 };
-      const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+      // Urgence : urgent > high > medium > low
+      const urgencyOrder: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
+      const urgencyDiff = (urgencyOrder[b.urgency] || 0) - (urgencyOrder[a.urgency] || 0);
       
-      if (priorityDiff !== 0) {
-        return priorityDiff;
+      if (urgencyDiff !== 0) {
+        return urgencyDiff;
       }
       
-      // Effort : S < M < L
-      const effortOrder: Record<string, number> = { "S": 1, "M": 2, "L": 3 };
+      // Effort : low < medium < high
+      const effortOrder: Record<string, number> = { low: 1, medium: 2, high: 3 };
       return (effortOrder[a.effort] || 0) - (effortOrder[b.effort] || 0);
     });
   }
@@ -146,11 +151,11 @@ export class ImmediateReentryManager {
     }
     
     const firstTask = tasks[0];
-    suggestions.push(`Commencez par : "${firstTask.name}"`);
+    suggestions.push(`Commencez par : "${firstTask.title}"`);
     
     if (tasks.length > 1) {
       const secondTask = tasks[1];
-      suggestions.push(`Ou essayez : "${secondTask.name}"`);
+      suggestions.push(`Ou essayez : "${secondTask.title}"`);
     }
     
     suggestions.push("Concentrez-vous sur l'action, pas la perfection.");
@@ -167,7 +172,7 @@ export const reentryManager = new ImmediateReentryManager();
  * Exécute une ré-entrée productive immédiate complète
  */
 export function executeImmediateReentry(allTasks: Task[]): ReentryResult {
-  console.log("[ImmediateReentry] Exécution d'une ré-entrée productive immédiate");
+  logger.info("Exécution d'une ré-entrée productive immédiate");
   
   // Optimiser l'ordre des tâches
   const orderedTasks = reentryManager.optimizeTaskOrder(allTasks);
@@ -201,7 +206,7 @@ export class ReentryIntegrator {
       selectionReason: "Sélectionnée pour ré-entrée productive immédiate"
     }));
     
-    console.log(`[ReentryIntegrator] Décision adaptée pour ré-entrée avec ${adaptedTasks.length} tâches`);
+    logger.debug('Décision adaptée pour ré-entrée', { adaptedTasksCount: adaptedTasks.length });
     
     return {
       adaptedTasks,
@@ -226,7 +231,7 @@ export class ReentryIntegrator {
     if (result.immediateTasks.length > 0) {
       report += "TÂCHES IMMÉDIATES:\n";
       for (const task of result.immediateTasks) {
-        report += `- ${task.name} (${task.duration || 0} min, effort: ${task.effort || 'N/A'})\n`;
+        report += `- ${task.title} (${task.duration || 0} min, effort: ${task.effort || 'N/A'})\n`;
       }
     }
     

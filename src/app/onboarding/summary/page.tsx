@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { deleteSetting, getSetting } from '@/lib/database';
 
 export default function OnboardingSummaryPage() {
   const [name, setName] = useState('Junior');
@@ -13,24 +14,32 @@ export default function OnboardingSummaryPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedName = localStorage.getItem('onboardingName');
-      const storedRhythm = localStorage.getItem('onboardingRhythm');
-      const storedHours = localStorage.getItem('onboardingHours');
+    let cancelled = false;
+
+    async function load() {
+      const [storedName, storedRhythm, storedHours] = await Promise.all([
+        getSetting<string>('onboarding.name'),
+        getSetting<string>('onboarding.rhythm'),
+        getSetting<string>('onboarding.hours'),
+      ]);
+
+      if (cancelled) return;
 
       if (storedName) setName(storedName);
       if (storedRhythm) setRhythm(storedRhythm);
       if (storedHours) setHours(storedHours);
     }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleNext = () => {
-    // Clear onboarding data from localStorage after completion
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('onboardingName');
-      localStorage.removeItem('onboardingRhythm');
-      localStorage.removeItem('onboardingHours');
-    }
+    void deleteSetting('onboarding.name');
+    void deleteSetting('onboarding.rhythm');
+    void deleteSetting('onboarding.hours');
     router.push('/dashboard');
   };
 

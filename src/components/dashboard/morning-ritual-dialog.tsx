@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { EnergyCheckIn } from './energy-check-in';
 import { useToast } from '@/hooks/use-toast';
+import { setSetting } from '@/lib/database';
 
 export type EnergyState =
     | 'energized'
@@ -48,11 +49,10 @@ export function MorningRitualDialog({
             return;
         }
 
-        // Sauvegarder dans localStorage
         const today = new Date().toISOString().split('T')[0];
-        localStorage.setItem('lastMorningCheckin', today);
-        localStorage.setItem('todayEnergyLevel', energyLevel);
-        if (intention) localStorage.setItem('todayIntention', intention);
+        void setSetting('morning.lastCheckin', today);
+        void setSetting('morning.todayEnergyLevel', energyLevel);
+        void setSetting('morning.todayIntention', intention || '');
 
         onComplete(energyLevel, intention);
         onOpenChange(false);

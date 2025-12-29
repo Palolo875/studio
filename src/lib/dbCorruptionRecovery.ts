@@ -3,6 +3,10 @@
  * Implémente la stratégie de récupération en cas de corruption d'IndexedDB
  */
 
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('DBRecovery');
+
 /**
  * Tente d'ouvrir la base de données avec récupération en cas de corruption
  * @param db Instance de la base de données
@@ -10,17 +14,17 @@
  */
 export async function openDbWithCorruptionRecovery(db: any): Promise<any> {
   try {
-    console.log('[DBRecovery] Tentative d\'ouverture de la base de données...');
+    logger.info("Tentative d'ouverture de la base de données");
     const openedDb = await db.open();
-    console.log('[DBRecovery] Base de données ouverte avec succès');
+    logger.info('Base de données ouverte avec succès');
     return openedDb;
   } catch (error: any) {
-    console.error('[DBRecovery] Erreur lors de l\'ouverture de la base de données:', error);
+    logger.error("Erreur lors de l'ouverture de la base de données", error as Error);
     
     // Vérifier si c'est une erreur de corruption
     if (error.name === "UnknownError" || 
         (error.message && (error.message.includes("corrupted") || error.message.includes("corrupt")))) {
-      console.warn('[DBRecovery] Corruption de la base de données détectée');
+      logger.warn('Corruption de la base de données détectée');
       return await handleDbCorruption(db);
     }
     
@@ -35,35 +39,35 @@ export async function openDbWithCorruptionRecovery(db: any): Promise<any> {
  * @returns Instance de la base de données restaurée ou nouvelle instance
  */
 async function handleDbCorruption(db: any): Promise<any> {
-  console.log('[DBRecovery] Démarrage du processus de récupération de corruption...');
+  logger.warn('Démarrage du processus de récupération de corruption');
   
   // Étape 1 : Tenter de restaurer à partir d'un backup
   try {
     const restoredDb = await attemptBackupRestoration(db);
     if (restoredDb) {
-      console.log('[DBRecovery] Base de données restaurée à partir d\'un backup');
+      logger.info("Base de données restaurée à partir d'un backup");
       return restoredDb;
     }
   } catch (restoreError) {
-    console.error('[DBRecovery] Échec de la restauration à partir d\'un backup:', restoreError);
+    logger.error("Échec de la restauration à partir d'un backup", restoreError as Error);
   }
   
   // Étape 2 : Réinitialiser complètement la base de données (dernier recours)
-  console.warn('[DBRecovery] Réinitialisation complète de la base de données (dernier recours)');
+  logger.warn('Réinitialisation complète de la base de données (dernier recours)');
   try {
     await db.delete();
-    console.log('[DBRecovery] Ancienne base de données supprimée');
+    logger.warn('Ancienne base de données supprimée');
     
     // Recréer la base de données
     const newDb = await db.open();
-    console.log('[DBRecovery] Nouvelle base de données créée');
+    logger.warn('Nouvelle base de données créée');
     
     // Afficher un message à l'utilisateur
-    showUserMessage("La base de données était corrompue et a été réinitialisée. Vos données précédentes ont été perdues.");
+    logger.warn('Base corrompue réinitialisée: données précédentes perdues');
     
     return newDb;
   } catch (resetError) {
-    console.error('[DBRecovery] Échec de la réinitialisation de la base de données:', resetError);
+    logger.error('Échec de la réinitialisation de la base de données', resetError as Error);
     throw new Error("Impossible de récupérer la base de données corrompue");
   }
 }
@@ -74,7 +78,7 @@ async function handleDbCorruption(db: any): Promise<any> {
  * @returns Instance de la base de données restaurée ou null si échec
  */
 async function attemptBackupRestoration(db: any): Promise<any | null> {
-  console.log('[DBRecovery] Recherche de backups disponibles...');
+  logger.info('Recherche de backups disponibles');
   
   // Dans une implémentation réelle, vous auriez plusieurs stratégies :
   // 1. Backup cloud (si l'utilisateur est connecté)
@@ -85,7 +89,7 @@ async function attemptBackupRestoration(db: any): Promise<any | null> {
   const backupAvailable = await checkForBackup();
   
   if (!backupAvailable) {
-    console.log('[DBRecovery] Aucun backup disponible');
+    logger.info('Aucun backup disponible');
     return null;
   }
   
@@ -95,22 +99,22 @@ async function attemptBackupRestoration(db: any): Promise<any | null> {
     
     // Supprimer la base corrompue
     await db.delete();
-    console.log('[DBRecovery] Base corrompue supprimée');
+    logger.warn('Base corrompue supprimée');
     
     // Restaurer à partir du backup
     await importBackup(backup);
-    console.log('[DBRecovery] Backup importé avec succès');
+    logger.info('Backup importé avec succès');
     
     // Rouvrir la base de données
     const restoredDb = await db.open();
-    console.log('[DBRecovery] Base de données restaurée et ouverte');
+    logger.info('Base de données restaurée et ouverte');
     
     // Afficher un message à l'utilisateur
-    showUserMessage("La base de données a été restaurée à partir d\'une sauvegarde.");
+    logger.info("La base de données a été restaurée à partir d'une sauvegarde");
     
     return restoredDb;
   } catch (error) {
-    console.error('[DBRecovery] Échec de la restauration du backup:', error);
+    logger.error('Échec de la restauration du backup', error as Error);
     return null;
   }
 }
@@ -122,7 +126,7 @@ async function attemptBackupRestoration(db: any): Promise<any | null> {
 async function checkForBackup(): Promise<boolean> {
   // Dans une implémentation réelle, cela vérifierait différents emplacements
   // Pour cette simulation, nous retournons false pour forcer la réinitialisation
-  console.log('[DBRecovery] Vérification des backups... (simulation)');
+  logger.debug('Vérification des backups (simulation)');
   return false;
 }
 
@@ -132,7 +136,7 @@ async function checkForBackup(): Promise<boolean> {
  */
 async function retrieveBackup(): Promise<any> {
   // Dans une implémentation réelle, cela récupérerait le backup depuis le stockage
-  console.log('[DBRecovery] Récupération du backup... (simulation)');
+  logger.debug('Récupération du backup (simulation)');
   return { data: "backup_data" };
 }
 
@@ -142,42 +146,7 @@ async function retrieveBackup(): Promise<any> {
  */
 async function importBackup(backup: any): Promise<void> {
   // Dans une implémentation réelle, cela importerait les données du backup
-  console.log('[DBRecovery] Importation du backup... (simulation)', backup);
-}
-
-/**
- * Affiche un message à l'utilisateur
- * @param message Message à afficher
- */
-function showUserMessage(message: string): void {
-  // Dans une application réelle, cela utiliserait un système de notifications
-  console.log(`[USER MESSAGE] ${message}`);
-  
-  // Exemple d'affichage dans l'interface utilisateur
-  if (typeof window !== 'undefined') {
-    // Créer un élément de notification
-    const notification = document.createElement('div');
-    notification.style.position = 'fixed';
-    notification.style.top = '20px';
-    notification.style.right = '20px';
-    notification.style.padding = '15px';
-    notification.style.backgroundColor = '#fff3cd';
-    notification.style.border = '1px solid #ffeaa7';
-    notification.style.borderRadius = '4px';
-    notification.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-    notification.style.zIndex = '10000';
-    notification.textContent = message;
-    
-    // Ajouter à la page
-    document.body.appendChild(notification);
-    
-    // Supprimer automatiquement après 5 secondes
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
-    }, 5000);
-  }
+  logger.debug('Importation du backup (simulation)', { backup });
 }
 
 /**
@@ -188,17 +157,17 @@ export async function performPeriodicHealthCheck(db: any): Promise<void> {
   try {
     // Vérifier si la base de données est accessible
     const testQuery = await db.tasks.limit(1).toArray();
-    console.log('[DBHealth] Vérification de santé réussie');
+    logger.debug('Vérification de santé réussie');
   } catch (error) {
-    console.error('[DBHealth] Problème de santé de la base de données détecté:', error);
+    logger.error('Problème de santé de la base de données détecté', error as Error);
     
     // Tenter de rouvrir la base de données
     try {
       await db.close();
       await openDbWithCorruptionRecovery(db);
-      console.log('[DBHealth] Base de données réouverte avec succès');
+      logger.info('Base de données réouverte avec succès');
     } catch (reopenError) {
-      console.error('[DBHealth] Impossible de rouvrir la base de données:', reopenError);
+      logger.error('Impossible de rouvrir la base de données', reopenError as Error);
     }
   }
 }

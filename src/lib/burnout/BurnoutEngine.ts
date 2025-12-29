@@ -462,7 +462,9 @@ export async function calculateBurnoutScore(
  * Vérifie périodiquement le burnout (à appeler une fois par jour)
  */
 export async function scheduleDailyBurnoutCheck(): Promise<void> {
-    const lastCheck = localStorage.getItem('lastBurnoutCheck');
+    const { getSetting, setSetting } = await import('@/lib/database');
+
+    const lastCheck = await getSetting<string>('burnout.lastCheck');
     const today = new Date().toISOString().split('T')[0];
 
     if (lastCheck === today) {
@@ -471,8 +473,8 @@ export async function scheduleDailyBurnoutCheck(): Promise<void> {
     }
 
     const result = await calculateBurnoutScore();
-    localStorage.setItem('lastBurnoutCheck', today);
-    localStorage.setItem('lastBurnoutResult', JSON.stringify(result));
+    await setSetting('burnout.lastCheck', today);
+    await setSetting('burnout.lastResult', result);
 
     if (result.riskLevel === 'high' || result.riskLevel === 'critical') {
         logger.warn('High burnout risk detected!', { riskLevel: result.riskLevel });

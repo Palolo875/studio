@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { FocusSettings } from '@/lib/types';
+import { createLogger } from '@/lib/logger';
+import { getSetting, setSetting } from '@/lib/database';
+
+const logger = createLogger('useFocusSettings');
 
 const DEFAULT_SETTINGS: FocusSettings = {
   workDuration: 25 * 60, // 25 minutes (en secondes)
@@ -14,58 +18,69 @@ export function useFocusSettings() {
   const [settings, setSettings] = useState<FocusSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Charger les paramètres depuis localStorage
+  // Charger les paramètres depuis Dexie (remplace localStorage)
   useEffect(() => {
-    try {
-      const savedSettings = localStorage.getItem('focusSettings');
-      if (savedSettings) {
-        const parsedSettings = JSON.parse(savedSettings);
-        
-        // Valider les paramètres
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const saved = await getSetting<{ focusWorkDuration?: unknown; focusBreakDuration?: unknown; focusAutoSave?: unknown; focusSoundEnabled?: unknown }>('focusSettings');
+        if (!saved) {
+          return;
+        }
+
         const validatedSettings: FocusSettings = {
-          workDuration: typeof parsedSettings.focusWorkDuration === 'number' 
-            ? parsedSettings.focusWorkDuration 
+          workDuration: typeof saved.focusWorkDuration === 'number'
+            ? saved.focusWorkDuration
             : DEFAULT_SETTINGS.workDuration,
-          breakDuration: typeof parsedSettings.focusBreakDuration === 'number' 
-            ? parsedSettings.focusBreakDuration 
+          breakDuration: typeof saved.focusBreakDuration === 'number'
+            ? saved.focusBreakDuration
             : DEFAULT_SETTINGS.breakDuration,
-          autoSaveNotes: typeof parsedSettings.focusAutoSave === 'boolean' 
-            ? parsedSettings.focusAutoSave 
+          autoSaveNotes: typeof saved.focusAutoSave === 'boolean'
+            ? saved.focusAutoSave
             : DEFAULT_SETTINGS.autoSaveNotes,
-          soundEnabled: typeof parsedSettings.focusSoundEnabled === 'boolean' 
-            ? parsedSettings.focusSoundEnabled 
+          soundEnabled: typeof saved.focusSoundEnabled === 'boolean'
+            ? saved.focusSoundEnabled
             : DEFAULT_SETTINGS.soundEnabled,
         };
-        
-        setSettings(validatedSettings);
+
+        if (!cancelled) {
+          setSettings(validatedSettings);
+        }
+      } catch (error) {
+        logger.error('Erreur lors du chargement des paramètres du mode focus', error as Error);
+        if (!cancelled) {
+          setSettings(DEFAULT_SETTINGS);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
-    } catch (error) {
-      console.error('Erreur lors du chargement des paramètres du mode focus:', error);
-      // Utiliser les paramètres par défaut en cas d'erreur
-      setSettings(DEFAULT_SETTINGS);
-    } finally {
-      setIsLoading(false);
     }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Sauvegarder les paramètres dans localStorage
+  // Sauvegarder les paramètres dans Dexie (remplace localStorage)
   const updateSettings = (newSettings: Partial<FocusSettings>) => {
     const updatedSettings = { ...settings, ...newSettings };
     setSettings(updatedSettings);
     
-    try {
-      // Convertir les noms de champs pour correspondre au formulaire
-      const formSettings = {
-        focusWorkDuration: updatedSettings.workDuration,
-        focusBreakDuration: updatedSettings.breakDuration,
-        focusAutoSave: updatedSettings.autoSaveNotes,
-        focusSoundEnabled: updatedSettings.soundEnabled,
-      };
-      
-      localStorage.setItem('focusSettings', JSON.stringify(formSettings));
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde des paramètres du mode focus:', error);
-    }
+    // Convertir les noms de champs pour correspondre au formulaire
+    const formSettings = {
+      focusWorkDuration: updatedSettings.workDuration,
+      focusBreakDuration: updatedSettings.breakDuration,
+      focusAutoSave: updatedSettings.autoSaveNotes,
+      focusSoundEnabled: updatedSettings.soundEnabled,
+    };
+
+    void setSetting('focusSettings', formSettings).catch((error) => {
+      logger.error('Erreur lors de la sauvegarde des paramètres du mode focus', error as Error);
+    });
   };
 
   return {

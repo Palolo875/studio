@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Sunrise, Sun, Moon, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { setSetting } from '@/lib/database';
 
 const rhythms = [
   {
@@ -35,8 +36,8 @@ export default function EnergyQuizPage() {
   const router = useRouter();
 
   const handleNext = () => {
-    if (selectedRythm && typeof window !== 'undefined') {
-      localStorage.setItem('onboardingRhythm', selectedRythm);
+    if (selectedRythm) {
+      void setSetting('onboarding.rhythm', selectedRythm);
     }
     router.push('/onboarding/schedule');
   };

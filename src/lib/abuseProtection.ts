@@ -1,6 +1,10 @@
 // Abuse Protection - Protection contre l'abus utilisateur
 // Implémentation du garde-fou contre l'abus de l'utilisateur
 
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('AbuseProtection');
+
 // Interface pour la protection contre l'abus
 export interface AbuseProtectionConfig {
   maxOverrideRate: number;  // Taux maximum d'overrides autorisé
@@ -81,7 +85,7 @@ export class AbuseProtectionManager {
   
   // Gérer un abus potentiel
   private handlePotentialAbuse(userCognitiveStatus: 'NORMAL' | 'DEPLETED' = 'NORMAL'): void {
-    console.log("POTENTIAL_ABUSE_DETECTED");
+    logger.warn('POTENTIAL_ABUSE_DETECTED');
     
     // Principe de Protection Asymétrique
     if (userCognitiveStatus === 'DEPLETED') {
@@ -136,25 +140,22 @@ Qu'est-ce qui correspond le mieux ?`,
     body: string;
     actions: { label: string; action: () => void }[];
   }): void {
-    console.log(`MESSAGE_TO_USER (${message.tone}): ${message.title}`);
-    console.log(message.body);
-    console.log("Actions disponibles:");
-    message.actions.forEach((action, index) => {
-      console.log(`${index + 1}. ${action.label}`);
-    });
+    logger.info('MESSAGE_TO_USER', { tone: message.tone, title: message.title });
+    logger.info('MESSAGE_BODY', { body: message.body });
+    logger.info('Actions disponibles', { actions: message.actions.map((a) => a.label) });
     // Dans une implémentation réelle, cela afficherait une notification dans l'UI avec des boutons d'action
   }
   
   // Appliquer les changements protecteurs automatiquement
   private applyProtectiveChanges(): void {
-    console.log("PROTECTIVE_CHANGES_APPLIED: Mode protecteur activé");
+    logger.warn('PROTECTIVE_CHANGES_APPLIED: Mode protecteur activé');
     // Dans une implémentation réelle, cela appliquerait des changements
     // spécifiques pour protéger l'utilisateur (réduction de charge, etc.)
   }
   
   // Afficher une notification simple en mode protecteur
   private showSimpleNotification(message: string): void {
-    console.log(`NOTIFICATION: ${message}`);
+    logger.info('NOTIFICATION', { message });
     // Dans une implémentation réelle, cela afficherait une notification
     // simple dans l'interface utilisateur
   }
@@ -162,14 +163,14 @@ Qu'est-ce qui correspond le mieux ?`,
   // Geler les adaptations
   freezeAdaptation(): void {
     this.adaptationFrozen = true;
-    console.log("ADAPTATION_FROZEN");
+    logger.warn('ADAPTATION_FROZEN');
     // Dans une implémentation réelle, cela désactiverait le mécanisme d'adaptation
   }
   
   // Suggérer le mode manuel
   suggestManualMode(): void {
     this.manualModeSuggested = true;
-    console.log("MANUAL_MODE_SUGGESTED");
+    logger.info('MANUAL_MODE_SUGGESTED');
     // Dans une implémentation réelle, cela proposerait à l'utilisateur de passer en mode manuel
   }
   
@@ -191,13 +192,13 @@ Qu'est-ce qui correspond le mieux ?`,
   
   // Ouvrir l'assistant de paramètres
   private openParametersWizard(): void {
-    console.log("Opening parameters wizard");
+    logger.info('Opening parameters wizard');
     // Dans une implémentation réelle, cela ouvrirait un assistant pour ajuster les paramètres
   }
   
   // Acknowledger une période temporaire
   private acknowledgeTemporaryPeriod(): void {
-    console.log("Acknowledging temporary period");
+    logger.info('Acknowledging temporary period');
     // Dans une implémentation réelle, cela enregistrerait que l'utilisateur traverse une période temporaire
   }
   
