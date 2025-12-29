@@ -1,4 +1,6 @@
 import { progressiveFallback } from './progressiveFallback';
+import { createLogger } from '@/lib/logger';
+
 /**
  * Agrégateur de métriques de performance - Phase 4
  * Implémente le suivi et l'analyse des performances avec détection de dégradations
@@ -20,6 +22,8 @@ export interface PerformanceReport {
   name: string;
   stats: PerformanceStats | null;
 }
+
+const logger = createLogger('PerformanceTracker');
 
 // Seuils de performance par défaut
 export const PERF_BASELINES = {
@@ -187,7 +191,7 @@ export class PerformanceTracker {
       }
     }, interval);
 
-    console.log('[PerformanceTracker] Monitoring démarré (Phase 4)');
+    logger.info('Monitoring démarré (Phase 4)');
   }
 
   /**
@@ -198,7 +202,7 @@ export class PerformanceTracker {
       clearInterval(this.intervalId);
       this.intervalId = null;
       this.isActive = false;
-      console.log('[PerformanceTracker] Monitoring arrêté');
+      logger.info('Monitoring arrêté');
     }
   }
 
@@ -232,7 +236,7 @@ export class PerformanceTracker {
    */
   reset(): void {
     this.metrics.clear();
-    console.log('[PerformanceTracker] Métriques réinitialisées');
+    logger.info('Métriques réinitialisées');
   }
 
   /**

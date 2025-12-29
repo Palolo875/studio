@@ -9,12 +9,15 @@ import {
 } from "./scoringRules";
 import { getTodoTasksBulk, getTaskHistoryBulk, getUserPatternsFromDB } from "./database/index";
 import { LanguageDetector } from "@/lib/nlp/LanguageDetector";
+import { createLogger } from '@/lib/logger';
 
 // Importer les nouveaux services SOTA
 import { ImpactAnalyzer } from "@/lib/playlist/services/impactAnalyzer";
 import { KeystoneDetector } from "@/lib/playlist/services/keystoneDetector";
 import { FeedbackGenerator } from "@/lib/playlist/services/feedbackGenerator";
 import { RewardSystem } from "@/lib/playlist/services/rewardSystem";
+
+const logger = createLogger('PlaylistGenerator');
 
 /**
  * Algorithme de Génération de Playlist (Cœur Décisionnel)
@@ -201,7 +204,7 @@ async function fetchTasksWithBulkGet(): Promise<{ tasks: Task[]; taskHistory: an
     
     return { tasks, taskHistory };
   } catch (error) {
-    console.error('Erreur lors de la récupération des tâches:', error);
+    logger.error('Erreur lors de la récupération des tâches', error as Error);
     return { tasks: [], taskHistory: [] };
   }
 }
@@ -299,7 +302,7 @@ export async function generatePlaylist(
       try {
         userPatterns = await getUserPatternsFromDB();
       } catch (error) {
-        console.warn("Impossible de récupérer les patterns utilisateur:", error);
+        logger.warn('Impossible de récupérer les patterns utilisateur', { error });
         // Continuer avec des patterns vides
         userPatterns = {
           skippedTaskTypes: {},
@@ -340,7 +343,7 @@ export async function generatePlaylist(
     
     return result;
   } catch (error) {
-    console.error("Erreur lors de la génération de la playlist:", error);
+    logger.error('Erreur lors de la génération de la playlist', error as Error);
     
     // Fallback en cas d'erreur : retourner une playlist de base avec des quick wins
     try {
@@ -364,7 +367,7 @@ export async function generatePlaylist(
         }
       }
     } catch (fallbackError) {
-      console.error("Erreur lors du fallback:", fallbackError);
+      logger.error('Erreur lors du fallback', fallbackError as Error);
     }
     
     // Dernier recours : tâche de bien-être
@@ -523,7 +526,7 @@ function applySOTABalanceRules(
     
     return result;
   } catch (error) {
-    console.error("Erreur lors de l'application des règles d'équilibre SOTA:", error);
+    logger.error("Erreur lors de l'application des règles d'équilibre SOTA", error as Error);
     
     // Fallback : retourner les 3 meilleures tâches sans règles d'équilibre
     return scoredTasks.slice(0, 3);
@@ -563,7 +566,7 @@ function updateRewardSystem(taskScores: TaskScore[]): void {
   );
   
   if (highImpactTasks.length > 0) {
-    console.log(`Félicitations ! Vous avez ${highImpactTasks.length} tâches à haut impact dans votre playlist.`);
+    logger.info('Tâches à haut impact dans la playlist', { count: highImpactTasks.length });
   }
 }
 

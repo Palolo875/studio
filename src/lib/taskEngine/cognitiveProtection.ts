@@ -1,5 +1,8 @@
 // Mécanismes de protection cognitive active - Phase 3.5
 import { CognitiveProtection, ProtectionAction, CognitiveRiskSnapshot } from './cognitiveSecurity';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('CognitiveProtection');
 
 /**
  * Applique une protection cognitive basée sur le niveau de risque
@@ -49,7 +52,7 @@ export function reduceSuggestions(currentSuggestions: any[]): any[] {
  * Active le mode passif - moins d'interventions
  */
 export function activatePassiveMode(): void {
-  console.log("[CognitiveProtection] Mode passif activé - réduction des interventions");
+  logger.info('Mode passif activé - réduction des interventions');
   // Dans une implémentation complète, cela désactiverait certains systèmes
 }
 
@@ -57,7 +60,7 @@ export function activatePassiveMode(): void {
  * Active le mode silencieux - aucune suggestion
  */
 export function activateSilenceMode(): void {
-  console.log("[CognitiveProtection] Mode silencieux activé - aucune suggestion");
+  logger.info('Mode silencieux activé - aucune suggestion');
   // Dans une implémentation complète, cela désactiverait toutes les notifications
 }
 
@@ -67,7 +70,7 @@ export function activateSilenceMode(): void {
 export function executeProtectionAction(protection: CognitiveProtection): void {
   switch (protection.action) {
     case "REDUCE_SUGGESTIONS":
-      console.log(`[CognitiveProtection] Réduction des suggestions déclenchée par ${protection.triggeredBy}`);
+      logger.info('Réduction des suggestions déclenchée', { triggeredBy: protection.triggeredBy });
       // L'application réelle serait faite au niveau de l'interface utilisateur
       break;
       

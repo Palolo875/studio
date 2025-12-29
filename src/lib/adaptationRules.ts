@@ -6,6 +6,9 @@ import {
   clampParameters,
   ADAPTATION_CONSTRAINTS
 } from './adaptationMemory';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('AdaptationRules');
 
 // Interface pour les règles d'ajustement
 interface AdjustmentRules {
@@ -122,7 +125,11 @@ export interface AdaptationLog {
 export function logAdaptation(log: AdaptationLog) {
   // Dans une implémentation réelle, cela enregistrerait dans une base de données
   // ou un système de logging
-  console.log(`[ADAPTATION] ${new Date(log.date).toISOString()} - Changes: ${log.changes.join(', ')}`);
+  logger.info('ADAPTATION', {
+    date: new Date(log.date).toISOString(),
+    changes: log.changes,
+    userId: log.userId,
+  });
   
   // Pour le suivi utilisateur, on pourrait aussi envoyer à un service d'analyse
   // analytics.track('SystemAdaptation', log);

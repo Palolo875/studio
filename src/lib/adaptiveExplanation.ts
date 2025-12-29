@@ -1,6 +1,10 @@
 // adaptiveExplanation.ts
 // Implémentation du système d'explication adaptatif
 
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('AdaptiveExplanation');
+
 export type ExplanationLevel = 'SILENT' | 'SIMPLE' | 'DETAILED';
 
 export interface Adaptation {
@@ -93,7 +97,8 @@ export class AdaptiveExplanationEngine {
   
   // Journaliser l'explication
   logExplanation(adaptation: Adaptation, explanation: Explanation): void {
-    console.log(`EXPLANATION_LOGGED: Adaptation ${adaptation.id}`, {
+    logger.info('EXPLANATION_LOGGED', {
+      adaptationId: adaptation.id,
       level: explanation.level,
       text: explanation.text,
       logOnly: explanation.logOnly

@@ -6,6 +6,9 @@ import { getBrainDecision, logBrainDecision, registerBrainVersion } from './deci
 import { generateDecisionExplanation } from './decisionExplanation';
 import { applyUserOverride } from './userChallenge';
 import { Task } from './types';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('BrainEngine');
 
 /**
  * Version actuelle du cerveau
@@ -52,7 +55,7 @@ export function decideSession(input: BrainInput): BrainOutput {
 
   const executionTime = Date.now() - startTime;
   if (executionTime > 100) {
-    console.warn(`[BrainEngine] Performance warning: ${executionTime}ms (limit 100ms)`);
+    logger.warn('Performance warning', { executionTimeMs: executionTime, limitMs: 100 });
   }
 
   return output;
@@ -111,7 +114,7 @@ export async function replayDecisionAsync(
 ): Promise<{ original: BrainDecision; replayed: BrainOutput; match: boolean } | null> {
   const original = await getBrainDecision(decisionId);
   if (!original) {
-    console.warn(`[BrainEngine] Cannot replay decision ${decisionId}: not found in storage.`);
+    logger.warn('Cannot replay decision: not found in storage', { decisionId });
     return null;
   }
 

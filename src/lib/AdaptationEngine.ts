@@ -15,6 +15,9 @@ import { AntiOverfittingEngine, AdaptationSample } from './antiOverfitting';
 import { computeProgressMetrics, UserProgressMetrics } from './progressMetrics';
 import { AdaptationValidationManager, AdaptationProposal } from './adaptationValidation';
 import { Task, Session, Override } from './types';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('AdaptationEngine');
 
 /**
  * AdaptationEngine - Moteur central d'adaptation et d'apprentissage (Phase 6)
@@ -73,20 +76,20 @@ export class AdaptationEngine {
         const overrideRate = overrides / total;
 
         if (overrideRate > ADAPTATION_CONSTRAINTS.ABUSE_PROTECTION.maxOverrideRate && total > 20) {
-            console.warn("[AdaptationEngine] Adaptation gelée : Taux d'abus trop élevé (Invariant L).");
+            logger.warn("Adaptation gelée : Taux d'abus trop élevé (Invariant L).", { overrideRate, total });
             return null;
         }
 
         // 2. Invariant XLIX : Budget de Transparence (Max 3/semaine)
         const recentAdaptations = this.rollback.getAdaptationHistory().filter(a => a.timestamp > Date.now() - 7 * 24 * 60 * 60 * 1000);
         if (recentAdaptations.length >= ADAPTATION_CONSTRAINTS.TRANSPARENCY_BUDGET.maxPerWeek) {
-            console.log("[AdaptationEngine] Budget de transparence atteint pour cette semaine (Invariant XLIX).");
+            logger.info('Budget de transparence atteint pour cette semaine (Invariant XLIX).', { count: recentAdaptations.length });
             return null;
         }
 
         // Invariant XLVII : Fenêtre d'observation min 30 jours (simulée ici avec 50 signaux)
         if (this.signals.length < 50) {
-            console.log("[AdaptationEngine] Pas assez de signaux pour adapter.");
+            logger.info('Pas assez de signaux pour adapter.', { signals: this.signals.length });
             return null;
         }
 
@@ -163,7 +166,7 @@ export class AdaptationEngine {
         // Drift Monitoring
         this.driftMonitor.track(this.currentParams);
 
-        console.log(`[AdaptationEngine] Adaptation appliquée : ${proposal.id}`);
+        logger.info('Adaptation appliquée', { proposalId: proposal.id });
     }
 
     /**
@@ -179,7 +182,7 @@ export class AdaptationEngine {
     checkInvariants(): boolean {
         const drift = this.driftMonitor.detectDrift();
         if (drift) {
-            console.warn(`[AdaptationEngine] Dérive détectée sur ${drift.parameter} !`);
+            logger.warn('Dérive détectée', { parameter: drift.parameter });
             return false;
         }
         return true;

@@ -4,6 +4,9 @@
  */
 
 import { upsertTasks, type DBTask } from '@/lib/database';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('NlpTaskStorage');
 
 export class NlpTaskStorage {
   private db: any;
@@ -15,10 +18,11 @@ export class NlpTaskStorage {
   }
 
   async bulkStoreTasks(tasks: any[]): Promise<void> {
+
     // Transaction atomique
     // Note: Dans une vraie implémentation, nous utiliserions:
     // await this.db.transaction('rw', this.tasks, async () => {
-    console.log('Stockage en masse des tâches NLP:', tasks.length);
+    logger.info('Stockage en masse des tâches NLP', { count: tasks.length });
 
     try {
       const dbTasks = tasks as DBTask[];
@@ -32,15 +36,15 @@ export class NlpTaskStorage {
         await this.triggerPlaylistRefresh();
       }
     } catch (error) {
-      console.error('Erreur lors du stockage des tâches:', error);
+      logger.error('Erreur lors du stockage des tâches', error as Error);
       throw error;
     }
   }
 
   private async updateDailyStats(tasks: any[]) {
     // Simulation de la mise à jour des statistiques
-    console.log('Mise à jour des statistiques quotidiennes:', tasks.length, 'tâches');
-    
+    logger.debug('Mise à jour des statistiques quotidiennes', { count: tasks.length });
+
     /*
     const today = this.getTodayKey();
     const ritual = await this.db.table('dailyRituals').get(today);
@@ -56,7 +60,7 @@ export class NlpTaskStorage {
 
   private async triggerPlaylistRefresh() {
     // Émettre event pour refresh UI
-    console.log('Déclenchement du rafraîchissement de la playlist');
+    logger.info('Déclenchement du rafraîchissement de la playlist');
     window.dispatchEvent(new CustomEvent('nlptasks:added'));
   }
 

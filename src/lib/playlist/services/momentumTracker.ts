@@ -3,6 +3,10 @@
  * Suit l'efficacité passée des tâches pour prédire le momentum futur
  */
 
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('MomentumTracker');
+
 // Définition minimale du type Task pour éviter les problèmes d'importation
 interface Task {
   id: string;
@@ -82,7 +86,7 @@ export class MomentumTracker {
         completionConsistency
       };
     } catch (error) {
-      console.warn('Erreur lors du calcul du momentum pour la tâche', task.id, error);
+      logger.warn('Erreur lors du calcul du momentum pour la tâche', { taskId: task.id, error });
       return null;
     }
   }

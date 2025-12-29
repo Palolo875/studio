@@ -5,6 +5,9 @@ import {
   updateUserPatternsInDB as updateUserPatternsInDBDexie,
   getUserPatternsFromDB as getUserPatternsFromDBDexie,
 } from '@/lib/database';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('TaskDatabase');
 
 // Interface pour l'historique des tâches
 export interface TaskHistoryEntry {
@@ -24,7 +27,7 @@ export async function getTodoTasksBulk(): Promise<Task[]> {
   try {
     return await getTodoTasksBulkDexie();
   } catch (error) {
-    console.error('Erreur lors de la récupération des tâches todo:', error);
+    logger.error('Erreur lors de la récupération des tâches todo', error as Error);
     return [];
   }
 }
@@ -41,7 +44,7 @@ export async function getTaskHistoryBulk(): Promise<TaskHistoryEntry[]> {
       completed: true,
     }));
   } catch (error) {
-    console.error('Erreur lors de la récupération de l\'historique:', error);
+    logger.error("Erreur lors de la récupération de l'historique", error as Error);
     return [];
   }
 }
@@ -53,7 +56,7 @@ export async function updateUserPatternsInDB(patterns: UserPatterns): Promise<vo
   try {
     await updateUserPatternsInDBDexie(patterns);
   } catch (error) {
-    console.error('Erreur lors de la mise à jour des patterns:', error);
+    logger.error('Erreur lors de la mise à jour des patterns', error as Error);
   }
 }
 
@@ -64,7 +67,7 @@ export async function getUserPatternsFromDB(): Promise<UserPatterns | null> {
   try {
     return await getUserPatternsFromDBDexie();
   } catch (error) {
-    console.error('Erreur lors de la récupération des patterns:', error);
+    logger.error('Erreur lors de la récupération des patterns', error as Error);
     return null;
   }
 }

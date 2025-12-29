@@ -1,6 +1,10 @@
 // antiOverfitting.ts
 // Implémentation du garde-fou contre la sur-adaptation
 
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('AntiOverfitting');
+
 export interface AntiOverfittingConfig {
   // Empêche la convergence trop rapide
   minSamplesBeforeAdaptation: number;
@@ -68,7 +72,10 @@ export class AntiOverfittingEngine {
     const recentSamples = this.adaptationSamples.slice(-30); // Simule "previous_30_days"
     const accuracy = this.calculateAverageAccuracy(recentSamples);
     
-    console.log(`TEMPORAL_CROSS_VALIDATION: Accuracy = ${accuracy.toFixed(2)}, Min required = ${this.config.temporalCrossValidation.minAccuracy}`);
+    logger.info('TEMPORAL_CROSS_VALIDATION', {
+      accuracy: Number(accuracy.toFixed(2)),
+      minRequired: this.config.temporalCrossValidation.minAccuracy,
+    });
     
     return accuracy >= this.config.temporalCrossValidation.minAccuracy;
   }

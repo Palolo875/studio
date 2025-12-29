@@ -3,6 +3,9 @@
  * Configure les écouteurs globaux et autres initialisations
  */
 import { setupNlpListeners } from './globalListeners';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('NlpInit');
 
 /**
  * Initialise le module NLP
@@ -11,7 +14,7 @@ import { setupNlpListeners } from './globalListeners';
 export function initNlpModule() {
   // Configurer les écouteurs globaux
   setupNlpListeners();
-  console.log('🚀 Module NLP initialisé');
+  logger.info('Module NLP initialisé');
 }
 
 // Initialisation automatique si nous sommes dans un environnement navigateur

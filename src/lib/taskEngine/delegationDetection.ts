@@ -1,5 +1,8 @@
 // Système de détection de délégation totale - Phase 3.9
 import { Task } from './types';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('DelegationDetection');
 
 /**
  * Signaux de délégation totale
@@ -65,7 +68,7 @@ export class DelegationDetector {
   addDelegationSignal(signal: string): void {
     if (!this.delegationSignals.signals.includes(signal)) {
       this.delegationSignals.signals.push(signal);
-      console.log(`[DelegationDetection] Nouveau signal ajouté: ${signal}`);
+      logger.info('Nouveau signal ajouté', { signal });
     }
   }
   
@@ -76,7 +79,7 @@ export class DelegationDetector {
     const index = this.delegationSignals.signals.indexOf(signal);
     if (index > -1) {
       this.delegationSignals.signals.splice(index, 1);
-      console.log(`[DelegationDetection] Signal retiré: ${signal}`);
+      logger.info('Signal retiré', { signal });
     }
   }
 }
@@ -92,7 +95,7 @@ export function handleDelegationRequest(userRequest: string): { isDelegation: bo
   const response = delegationDetector.generateResponse(userRequest);
   
   if (isDelegation) {
-    console.log(`[DelegationDetection] Demande de délégation détectée: ${userRequest}`);
+    logger.info('Demande de délégation détectée', { userRequest });
   }
   
   return {

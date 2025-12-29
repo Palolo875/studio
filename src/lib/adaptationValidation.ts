@@ -2,6 +2,9 @@
 // Implémentation de l'étape 3 : Validation des Adaptations et Gouvernance
 
 import { ParameterDelta } from './adaptationMemory';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('AdaptationValidation');
 
 // Interface pour l'impact d'une adaptation
 export interface AdaptationImpact {
@@ -79,7 +82,7 @@ export class AdaptationValidationManager {
     // Estimer l'impact si ce n'est pas déjà fourni
     const impact = change.impact || this.estimateImpact(change.proposedChanges);
     
-    console.log("Showing adaptation proposal modal:", {
+    logger.info('Showing adaptation proposal modal', {
       title: "Adaptation proposée",
       reason: change.reason,
       currentBehavior: impact.currentBehavior,
@@ -103,7 +106,7 @@ export class AdaptationValidationManager {
     const proposal = this.proposals.find(p => p.id === proposalId);
     
     if (!proposal) {
-      console.error(`Proposal with ID ${proposalId} not found`);
+      logger.error('Proposal not found', undefined, { proposalId });
       return;
     }
     
@@ -111,19 +114,24 @@ export class AdaptationValidationManager {
       case "ACCEPT":
         proposal.consentGiven = true;
         this.applyChanges(proposal.proposedChanges);
-        console.log(`Adaptation proposal ${proposalId} accepted and applied`);
+        logger.info('Adaptation proposal accepted and applied', { proposalId });
         break;
         
       case "REJECT":
         proposal.consentGiven = false;
-        console.log(`Adaptation proposal ${proposalId} rejected`);
+        logger.info('Adaptation proposal rejected', { proposalId });
         break;
         
       case "POSTPONE":
         proposal.consentGiven = null;
-        console.log(`Adaptation proposal ${proposalId} postponed`);
+        logger.info('Adaptation proposal postponed', { proposalId });
         break;
     }
+  }
+  
+  private applyChanges(_changes: ParameterDelta[]): void {
+    // TODO: connecter ce module au vrai store de paramètres.
+    // Ici on garde un no-op pour préserver le flow sans console/alert.
   }
   
   // Estimer l'impact d'une adaptation

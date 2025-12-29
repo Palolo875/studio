@@ -2,6 +2,9 @@
 // Implémentation de l'étape 3.3 : Limiter l'Autonomie Systémique et Empêcher les Dérives
 
 import { ParameterDelta } from './adaptationMemory';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('SystemAutonomy');
 
 // Interface pour les paramètres système par défaut
 export interface SystemDefaults {
@@ -69,7 +72,7 @@ export class SystemAutonomyManager {
     userConsentRequired: boolean;
     consentGiven: boolean | null;
   }): void {
-    console.log("Showing adaptation proposal:", {
+    logger.info('Showing adaptation proposal', {
       title: "Réévaluation des adaptations",
       body: change.reason,
       changes: change.proposedChanges,
@@ -85,7 +88,7 @@ export class SystemAutonomyManager {
   
   // Réinitialiser les adaptations
   resetAdaptations(): void {
-    console.log("Resetting adaptations to default values");
+    logger.info('Resetting adaptations to default values');
     this.adaptationHistory = [];
     this.lastAdaptationTimestamp = Date.now();
     
@@ -96,7 +99,7 @@ export class SystemAutonomyManager {
   
   // Appliquer les changements
   private applyChanges(changes: ParameterDelta[]): void {
-    console.log("Applying changes:", changes);
+    logger.debug('Applying changes', { changes });
     // Dans une implémentation réelle, cela appliquerait les changements aux paramètres du système
   }
   

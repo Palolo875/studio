@@ -3,6 +3,10 @@
  * Collecte des métriques d'échec et activation du mode RAW_CAPTURE_ONLY si nécessaire
  */
 
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('NLPTelemetryService');
+
 // Interface pour les métriques de télémétrie NLP
 export interface NLPTelemetryMetrics {
   totalTasks: number;
@@ -122,21 +126,21 @@ export class NLPTelemetryService {
     // Vérifier si le taux d'unknown est trop élevé
     if (metrics.unknownRate > this.config.maxUnknownRate) {
       this.mode = 'RAW_CAPTURE_ONLY';
-      console.warn('Mode RAW_CAPTURE_ONLY activé : taux d\'unknown trop élevé');
+      logger.warn("Mode RAW_CAPTURE_ONLY activé : taux d'unknown trop élevé");
       return;
     }
     
     // Vérifier si le taux d'ambiguous est trop élevé
     if (metrics.ambiguousRate > this.config.maxAmbiguousRate) {
       this.mode = 'RAW_CAPTURE_ONLY';
-      console.warn('Mode RAW_CAPTURE_ONLY activé : taux d\'ambiguous trop élevé');
+      logger.warn("Mode RAW_CAPTURE_ONLY activé : taux d'ambiguous trop élevé");
       return;
     }
     
     // Vérifier si la confiance moyenne est trop basse
     if (metrics.averageConfidence < this.config.minConfidenceThreshold) {
       this.mode = 'DEGRADED';
-      console.warn('Mode DEGRADED activé : confiance moyenne trop basse');
+      logger.warn('Mode DEGRADED activé : confiance moyenne trop basse');
       return;
     }
     

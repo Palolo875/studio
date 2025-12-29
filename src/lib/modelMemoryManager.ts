@@ -3,6 +3,10 @@
  * Implémente le budget mémoire réaliste et la dégradation progressive
  */
 
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('ModelMemoryManager');
+
 // Interface pour le budget mémoire des modèles
 export interface ModelMemoryBudget {
   mmBERT_INT8: number;        // classification uniquement
@@ -63,14 +67,14 @@ export class ModelMemoryManager {
         }
       } else {
         // Ne pas charger de nouveau modèle si nous avons atteint la limite
-        console.warn(`[ModelMemoryManager] Limite de modèles chargés atteinte: ${this.config.maxLoadedModels}`);
+        logger.warn('Limite de modèles chargés atteinte', { maxLoadedModels: this.config.maxLoadedModels });
         return false;
       }
     }
     
     // Charger le modèle
     this.loadedModels.add(modelName);
-    console.log(`[ModelMemoryManager] Modèle chargé: ${modelName}`);
+    logger.info('Modèle chargé', { modelName });
     return true;
   }
   
@@ -80,7 +84,7 @@ export class ModelMemoryManager {
    */
   unloadModel(modelName: string): void {
     this.loadedModels.delete(modelName);
-    console.log(`[ModelMemoryManager] Modèle déchargé: ${modelName}`);
+    logger.info('Modèle déchargé', { modelName });
   }
   
   /**
@@ -88,7 +92,7 @@ export class ModelMemoryManager {
    */
   unloadAllModels(): void {
     this.loadedModels.clear();
-    console.log('[ModelMemoryManager] Tous les modèles ont été déchargés');
+    logger.info('Tous les modèles ont été déchargés');
   }
   
   /**

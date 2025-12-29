@@ -1,5 +1,8 @@
 // Système de coût cognitif explicite - Phase 3.9
 import { Task } from './types';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('CognitiveCost');
 
 /**
  * Actions à coût cognitif
@@ -73,7 +76,7 @@ export class CognitiveCostManager {
     this.consumedCapacity += cost.estimatedCost;
     cost.acknowledged = true;
     
-    console.log(`[CognitiveCost] Capacité consommée: ${cost.estimatedCost}%. Reste: ${this.getRemainingCapacity()}%`);
+    logger.info('Capacité consommée', { consumedPercent: cost.estimatedCost, remainingPercent: this.getRemainingCapacity() });
   }
   
   /**
@@ -88,7 +91,7 @@ export class CognitiveCostManager {
    */
   resetCapacity(): void {
     this.consumedCapacity = 0;
-    console.log("[CognitiveCost] Capacité réinitialisée");
+    logger.info('Capacité réinitialisée');
   }
   
   /**

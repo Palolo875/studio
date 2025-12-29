@@ -1,5 +1,8 @@
 // Système de sécurité cognitive et anti-manipulation - Phase 3.5
 import { OverrideEvent } from './brainContracts';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('CognitiveSecurity');
 
 /**
  * Invariants anti-manipulation
@@ -141,6 +144,6 @@ export function getRequiredProtection(riskSnapshot: CognitiveRiskSnapshot): Cogn
  * Exécute l'action de protection cognitive
  */
 export function applyProtection(action: ProtectionAction): void {
-  console.log(`[CognitiveSecurity] Action appliquée: ${action}`);
+  logger.info('Action appliquée', { action });
   // Ici on notifierait le BrainEngine pour changer son SystemMode
 }

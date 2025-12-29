@@ -2,6 +2,9 @@
 // Implémentation de la fonctionnalité de retour arrière des adaptations
 
 import { ParameterDelta } from './adaptationMemory';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('AdaptationRollback');
 
 // Interface pour l'historique des adaptations
 export interface AdaptationHistory {
@@ -94,7 +97,7 @@ export class AdaptationRollbackManager {
       await this.applyParametersWithValidation(rollback);
       
       // Journaliser le rollback
-      console.log("ADAPTATION_ROLLEDBACK", {
+      logger.info('ADAPTATION_ROLLEDBACK', {
         adaptationId,
         timestamp: Date.now(),
         reason: "User requested rollback"
@@ -104,11 +107,11 @@ export class AdaptationRollbackManager {
       adaptation.userConsent = "REJECTED";
       
       // Notifier l'utilisateur
-      console.log("NOTIFICATION: Adaptation annulée avec succès");
+      logger.info('NOTIFICATION: Adaptation annulée avec succès');
       
       return true;
     } catch (error) {
-      console.error("Error rolling back adaptation:", error);
+      logger.error('Error rolling back adaptation', error as Error);
       return false;
     }
   }
@@ -117,7 +120,7 @@ export class AdaptationRollbackManager {
   async applyParametersWithValidation(deltas: InvertedDelta[]): Promise<void> {
     // Dans une implémentation réelle, cela appliquerait les changements aux paramètres du système
     // avec des validations appropriées
-    console.log("Applying parameter changes with validation:", deltas);
+    logger.debug('Applying parameter changes with validation', { deltas });
     
     // Simulation d'un délai asynchrone
     await new Promise(resolve => setTimeout(resolve, 100));

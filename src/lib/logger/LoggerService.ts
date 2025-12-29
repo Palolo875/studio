@@ -62,6 +62,8 @@ const DEFAULT_CONFIG: LoggerConfig = {
   maxStoredLogs: 1000,
 };
 
+const nativeConsole: Console | undefined = (globalThis as unknown as { console?: Console }).console;
+
 class LoggerService {
   private config: LoggerConfig;
   private logs: LogEntry[] = [];
@@ -128,19 +130,19 @@ class LoggerService {
 
       switch (level) {
         case 'debug':
-          console.debug(`%c${formatted}`, style, data || '');
+          nativeConsole?.debug?.(`%c${formatted}`, style, data || '');
           break;
         case 'info':
-          console.info(`%c${formatted}`, style, data || '');
+          nativeConsole?.info?.(`%c${formatted}`, style, data || '');
           break;
         case 'warn':
-          console.warn(`%c${formatted}`, style, data || '');
+          nativeConsole?.warn?.(`%c${formatted}`, style, data || '');
           break;
         case 'error':
         case 'fatal':
-          console.error(`%c${formatted}`, style, error || data || '');
+          nativeConsole?.error?.(`%c${formatted}`, style, error || data || '');
           if (error?.stack) {
-            console.error(error.stack);
+            nativeConsole?.error?.(error.stack);
           }
           break;
       }

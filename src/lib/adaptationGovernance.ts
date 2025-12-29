@@ -2,6 +2,9 @@
 // Implémentation de l'étape 3.2 : Gouvernance Éthique des Adaptations
 
 import { ParameterDelta } from './adaptationMemory';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('AdaptationGovernance');
 
 // Interface pour le journal d'historique des adaptations
 export interface AdaptationHistoryLog {
@@ -54,7 +57,7 @@ export class AdaptationGovernanceManager {
   
   // Afficher un message à l'utilisateur
   private showMessage(message: string): void {
-    console.log(`NOTIFICATION: ${message}`);
+    logger.info('NOTIFICATION', { message });
     // Dans une implémentation réelle, cela afficherait une notification dans l'UI
   }
   
@@ -88,7 +91,7 @@ export class AdaptationGovernanceManager {
   
   // Afficher une notification
   private showNotification(message: string): void {
-    console.log(`NOTIFICATION: ${message}`);
+    logger.info('NOTIFICATION', { message });
     // Dans une implémentation réelle, cela afficherait une notification dans l'UI
   }
   

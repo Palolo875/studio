@@ -18,6 +18,9 @@ import {
 import { computeProgressMetrics } from './progressMetrics';
 import { computeBrainQuality } from './brainQuality';
 import { AdaptationPanel } from './adaptationTransparency';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('Phase6Implementation');
 
 // Classe principale pour la gestion de l'adaptation
 export class AdaptationManager {
@@ -35,7 +38,7 @@ export class AdaptationManager {
   // Ajouter un signal d'adaptation
   addAdaptationSignal(signal: AdaptationSignal) {
     // Dans une implémentation réelle, cela stockerait le signal
-    console.log("Signal d'adaptation reçu:", signal);
+    logger.info("Signal d'adaptation reçu", { signal });
     
     // Tracker les paramètres pour la détection de dérive
     this.driftMonitor.track(this.parameters);
@@ -56,7 +59,7 @@ export class AdaptationManager {
     
     if (brainQualityAfter < brainQualityBefore - 0.15) {
       // Rollback automatique si la qualité diminue trop
-      console.log("Qualité du cerveau diminuée significativement, rollback...");
+      logger.warn('Qualité du cerveau diminuée significativement, rollback...');
       // rollbackAdaptation("recent_adaptation_id"); // Dans la vraie implémentation
     }
     
@@ -81,7 +84,7 @@ export class AdaptationManager {
     // Entrer en mode conservateur si la qualité est trop basse
     if (quality < 0.5) {
       const conservativeMode = enterConservativeMode();
-      console.log("Passage en mode conservateur:", conservativeMode);
+      logger.info('Passage en mode conservateur', { conservativeMode });
       // Appliquer le mode conservateur
       this.parameters = {
         ...this.parameters,

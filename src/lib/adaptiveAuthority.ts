@@ -1,6 +1,10 @@
 // adaptiveAuthority.ts
 // Implémentation de la hiérarchie des modes d'autorité adaptatifs
 
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('AdaptiveAuthority');
+
 export type AuthorityMode = 'NORMAL' | 'PROTECTIVE' | 'CRISIS';
 
 export interface UserContext {
@@ -84,7 +88,7 @@ export class AdaptiveAuthorityManager {
   updateAuthorityMode(context: UserContext): AuthorityMode {
     const newMode = this.determineAuthorityMode(context);
     if (newMode !== this.currentMode) {
-      console.log(`AUTHORITY_MODE_CHANGED: ${this.currentMode} -> ${newMode}`);
+      logger.info('AUTHORITY_MODE_CHANGED', { from: this.currentMode, to: newMode });
       this.currentMode = newMode;
     }
     return this.currentMode;
@@ -92,14 +96,14 @@ export class AdaptiveAuthorityManager {
 
   // Appliquer les changements protecteurs automatiquement
   applyProtectiveChanges(): void {
-    console.log("PROTECTIVE_CHANGES_APPLIED: Mode protecteur activé");
+    logger.info('PROTECTIVE_CHANGES_APPLIED: Mode protecteur activé');
     // Dans une implémentation réelle, cela appliquerait des changements
     // spécifiques pour protéger l'utilisateur (réduction de charge, etc.)
   }
 
   // Afficher une notification simple en mode protecteur
   showSimpleNotification(message: string): void {
-    console.log(`NOTIFICATION: ${message}`);
+    logger.info('NOTIFICATION', { message });
     // Dans une implémentation réelle, cela afficherait une notification
     // simple dans l'interface utilisateur
   }

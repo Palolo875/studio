@@ -3,6 +3,9 @@
  * Classification énergie/effort/sentiment avec modèle quantifié INT8
  */
 import { RawTaskWithContract } from '@/lib/nlp/NLPContract';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('TaskClassifier');
 
 // Définitions des classes multilingues
 const CLASS_DEFINITIONS = {
@@ -58,12 +61,12 @@ let classifier: any = null;
  */
 export async function initClassifier() {
   // Simulation de l'initialisation
-  console.log('Initialisation du classificateur mmBERT...');
-  
+  logger.info('Initialisation du classificateur mmBERT...');
+
   // Dans une vraie implémentation:
   /*
   if (classifier) return classifier;
-  
+
   classifier = await pipeline(
     'zero-shot-classification', 
     'Xenova/multilingual-e5-small-classifier', // ~45MB INT8
@@ -71,12 +74,12 @@ export async function initClassifier() {
       device: 'wasm',
       dtype: 'qint8',
       progress_callback: (data) => {
-        if (data.status === 'progress') console.log(`MMBERT: ${data.progress}%`);
+        if (data.status === 'progress') logger.info('MMBERT progress', { progress: data.progress });
       }
     }
   );
   */
-  
+
   classifier = {
     classify: async (text: string, labels: string[]) => {
       // Simulation de classification basée sur le contenu du texte

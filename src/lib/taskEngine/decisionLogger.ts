@@ -1,6 +1,9 @@
 // Système de logging des décisions du cerveau - Phase 3.4
 import { BrainDecision, BrainVersion } from './brainContracts';
 import { db, type DBBrainDecision } from '@/lib/database';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('DecisionLogger');
 
 /**
  * Loggue une décision du cerveau
@@ -42,7 +45,7 @@ export async function getAllBrainDecisions(): Promise<BrainDecision[]> {
 export async function replayDecision(decisionId: string): Promise<BrainDecision | null> {
   const decision = await getBrainDecision(decisionId);
   if (!decision) {
-    console.warn(`[BrainDecision] Décision ${decisionId} non trouvée pour le replay`);
+    logger.warn('Décision non trouvée pour le replay', { decisionId });
     return null;
   }
   return decision;

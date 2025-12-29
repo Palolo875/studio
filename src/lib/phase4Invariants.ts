@@ -9,6 +9,9 @@ import { WorkerCommunication } from './workerCommunication';
 import { progressiveFallback } from './progressiveFallback';
 import { storageGuard } from './storageGuard';
 import { batteryAwareness } from './batteryAwareness';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('Phase4Invariants');
 
 // Constantes pour les unités
 const MB = 1024 * 1024;
@@ -120,7 +123,7 @@ export class Phase4Invariants {
           }
         }
       } catch (error) {
-        console.error(`[Phase4Invariants] Erreur lors de la vérification de l'invariant ${invariant.id}:`, error);
+        logger.error(`Erreur lors de la vérification de l'invariant ${invariant.id}`, error as Error);
         // En cas d'erreur, on considère que l'invariant est violé
         violatedInvariants.push(invariant);
       }
@@ -143,7 +146,7 @@ export class Phase4Invariants {
     try {
       return invariant.check();
     } catch (error) {
-      console.error(`[Phase4Invariants] Erreur lors de la vérification de l'invariant ${invariantId}:`, error);
+      logger.error(`Erreur lors de la vérification de l'invariant ${invariantId}`, error as Error);
       return false;
     }
   }
@@ -154,7 +157,7 @@ export class Phase4Invariants {
    */
   addInvariant(invariant: Invariant): void {
     this.invariants.push(invariant);
-    console.log(`[Phase4Invariants] Invariant ${invariant.id} ajouté`);
+    logger.info('Invariant ajouté', { invariantId: invariant.id });
   }
 
   /**
@@ -165,7 +168,7 @@ export class Phase4Invariants {
     const index = this.invariants.findIndex(inv => inv.id === invariantId);
     if (index !== -1) {
       this.invariants.splice(index, 1);
-      console.log(`[Phase4Invariants] Invariant ${invariantId} supprimé`);
+      logger.info('Invariant supprimé', { invariantId });
     }
   }
 
@@ -195,7 +198,7 @@ export class Phase4Invariants {
       throw new Error(`Invariant ${invariantId} non trouvé`);
     }
 
-    console.log(`[Phase4Invariants] Application des actions correctives pour l'invariant ${invariantId}`);
+    logger.info('Application des actions correctives', { invariantId });
 
     // Appliquer des actions spécifiques selon l'invariant
     switch (invariantId) {

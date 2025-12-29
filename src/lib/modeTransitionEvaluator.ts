@@ -3,6 +3,9 @@
 
 import { SovereigntyManager, SovereigntyMode } from './modeEngine';
 import { Session } from './types';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('ModeTransitionEvaluator');
 
 // Interface pour l'évaluateur de transitions
 export class ModeTransitionEvaluator {
@@ -38,9 +41,9 @@ export class ModeTransitionEvaluator {
         }
       }
       
-      console.log(`Mode transition evaluation completed for user ${userId}`);
+      logger.info('Mode transition evaluation completed', { userId });
     } catch (error) {
-      console.error('Error evaluating mode transition:', error);
+      logger.error('Error evaluating mode transition', error as Error);
     }
   }
   
@@ -56,6 +59,6 @@ export class ModeTransitionEvaluator {
     // Mettre à jour le gestionnaire de souveraineté
     this.sovereigntyManager.registerUserActivity(timestamp);
     
-    console.log(`User activity registered for user ${userId} at ${new Date(timestamp)}`);
+    logger.info('User activity registered', { userId, timestamp });
   }
 }
