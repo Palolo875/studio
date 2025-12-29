@@ -48,7 +48,7 @@ export function TimerDisplay({
       
       // Jouer un son discret si activé
       if (settings.soundEnabled && audioRef.current) {
-        audioRef.current.play().catch(e => console.log("Impossible de jouer le son:", e));
+        audioRef.current.play().catch(() => null);
       }
       
       if (!isBreakTime) {

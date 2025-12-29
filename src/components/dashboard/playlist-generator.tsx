@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import type { DailyRituals, Task } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Music } from "lucide-react";
+import { decideSessionWithTrace } from "@/lib/taskEngine/brainEngine";
+import type { BrainInput } from "@/lib/taskEngine/brainContracts";
 
 interface PlaylistGeneratorProps {
   onPlaylistGenerated: (tasks: Task[]) => void;
@@ -40,6 +42,85 @@ export function PlaylistGenerator({ onPlaylistGenerated, dailyRituals = { playli
   useEffect(() => {
     if (state.message && !state.errors && state.tasks.length > 0) {
       onPlaylistGenerated(state.tasks);
+
+      try {
+        const energyLevel = (document.getElementById('energyLevel') as HTMLSelectElement | null)?.value as
+          | 'high'
+          | 'medium'
+          | 'low'
+          | undefined;
+        const intention = (document.getElementById('intention') as HTMLSelectElement | null)?.value as
+          | 'focus'
+          | 'learning'
+          | 'creativity'
+          | 'planning'
+          | undefined;
+
+        if (energyLevel && intention) {
+          const brainTasks = state.tasks.map((t: Task) => {
+            const now = new Date();
+            return {
+              id: t.id,
+              title: t.name,
+              description: t.description,
+              duration: t.estimatedDuration ?? 30,
+              effort: (t.energyRequired ?? 'medium') as 'low' | 'medium' | 'high',
+              urgency: (t.priority ?? 'medium') as 'low' | 'medium' | 'high' | 'urgent',
+              impact: 'medium' as const,
+              deadline: t.scheduledDate ? new Date(t.scheduledDate) : undefined,
+              scheduledTime: undefined,
+              completionHistory: [],
+              category: (t.tags && t.tags[0]) || 'general',
+              status: t.completed ? 'done' : 'todo',
+              activationCount: 0,
+              lastActivated: t.lastAccessed ? new Date(t.lastAccessed) : now,
+              createdAt: now,
+              origin: 'self_chosen' as const,
+              hasTangibleResult: true,
+            };
+          });
+
+          const input: BrainInput = {
+            tasks: brainTasks,
+            userState: {
+              energy: energyLevel,
+              stability: 'stable',
+              linguisticFatigue: false,
+            },
+            temporal: {
+              currentTime: new Date(),
+              availableTime: 8 * 60,
+              timeOfDay:
+                new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening',
+            },
+            budget: {
+              daily: {
+                maxLoad: 100,
+                usedLoad: 0,
+                remaining: 100,
+                lockThreshold: 10,
+              },
+              session: {
+                maxDuration: 90,
+                maxTasks: 5,
+                maxComplexity: 10,
+              },
+            },
+            constraints: [],
+            history: [],
+            decisionPolicy: {
+              level: 'ASSISTED',
+              userConsent: true,
+              overrideCostVisible: true,
+            },
+          };
+
+          decideSessionWithTrace(input);
+        }
+      } catch {
+        // ignore
+      }
+
       toast({
         title: "Succès",
         description: state.message,

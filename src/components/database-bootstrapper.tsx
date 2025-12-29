@@ -4,18 +4,7 @@ import { useEffect } from 'react';
 import { db } from '@/lib/database';
 import { createLocalBackupSnapshot, openDbWithCorruptionRecovery, performPeriodicHealthCheck } from '@/lib/dbCorruptionRecovery';
 import { performStartupIntegrityCheck } from '@/lib/dataIntegrityValidator';
-
-async function estimateStorageUsage(): Promise<{ usage?: number; quota?: number } | null> {
-  if (typeof navigator === 'undefined') return null;
-  const storage = (navigator as any).storage;
-  if (!storage?.estimate) return null;
-  try {
-    const estimate = await storage.estimate();
-    return { usage: estimate.usage, quota: estimate.quota };
-  } catch {
-    return null;
-  }
-}
+import { storageGuard } from '@/lib/storageGuard';
 
 export function DatabaseBootstrapper() {
   useEffect(() => {
@@ -23,6 +12,7 @@ export function DatabaseBootstrapper() {
     let healthInterval: ReturnType<typeof setInterval> | undefined;
     let growthInterval: ReturnType<typeof setInterval> | undefined;
     let backupInterval: ReturnType<typeof setInterval> | undefined;
+    let pruneInterval: ReturnType<typeof setInterval> | undefined;
 
     async function bootstrap() {
       try {
@@ -43,13 +33,19 @@ export function DatabaseBootstrapper() {
 
       createLocalBackupSnapshot('startup').catch(() => null);
 
+      storageGuard.enforce().catch(() => null);
+
       healthInterval = setInterval(() => {
         performPeriodicHealthCheck(db).catch(() => null);
       }, 15 * 60 * 1000);
 
       growthInterval = setInterval(() => {
-        estimateStorageUsage().then(() => null);
+        storageGuard.enforce().catch(() => null);
       }, 30 * 60 * 1000);
+
+      pruneInterval = setInterval(() => {
+        db.pruneData(90).catch(() => null);
+      }, 24 * 60 * 60 * 1000);
 
       backupInterval = setInterval(() => {
         createLocalBackupSnapshot('periodic').catch(() => null);
@@ -62,6 +58,7 @@ export function DatabaseBootstrapper() {
       cancelled = true;
       if (healthInterval) clearInterval(healthInterval);
       if (growthInterval) clearInterval(growthInterval);
+      if (pruneInterval) clearInterval(pruneInterval);
       if (backupInterval) clearInterval(backupInterval);
     };
   }, []);

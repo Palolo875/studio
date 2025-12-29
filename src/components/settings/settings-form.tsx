@@ -2,6 +2,7 @@
 
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,6 +26,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "../ui/separator";
+import { DatabaseSnapshotManager } from "@/lib/databaseSnapshot";
+import { getSetting, setSetting } from "@/lib/database";
 
 const formSchema = z.object({
   // Profil
@@ -86,6 +89,7 @@ const SettingsSectionCard = ({ id, title, description, children }: { id: string,
 export function SettingsForm() {
   const { toast } = useToast();
   const { setTheme, theme } = useTheme();
+  const restoreFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -124,13 +128,93 @@ export function SettingsForm() {
     },
   });
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const saved = await getSetting<Partial<FormValues>>('appSettings');
+        if (cancelled) return;
+        if (!saved || typeof saved !== 'object') return;
+        const current = form.getValues();
+        form.reset({
+          ...current,
+          ...saved,
+          theme: (saved.theme as any) ?? current.theme,
+        });
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [form]);
+
   function onSubmit(values: FormValues) {
     setTheme(values.theme);
+    void setSetting('appSettings', values);
     toast({
       title: "Paramètres enregistrés",
       description: "Vos informations ont été mises à jour.",
     });
-    console.log(values);
+  }
+
+  async function exportBackup(): Promise<void> {
+    try {
+      const snapshot = await DatabaseSnapshotManager.createSnapshot();
+      await DatabaseSnapshotManager.saveSnapshotToStorage(snapshot, `manual_export_${Date.now()}`);
+      const payload = DatabaseSnapshotManager.exportSnapshot(snapshot);
+
+      const blob = new Blob([payload], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `kairuflow_backup_${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Backup exporté",
+        description: "Le fichier de sauvegarde a été téléchargé.",
+      });
+    } catch {
+      toast({
+        title: "Export impossible",
+        description: "Erreur lors de l'export de la sauvegarde.",
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function importBackupFromFile(file: File): Promise<void> {
+    try {
+      const confirmed = window.confirm(
+        "Restaurer une sauvegarde va remplacer les données locales actuelles. Continuer ?"
+      );
+      if (!confirmed) return;
+
+      const text = await file.text();
+      const snapshot = DatabaseSnapshotManager.importSnapshot(text);
+      await DatabaseSnapshotManager.restoreSnapshot(snapshot);
+
+      toast({
+        title: "Restauration terminée",
+        description: "La sauvegarde a été importée. Rechargement en cours…",
+      });
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 600);
+    } catch {
+      toast({
+        title: "Import impossible",
+        description: "Erreur lors de l'import/restauration de la sauvegarde.",
+        variant: "destructive",
+      });
+    }
   }
 
   return (
@@ -506,6 +590,40 @@ export function SettingsForm() {
                 >
                     Vider
                 </Button>
+            </div>
+
+            <div className="flex flex-col gap-4 rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">Backup / Restore</FormLabel>
+                <p className="text-sm text-muted-foreground">
+                  Exportez une sauvegarde JSON ou restaurez une sauvegarde existante.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button type="button" variant="outline" onClick={() => exportBackup()}>
+                  Exporter (JSON)
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => restoreFileInputRef.current?.click()}
+                >
+                  Importer / Restaurer
+                </Button>
+                <input
+                  ref={restoreFileInputRef}
+                  type="file"
+                  accept="application/json"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    if (!file) return;
+                    importBackupFromFile(file);
+                  }}
+                />
+              </div>
             </div>
             
             <FormField

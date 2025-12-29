@@ -8,7 +8,6 @@ export function FocusDemo() {
   const [isDemoVisible, setIsDemoVisible] = useState(false);
 
   const handleTaskComplete = (taskId: string) => {
-    console.log(`Demo task ${taskId} marked as complete.`);
     setIsDemoVisible(false);
   };
   

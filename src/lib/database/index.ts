@@ -360,7 +360,7 @@ class KairuFlowDatabase extends Dexie {
                 eveningEntries: 'id, timestamp, updatedAt',
                 settings: 'key, updatedAt',
             })
-            .upgrade(async (trans) => {
+            .upgrade(async (trans: any) => {
                 const nowMs = Date.now();
                 const now = new Date(nowMs);
                 const snapshotName = `pre_upgrade_to_v6_${nowMs}`;
@@ -463,18 +463,26 @@ class KairuFlowDatabase extends Dexie {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - days);
 
-        const initialCount = await this.taskHistory.count();
-        await this.taskHistory
-            .where('timestamp')
-            .below(cutoffDate)
-            .delete();
+        const cutoffTs = cutoffDate.getTime();
+        const deletedHistory = await this.taskHistory.where('timestamp').below(cutoffDate).delete();
+        const deletedSessions = await this.sessions.where('timestamp').below(cutoffTs).delete();
+        const deletedBrainDecisions = await this.brainDecisions.where('timestamp').below(cutoffTs).delete();
+        const deletedDecisionExplanations = await this.decisionExplanations.where('timestamp').below(cutoffTs).delete();
 
-        const finalCount = await this.taskHistory.count();
-        const removedCount = initialCount - finalCount;
+        const removedCount =
+            deletedHistory + deletedSessions + deletedBrainDecisions + deletedDecisionExplanations;
 
-        logger.info('Database prune completed', { removedCount, days });
+        logger.info('Database prune completed', {
+            days,
+            removedCount,
+            deletedHistory,
+            deletedSessions,
+            deletedBrainDecisions,
+            deletedDecisionExplanations,
+        });
         return removedCount;
     }
+
 }
 
 // Instance singleton

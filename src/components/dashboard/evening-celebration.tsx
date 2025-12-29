@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { Textarea } from '@/components/ui/textarea';
 import { calculateFocusScore, getFocusScoreMessage } from '@/lib/focus-score-calculator';
 import { useToast } from '@/hooks/use-toast';
+import { getLatestEveningEntry, upsertEveningEntry } from '@/lib/database';
 
 interface EveningCelebrationProps {
   completedTasks: string[];
@@ -35,13 +36,34 @@ export function EveningCelebration({
   const [lastSavedBrainDump, setLastSavedBrainDump] = useState('');
   const [actionsDetected, setActionsDetected] = useState(0);
   const [showActionBadge, setShowActionBadge] = useState(false);
+  const [eveningEntryId, setEveningEntryId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const latest = await getLatestEveningEntry();
+        if (cancelled) return;
+        if (!latest) return;
+        setEveningEntryId(latest.id);
+        setBrainDump(latest.brainDump);
+        setLastSavedBrainDump(latest.brainDump);
+        setActionsDetected(latest.actionsDetected);
+        setShowActionBadge(latest.actionsDetected > 0);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Auto-save brain dump every 2 seconds
   useEffect(() => {
     if (!brainDump || brainDump === lastSavedBrainDump) return;
     
     const timer = setTimeout(() => {
-      // In a real app, this would save to a database
       setLastSavedBrainDump(brainDump);
       
       // Simulate NLP analysis to detect actions
@@ -55,10 +77,21 @@ export function EveningCelebration({
       if (detectedActions > 0) {
         setShowActionBadge(true);
       }
+
+      const now = new Date();
+      const id = eveningEntryId ?? `evening_${now.getTime()}`;
+      void upsertEveningEntry({
+        id,
+        timestamp: now.getTime(),
+        brainDump,
+        actionsDetected: detectedActions,
+        transformedToTasks: false,
+      });
+      setEveningEntryId(id);
     }, 2000);
     
     return () => clearTimeout(timer);
-  }, [brainDump, lastSavedBrainDump]);
+  }, [brainDump, lastSavedBrainDump, eveningEntryId]);
 
   // Hide action badge after 5 seconds of inactivity
   useEffect(() => {

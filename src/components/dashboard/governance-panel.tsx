@@ -101,7 +101,6 @@ export function GovernancePanel({
 
     if (success) {
       setProtectiveModeActive(protectiveManager.isActive());
-      console.log("Demande de sortie du mode protectif enregistrée");
     }
   };
 
@@ -356,7 +355,7 @@ export function GovernancePanel({
                   size="sm"
                   variant="outline"
                   className="ml-auto"
-                  onClick={() => console.log("Ouvrir le gestionnaire de conflits")}
+                  onClick={() => null}
                 >
                   <Vote className="h-4 w-4 mr-1" />
                   Résoudre

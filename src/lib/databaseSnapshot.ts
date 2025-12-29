@@ -145,19 +145,28 @@ export class DatabaseSnapshotManager {
       logger.info('Restauration de la base de données');
 
       // Transaction atomique: soit tout est restauré, soit rien.
-      await (db as any).transaction(
-        'rw',
+      const tables: any[] = [
         db.tasks,
         db.sessions,
         db.overrides,
         db.sleepData,
         db.taskHistory,
-        (db as any).eveningEntries,
-        (db as any).settings,
         db.brainDecisions,
         db.decisionExplanations,
         db.adaptationSignals,
         db.adaptationHistory,
+      ];
+
+      if ((db as any).eveningEntries) {
+        tables.push((db as any).eveningEntries);
+      }
+      if ((db as any).settings) {
+        tables.push((db as any).settings);
+      }
+
+      await (db as any).transaction(
+        'rw',
+        ...tables,
         async () => {
           await Promise.all([
             db.tasks.clear(),
