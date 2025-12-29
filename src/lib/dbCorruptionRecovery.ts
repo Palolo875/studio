@@ -3,9 +3,65 @@
  * Implémente la stratégie de récupération en cas de corruption d'IndexedDB
  */
 
+import Dexie, { type Table } from 'dexie';
 import { createLogger } from '@/lib/logger';
+import { DatabaseSnapshotManager, type DatabaseSnapshot } from '@/lib/databaseSnapshot';
 
 const logger = createLogger('DBRecovery');
+
+interface BackupRow {
+  id?: number;
+  timestamp: number;
+  name: string;
+  snapshot: DatabaseSnapshot;
+}
+
+class KairuFlowBackupDatabase extends Dexie {
+  backups!: Table<BackupRow, number>;
+
+  constructor() {
+    super('KairuFlowBackupDB');
+    this.version(1).stores({
+      backups: '++id, timestamp, name',
+    });
+  }
+}
+
+const backupDb = new KairuFlowBackupDatabase();
+
+async function getLatestBackupSnapshot(): Promise<DatabaseSnapshot | null> {
+  try {
+    const row = await backupDb.backups.orderBy('timestamp').reverse().first();
+    return row?.snapshot ?? null;
+  } catch (error) {
+    logger.error('Impossible de lire le backup DB', error as Error);
+    return null;
+  }
+}
+
+async function pruneBackups(keep: number): Promise<void> {
+  try {
+    const rows = await backupDb.backups.orderBy('timestamp').reverse().toArray();
+    const toDelete = rows.slice(keep);
+    if (toDelete.length === 0) return;
+    await backupDb.backups.bulkDelete(toDelete.map(r => r.id!).filter((id): id is number => typeof id === 'number'));
+  } catch (error) {
+    logger.error('Impossible de pruner les backups', error as Error);
+  }
+}
+
+export async function createLocalBackupSnapshot(reason: string = 'periodic'): Promise<void> {
+  try {
+    const snapshot = await DatabaseSnapshotManager.createSnapshot();
+    const ts = Date.now();
+    const name = `backup_${reason}_${ts}`;
+    await backupDb.backups.add({ timestamp: ts, name, snapshot });
+    await pruneBackups(5);
+    logger.info('Backup local créé', { name });
+  } catch (error) {
+    logger.error('Échec création backup local', error as Error);
+  }
+}
 
 /**
  * Tente d'ouvrir la base de données avec récupération en cas de corruption
@@ -85,29 +141,20 @@ async function attemptBackupRestoration(db: any): Promise<any | null> {
   // 2. Backup local (dans un autre stockage)
   // 3. Backup automatique (synchronisé avec les modifications)
   
-  // Pour cette implémentation, nous simulons la recherche d'un backup
-  const backupAvailable = await checkForBackup();
-  
-  if (!backupAvailable) {
-    logger.info('Aucun backup disponible');
-    return null;
-  }
-  
   try {
-    // Simuler la récupération du backup
-    const backup = await retrieveBackup();
-    
-    // Supprimer la base corrompue
+    const snapshot = await retrieveBackup();
+    if (!snapshot) {
+      logger.info('Aucun backup disponible');
+      return null;
+    }
+
+    await db.close();
     await db.delete();
     logger.warn('Base corrompue supprimée');
-    
-    // Restaurer à partir du backup
-    await importBackup(backup);
-    logger.info('Backup importé avec succès');
-    
-    // Rouvrir la base de données
+
     const restoredDb = await db.open();
-    logger.info('Base de données restaurée et ouverte');
+    await importBackup(snapshot);
+    logger.info('Backup importé avec succès');
     
     // Afficher un message à l'utilisateur
     logger.info("La base de données a été restaurée à partir d'une sauvegarde");
@@ -124,29 +171,29 @@ async function attemptBackupRestoration(db: any): Promise<any | null> {
  * @returns True si un backup est disponible, false sinon
  */
 async function checkForBackup(): Promise<boolean> {
-  // Dans une implémentation réelle, cela vérifierait différents emplacements
-  // Pour cette simulation, nous retournons false pour forcer la réinitialisation
-  logger.debug('Vérification des backups (simulation)');
-  return false;
+  logger.debug('Vérification des backups');
+  const snapshot = await getLatestBackupSnapshot();
+  return snapshot !== null;
 }
 
 /**
  * Récupère le dernier backup disponible
  * @returns Données du backup
  */
-async function retrieveBackup(): Promise<any> {
-  // Dans une implémentation réelle, cela récupérerait le backup depuis le stockage
-  logger.debug('Récupération du backup (simulation)');
-  return { data: "backup_data" };
+async function retrieveBackup(): Promise<DatabaseSnapshot | null> {
+  logger.debug('Récupération du backup');
+  const hasBackup = await checkForBackup();
+  if (!hasBackup) return null;
+  return await getLatestBackupSnapshot();
 }
 
 /**
  * Importe un backup dans la base de données
  * @param backup Données du backup à importer
  */
-async function importBackup(backup: any): Promise<void> {
-  // Dans une implémentation réelle, cela importerait les données du backup
-  logger.debug('Importation du backup (simulation)', { backup });
+async function importBackup(backup: DatabaseSnapshot): Promise<void> {
+  logger.debug('Importation du backup');
+  await DatabaseSnapshotManager.restoreSnapshot(backup);
 }
 
 /**

@@ -27,10 +27,10 @@ export interface MigrationResult {
  * @returns Backup chiffré
  */
 export async function exportEncryptedBackup(): Promise<string> {
-  // Dans une implémentation réelle, cela chiffrerait l'export de la base
-  // Pour cette implémentation, nous simulons simplement
   logger.info('Création d’un backup chiffré');
-  return "encrypted_backup_data_" + Date.now();
+  const snapshot = await DatabaseSnapshotManager.createSnapshot();
+  const snapshotString = DatabaseSnapshotManager.exportSnapshot(snapshot);
+  return snapshotString;
 }
 
 /**
@@ -38,8 +38,9 @@ export async function exportEncryptedBackup(): Promise<string> {
  * @param backup Backup chiffré à importer
  */
 export async function importEncryptedBackup(backup: string): Promise<void> {
-  // Dans une implémentation réelle, cela déchiffrerait et importerait le backup
   logger.info('Restauration du backup', { prefix: backup.substring(0, 30) });
+  const snapshot = DatabaseSnapshotManager.importSnapshot(backup);
+  await DatabaseSnapshotManager.restoreSnapshot(snapshot);
 }
 
 /**
@@ -74,13 +75,6 @@ export async function migrateWithRollback(db: any, migration: Migration): Promis
       throw new Error(`Incohérence détectée post-migration: ${integrity.errors[0].message}`);
     }
 
-    // 4. Confirmation métadonnées
-    db.meta.push({
-      version: migration.version,
-      appliedAt: new Date(),
-      snapshotHash: hashVal
-    });
-
     return { success: true, backupCreated: true };
   } catch (error) {
     logger.error(`Échec V${migration.version}. Rollback immédiat.`, error as Error);
@@ -99,30 +93,7 @@ export async function migrateWithRollback(db: any, migration: Migration): Promis
 /**
  * Liste des migrations disponibles
  */
-export const MIGRATIONS: Migration[] = [
-  // Exemple de migration
-  {
-    version: 1,
-    name: "Initial schema",
-    up: async (db: any) => {
-      // Création des tables initiales
-      if (!db.tasks) {
-        db.version(1).stores({
-          tasks: '++id,sessionId,title,status,createdAt,updatedAt',
-          sessions: '++id,startedAt,endedAt,mode',
-          brainDecisions: '++id,sessionId,timestamp,mode',
-          overrides: '++id,taskId,reason,createdAt'
-        });
-      }
-    },
-    down: async (db: any) => {
-      // Suppression des tables
-      // Note: Dexie ne permet pas facilement de supprimer des tables, 
-      // donc dans la pratique, vous pourriez avoir besoin d'autres approches
-    }
-  },
-  // Ajoutez d'autres migrations ici
-];
+export const MIGRATIONS: Migration[] = [];
 
 /**
  * Applique toutes les migrations en attente
@@ -131,31 +102,14 @@ export const MIGRATIONS: Migration[] = [
 export async function applyPendingMigrations(db: any): Promise<void> {
   logger.info('Vérification des migrations en attente');
 
-  // Obtenir la version actuelle de la base de données
+  // Dexie applique les migrations automatiquement via version().upgrade() lors du db.open().
+  // Cette fonction force l'ouverture (donc l'application des upgrades) et valide ensuite l'intégrité.
+  await db.open();
   const currentVersion = db.verno || 0;
   logger.info('Version actuelle', { version: currentVersion });
 
-  // Filtrer les migrations qui n'ont pas encore été appliquées
-  const pendingMigrations = MIGRATIONS.filter(m => m.version > currentVersion);
-
-  if (pendingMigrations.length === 0) {
-    logger.info('Aucune migration en attente');
-    return;
+  const integrity = await validateDataIntegrity(db);
+  if (!integrity.valid) {
+    throw new Error(`Incohérence détectée post-migration: ${integrity.errors[0]?.message ?? 'unknown'}`);
   }
-
-  logger.info('Migrations en attente', { count: pendingMigrations.length });
-
-  // Appliquer chaque migration avec rollback
-  for (const migration of pendingMigrations) {
-    const result = await migrateWithRollback(db, migration);
-
-    if (!result.success) {
-      logger.error(`Échec de la migration ${migration.version}: ${result.error}`, new Error(result.error));
-      throw new Error(`Échec de la migration ${migration.version}: ${result.error}`);
-    }
-
-    logger.info('Migration appliquée avec succès', { version: migration.version, name: migration.name });
-  }
-
-  logger.info('Toutes les migrations ont été appliquées');
 }

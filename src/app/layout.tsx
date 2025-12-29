@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from '@/components/theme-provider';
+import { DatabaseBootstrapper } from '@/components/database-bootstrapper';
 
 export const metadata: Metadata = {
   title: 'KairuFlow Dashboard',
@@ -27,6 +28,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <DatabaseBootstrapper />
           {children}
           <Toaster />
         </ThemeProvider>

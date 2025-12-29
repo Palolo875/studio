@@ -340,6 +340,116 @@ class KairuFlowDatabase extends Dexie {
             settings: 'key, updatedAt',
         });
 
+        // Version 6: metadata migrations + snapshot pre-upgrade
+        this.version(6)
+            .stores({
+                tasks: 'id, status, urgency, deadline, category, createdAt, updatedAt',
+                sessions: 'id, timestamp, state, createdAt',
+                taskHistory: '++id, taskId, action, timestamp',
+                userPatterns: 'id, userId, patternType, updatedAt',
+                overrides: '++id, timestamp',
+                sleepData: '++id, date, createdAt',
+
+                brainDecisions: 'id, timestamp, brainVersion',
+                brainVersions: 'id, releasedAt',
+                decisionExplanations: 'id, decisionId, timestamp',
+                adaptationSignals: '++id, timestamp, type',
+                adaptationHistory: '++id, timestamp',
+                snapshots: '++id, timestamp, name',
+
+                eveningEntries: 'id, timestamp, updatedAt',
+                settings: 'key, updatedAt',
+            })
+            .upgrade(async (trans) => {
+                const nowMs = Date.now();
+                const now = new Date(nowMs);
+                const snapshotName = `pre_upgrade_to_v6_${nowMs}`;
+
+                const tableNames = [
+                    'tasks',
+                    'sessions',
+                    'taskHistory',
+                    'userPatterns',
+                    'overrides',
+                    'sleepData',
+                    'brainDecisions',
+                    'brainVersions',
+                    'decisionExplanations',
+                    'adaptationSignals',
+                    'adaptationHistory',
+                    'eveningEntries',
+                    'settings',
+                ];
+
+                const dumpEntries = await Promise.all(
+                    tableNames.map(async (name) => {
+                        try {
+                            const rows = await trans.table(name).toArray();
+                            return [name, rows] as const;
+                        } catch {
+                            return [name, []] as const;
+                        }
+                    })
+                );
+
+                const snapshot: Record<string, unknown> = Object.fromEntries(dumpEntries);
+                const snapshotEnvelope = {
+                    meta: {
+                        createdAt: now,
+                        name: snapshotName,
+                        reason: 'pre-upgrade',
+                        toVersion: 6,
+                    },
+                    data: snapshot,
+                };
+
+                try {
+                    await trans.table('snapshots').add({
+                        timestamp: nowMs,
+                        name: snapshotName,
+                        snapshot: snapshotEnvelope,
+                    });
+                } catch (error) {
+                    logger.error('Failed to create pre-upgrade snapshot (v6)', error as Error);
+                }
+
+                try {
+                    const settingsTable = trans.table('settings');
+                    const existing = await settingsTable.get('migration_meta');
+                    const existingValue = existing?.value;
+                    const baseMeta =
+                        existingValue && typeof existingValue === 'object' && !Array.isArray(existingValue)
+                            ? (existingValue as Record<string, unknown>)
+                            : {};
+
+                    const existingHistory = Array.isArray((baseMeta as any).history) ? ((baseMeta as any).history as unknown[]) : [];
+                    const nextHistory = [
+                        ...existingHistory,
+                        {
+                            toVersion: 6,
+                            appliedAt: nowMs,
+                            snapshotName,
+                        },
+                    ];
+
+                    const payload: DBSetting = {
+                        key: 'migration_meta',
+                        value: {
+                            ...baseMeta,
+                            lastAppliedVersion: 6,
+                            lastAppliedAt: nowMs,
+                            history: nextHistory,
+                        },
+                        createdAt: existing?.createdAt ?? now,
+                        updatedAt: now,
+                    };
+
+                    await settingsTable.put(payload);
+                } catch (error) {
+                    logger.error('Failed to persist migration metadata (v6)', error as Error);
+                }
+            });
+
         logger.info('Database initialized');
 
     }
