@@ -1,6 +1,9 @@
 // Système de retour sans punition - Phase 3.8
 import { Task } from './types';
 import { InactivityState, ReturnSession } from './abandonmentDetection';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('ZeroPunishmentReturn');
 
 /**
  * Politique de traitement des tâches anciennes
@@ -36,12 +39,12 @@ export class ZeroPunishmentReturnManager {
    * Réinitialise les drapeaux de retard lors du retour
    */
   resetOverdueFlags(tasks: Task[]): Task[] {
-    console.log("[ZeroPunishmentReturn] Réinitialisation des drapeaux de retard");
+    logger.debug('Reset overdue flags', { taskCount: tasks.length });
     
     // Créer une copie des tâches avec les drapeaux réinitialisés
     return tasks.map(task => {
       // Ne pas modifier les tâches déjà terminées
-      if (task.completed) {
+      if (task.status === 'done') {
         return task;
       }
       
@@ -57,7 +60,7 @@ export class ZeroPunishmentReturnManager {
    * Recalcule le contexte du jour
    */
   recalculateTodayContext(): any {
-    console.log("[ZeroPunishmentReturn] Recalcul du contexte du jour");
+    logger.debug('Recalculate today context');
     
     // Dans une implémentation complète, cela recalculerait:
     // - L'énergie disponible
@@ -85,11 +88,11 @@ export class ZeroPunishmentReturnManager {
       // Calculer l'âge de la tâche
       let lastInteractionDate: Date;
       
-      if (task.lastAccessed) {
-        lastInteractionDate = new Date(task.lastAccessed);
+      if (task.lastActivated) {
+        lastInteractionDate = new Date(task.lastActivated);
       } else {
         // Si pas d'interaction enregistrée, utiliser la date de création
-        lastInteractionDate = new Date(); // Simplification pour cet exemple
+        lastInteractionDate = new Date(task.createdAt);
       }
       
       const diffTime = Math.abs(now.getTime() - lastInteractionDate.getTime());
@@ -112,7 +115,7 @@ export class ZeroPunishmentReturnManager {
       updatedTasks.push(updatedTask);
     }
     
-    console.log(`[ZeroPunishmentReturn] Mise à jour du vieillissement de ${tasks.length} tâches`);
+    logger.debug('Task aging updated', { taskCount: tasks.length });
     return { updatedTasks, agingInfo };
   }
   
@@ -139,7 +142,7 @@ export class ZeroPunishmentReturnManager {
     // Combiner les tâches actives et un nombre limité de tâches anciennes
     const filteredTasks = [...activeTasks, ...limitedStaleTasks];
     
-    console.log(`[ZeroPunishmentReturn] ${activeTasks.length} tâches actives, ${limitedStaleTasks.length} tâches anciennes sélectionnées`);
+    logger.debug('Tasks filtered for return', { activeCount: activeTasks.length, staleCount: limitedStaleTasks.length });
     return filteredTasks;
   }
   
@@ -228,7 +231,7 @@ export function applyFullReturnPolicy(tasks: Task[]): {
   session: ReturnSession, 
   message: string 
 } {
-  console.log("[ZeroPunishmentReturn] Application de la politique de retour complète");
+  logger.info('Apply full return policy', { taskCount: tasks.length });
   
   // Réinitialiser les drapeaux de retard
   const tasksWithoutOverdue = returnManager.resetOverdueFlags(tasks);

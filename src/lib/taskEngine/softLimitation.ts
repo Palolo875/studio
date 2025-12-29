@@ -1,6 +1,9 @@
 // Système de limitation douce - Phase 3.9
 import { OverrideEvent } from './brainContracts';
 import { CognitiveCost, cognitiveCostManager } from './cognitiveCost';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('SoftLimitation');
 
 /**
  * Paramètres de limitation douce
@@ -77,7 +80,7 @@ export class SoftLimitationManager {
    */
   resetActionHistory(): void {
     this.actionHistory = [];
-    console.log("[SoftLimitation] Historique des actions réinitialisé");
+    logger.info('Historique des actions réinitialisé');
   }
   
   /**
@@ -85,7 +88,7 @@ export class SoftLimitationManager {
    */
   updateParams(newParams: Partial<SoftLimitationParams>): void {
     this.limitationParams = { ...this.limitationParams, ...newParams };
-    console.log("[SoftLimitation] Paramètres mis à jour", this.limitationParams);
+    logger.debug('Paramètres mis à jour', { params: this.limitationParams });
   }
 }
 
@@ -237,7 +240,7 @@ export class MultiActionSoftLimiter {
     for (const limiter of this.limiters.values()) {
       limiter.resetActionHistory();
     }
-    console.log("[MultiActionSoftLimiter] Tous les limiteurs réinitialisés");
+    logger.info('Tous les limiteurs réinitialisés');
   }
 }
 

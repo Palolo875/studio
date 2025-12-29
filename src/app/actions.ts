@@ -1,6 +1,5 @@
 "use server";
 
-import { analyzeCapture, type AnalyzeCaptureOutput } from "@/ai/flows/analyze-capture-flow";
 import type { DailyRituals, Task } from "@/lib/types";
 import { z } from "zod";
 import { generateMagicalPlaylist } from "@/lib/magical-playlist-algorithm";
@@ -132,30 +131,5 @@ export async function handleGetRecommendations(formData: FormData) {
   } catch (error) {
     console.error(error);
     return { recommendations: [], error: "Failed to get recommendations." };
-  }
-}
-
-const analyzeCaptureSchema = z.object({
-  text: z.string().min(1, "Le texte ne peut pas être vide."),
-});
-
-export async function handleAnalyzeCapture(prevState: any, formData: FormData): Promise<{ analysis: AnalyzeCaptureOutput | null; error: string | null }> {
-  try {
-    const validatedFields = analyzeCaptureSchema.safeParse({
-      text: formData.get("text"),
-    });
-
-    if (!validatedFields.success) {
-      return { analysis: null, error: "Données du formulaire invalides." };
-    }
-
-    const { text } = validatedFields.data;
-
-    const result = await analyzeCapture({ text });
-
-    return { analysis: result, error: null };
-  } catch (error) {
-    console.error(error);
-    return { analysis: null, error: "Échec de l'analyse de la capture." };
   }
 }

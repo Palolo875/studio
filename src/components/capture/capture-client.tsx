@@ -5,24 +5,81 @@ import { useState, useRef, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Bot, Mic, Sparkles, PlusCircle } from 'lucide-react';
-import { useActionState } from 'react';
-import { handleAnalyzeCapture } from '@/app/actions';
-import type { AnalyzeCaptureOutput } from '@/ai/flows/analyze-capture-flow';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { upsertTasks, type DBTask } from '@/lib/database';
 import { useToast } from '@/hooks/use-toast';
+import { extractTasks, type RawTaskWithContract } from '@/lib/nlp/TaskExtractor';
+import { basicRawCapture } from '@/lib/nlp/basicRawCapture';
+import { createNLPContractResult } from '@/lib/nlp/NLPContract';
 
-const initialState: { analysis: AnalyzeCaptureOutput | null; error: string | null } = {
-  analysis: null,
-  error: null,
+type AnalyzeCaptureOutput = {
+  tasks: Array<{ title: string; deadline?: string; priority?: 'high' | 'medium' | 'low' }>;
+  notes?: string;
+  sentiment?: string;
 };
+
+function inferPriority(task: RawTaskWithContract): 'high' | 'medium' | 'low' {
+  const text = `${task.rawText} ${task.object}`.toLowerCase();
+  if (text.includes('urgent') || text.includes('asap')) return 'high';
+  if (text.includes('demain') || text.includes('tomorrow')) return 'high';
+  if (text.includes('rapid') || text.includes('vite') || text.includes('quick')) return 'medium';
+  return 'medium';
+}
+
+function inferSentiment(text: string): string | undefined {
+  const lower = text.toLowerCase();
+  if (lower.includes('fatigu') || lower.includes('épuis')) return 'fatigué';
+  if (lower.includes('stress')) return 'stressé';
+  if (lower.includes('motivé') || lower.includes('hâte')) return 'motivé';
+  return undefined;
+}
+
+function deriveNotes(text: string, tasks: RawTaskWithContract[]): string | undefined {
+  const usedSentences = new Set(tasks.map(t => t.rawText.trim()));
+  const remaining = text
+    .split(/[.!?]+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0 && !usedSentences.has(s));
+  return remaining.length ? remaining.join('. ') : undefined;
+}
+
+async function analyzeCaptureLocal(text: string): Promise<AnalyzeCaptureOutput> {
+  const input = text.trim();
+  if (!input) return { tasks: [], notes: undefined, sentiment: undefined };
+
+  try {
+    const rawTasks = extractTasks(input);
+    const tasks = rawTasks.map((t) => {
+      const title = [t.action, t.object].filter(Boolean).join(' ').trim() || t.rawText;
+      return { title, deadline: t.deadline ?? undefined, priority: inferPriority(t) };
+    });
+
+    createNLPContractResult(rawTasks);
+
+    return {
+      tasks,
+      notes: deriveNotes(input, rawTasks),
+      sentiment: inferSentiment(input),
+    };
+  } catch {
+    const fallback = basicRawCapture(input);
+    const tasks = fallback.map(t => ({
+      title: t.content,
+      deadline: undefined,
+      priority: 'medium' as const,
+    }));
+    return { tasks, notes: undefined, sentiment: inferSentiment(input) };
+  }
+}
 
 export function CaptureClient() {
   const [content, setContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [state, formAction, isPending] = useActionState(handleAnalyzeCapture, initialState);
+  const [analysis, setAnalysis] = useState<AnalyzeCaptureOutput | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -30,13 +87,13 @@ export function CaptureClient() {
   }, []);
   
   const handleAddToTasks = async () => {
-    if (!state.analysis) return;
+    if (!analysis) return;
 
     const now = new Date();
-    const tasks: DBTask[] = state.analysis.tasks.map((t, index) => ({
+    const tasks: DBTask[] = analysis.tasks.map((t, index) => ({
       id: `capture_${now.getTime()}_${index}`,
       title: t.title,
-      description: state.analysis?.notes ?? undefined,
+      description: analysis?.notes ?? undefined,
       duration: 30,
       effort: 'medium',
       urgency: t.priority ?? 'medium',
@@ -60,6 +117,7 @@ export function CaptureClient() {
         description: `${tasks.length} tâche(s) ajoutée(s) à la bibliothèque.`,
       });
       setContent('');
+      setAnalysis(null);
     } catch {
       toast({
         variant: 'destructive',
@@ -69,10 +127,38 @@ export function CaptureClient() {
     }
   };
 
+  const handleAnalyze = async () => {
+    const text = content.trim();
+    if (!text) return;
+
+    setIsPending(true);
+    setError(null);
+    try {
+      const result = await analyzeCaptureLocal(text);
+      setAnalysis(result);
+    } catch (e) {
+      setAnalysis(null);
+      setError(e instanceof Error ? e.message : "Échec de l'analyse");
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: "Échec de l'analyse de la capture.",
+      });
+    } finally {
+      setIsPending(false);
+    }
+  };
+
 
   return (
     <div className="relative h-full w-full px-4 sm:px-8 md:px-12 lg:px-24 xl:px-32 py-12">
-      <form action={formAction} className="w-full h-full flex flex-col">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void handleAnalyze();
+        }}
+        className="w-full h-full flex flex-col"
+      >
         <Textarea
           ref={textareaRef}
           name="text"
@@ -95,7 +181,7 @@ export function CaptureClient() {
       </form>
 
       <AnimatePresence>
-        {state.analysis && (
+        {analysis && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -111,11 +197,11 @@ export function CaptureClient() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {state.analysis.tasks.length > 0 && (
+                {analysis.tasks.length > 0 && (
                   <div className="space-y-3">
                     <h4 className="font-semibold">Tâches Suggérées</h4>
                     <ul className="space-y-2">
-                      {state.analysis.tasks.map((task, index) => (
+                      {analysis.tasks.map((task, index) => (
                         <li key={index} className="flex flex-col p-3 bg-muted/50 rounded-lg">
                            <span className="font-medium">{task.title}</span>
                            <div className="flex items-center gap-2 mt-1">
@@ -127,16 +213,16 @@ export function CaptureClient() {
                     </ul>
                   </div>
                 )}
-                {state.analysis.notes && (
+                {analysis.notes && (
                   <div className="space-y-3">
                     <h4 className="font-semibold">Notes</h4>
-                    <p className="text-muted-foreground p-3 bg-muted/50 rounded-lg whitespace-pre-wrap">{state.analysis.notes}</p>
+                    <p className="text-muted-foreground p-3 bg-muted/50 rounded-lg whitespace-pre-wrap">{analysis.notes}</p>
                   </div>
                 )}
-                 {state.analysis.sentiment && (
+                 {analysis.sentiment && (
                   <div className="space-y-3">
                     <h4 className="font-semibold">Sentiment</h4>
-                    <p className="text-muted-foreground p-3 bg-muted/50 rounded-lg capitalize">{state.analysis.sentiment}</p>
+                    <p className="text-muted-foreground p-3 bg-muted/50 rounded-lg capitalize">{analysis.sentiment}</p>
                   </div>
                 )}
               </CardContent>

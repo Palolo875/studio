@@ -6,10 +6,12 @@
 
 import { useState } from 'react';
 import { useNLP } from '@/hooks/useNLP';
+import { useToast } from '@/hooks/use-toast';
 
 export function Capture() {
   const [text, setText] = useState('');
   const { processText, isProcessing, error } = useNLP();
+  const { toast } = useToast();
   
   const handleSubmit = async () => {
     const result = await processText(text);
@@ -18,11 +20,15 @@ export function Capture() {
       // Afficher un message de succès avec des détails
       const avgConfidence = result.tasks.reduce((acc, task) => acc + (task.confidence || 0), 0) / result.tasks.length;
       const energyTypes = result.tasks.map(t => t.energy).filter(Boolean).join(', ');
-      alert(`${result.tasks.length} tâches créées !
-Confiance moyenne: ${(avgConfidence * 100).toFixed(1)}%
-Types d'énergie: ${energyTypes || 'non spécifiés'}`);
+      toast({
+        title: `${result.tasks.length} tâche(s) créée(s)`,
+        description: `Confiance moyenne: ${(avgConfidence * 100).toFixed(1)}% | Types d'énergie: ${energyTypes || 'non spécifiés'}`,
+      });
     } else {
-      alert('Tâches créées avec le mode fallback.');
+      toast({
+        title: 'Tâches créées',
+        description: 'Création effectuée via le mode fallback.',
+      });
     }
   };
 

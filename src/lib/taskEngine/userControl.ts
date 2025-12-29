@@ -1,5 +1,8 @@
 // Contrôle utilisateur explicite - Phase 3.5
 import { UserCognitiveSettings, DEFAULT_COGNITIVE_SETTINGS } from './cognitiveSecurity';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('UserControl');
 
 /**
  * Gestion des paramètres cognitifs utilisateur
@@ -25,7 +28,7 @@ class UserCognitiveControl {
    */
   updateSettings(newSettings: Partial<UserCognitiveSettings>): void {
     this.settings = { ...this.settings, ...newSettings };
-    console.log("[UserControl] Paramètres cognitifs mis à jour", this.settings);
+    logger.debug('Paramètres cognitifs mis à jour', { settings: this.settings });
     // Dans une implémentation complète, cela sauvegarderait les paramètres
   }
   
@@ -34,7 +37,7 @@ class UserCognitiveControl {
    */
   resetToDefault(): void {
     this.settings = { ...DEFAULT_COGNITIVE_SETTINGS };
-    console.log("[UserControl] Paramètres réinitialisés aux valeurs par défaut");
+    logger.info('Paramètres réinitialisés aux valeurs par défaut');
   }
   
   /**
@@ -104,8 +107,8 @@ export function toggleAI(enable: boolean): void {
   });
   
   if (enable) {
-    console.log("[UserControl] IA activée par l'utilisateur");
+    logger.info("IA activée par l'utilisateur");
   } else {
-    console.log("[UserControl] IA désactivée par l'utilisateur");
+    logger.info("IA désactivée par l'utilisateur");
   }
 }

@@ -1,6 +1,10 @@
 // User Facing Contract - Contrat visible par l'utilisateur
 // Implémentation du contrat d'autorité présenté à l'utilisateur
 
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('UserFacingContract');
+
 // Interface pour le contrat visible par l'utilisateur
 export interface UserFacingContract {
   // Version lisible pour l'utilisateur
@@ -57,7 +61,7 @@ export class UserContractManager {
   acceptContract(): void {
     this.contract.accepted = true;
     this.contract.acceptedAt = Date.now();
-    console.log("User contract accepted");
+    logger.info('User contract accepted');
   }
   
   // Vérifier si le contrat a été accepté
@@ -78,30 +82,30 @@ export class UserContractManager {
 
 // Fonction pour afficher l'onboarding du contrat
 export function showContractOnboarding(): void {
-  console.log("Showing contract onboarding modal:");
-  console.log("=====================================");
-  console.log("Fonctionnement de KairuFlow");
-  console.log("");
+  logger.info('Showing contract onboarding modal');
+  logger.info('=====================================');
+  logger.info('Fonctionnement de KairuFlow');
+  logger.info('');
   
-  console.log("Ce que tu contrôles:");
+  logger.info('Ce que tu contrôles:');
   CONTRACT_V1.summary.yourRights.forEach((right, index) => {
-    console.log(`  ${index + 1}. ${right}`);
+    logger.info(`${index + 1}. ${right}`);
   });
   
-  console.log("");
-  console.log("Ce que le système peut faire:");
+  logger.info('');
+  logger.info('Ce que le système peut faire:');
   CONTRACT_V1.summary.systemRights.forEach((right, index) => {
-    console.log(`  ${index + 1}. ${right}`);
+    logger.info(`${index + 1}. ${right}`);
   });
   
-  console.log("");
-  console.log("Principes partagés:");
+  logger.info('');
+  logger.info('Principes partagés:');
   CONTRACT_V1.summary.sharedPrinciples.forEach((principle, index) => {
-    console.log(`  ${index + 1}. ${principle}`);
+    logger.info(`${index + 1}. ${principle}`);
   });
   
-  console.log("");
-  console.log("[Bouton] J'ai compris et j'accepte");
+  logger.info('');
+  logger.info("[Bouton] J'ai compris et j'accepte");
   
   // Dans une implémentation réelle, cela afficherait un modal dans l'UI
 }

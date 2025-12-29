@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -22,12 +23,10 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const energyData = [
-  { time: "Matin", focus: 8, creative: 6, admin: 4 },
-  { time: "Midi", focus: 7, creative: 8, admin: 5 },
-  { time: "Après-midi", focus: 9, creative: 7, admin: 6 },
-  { time: "Soir", focus: 5, creative: 9, admin: 3 },
-];
+import { db, type DBTask, type DBTaskHistory } from "@/lib/database";
+
+type EnergyPoint = { time: string; focus: number; creative: number; admin: number };
+type SuccessPoint = { category: string; rate: string; color: string; insight: string };
 
 const chartConfig = {
   focus: { label: "Focus", color: "hsl(var(--chart-1))" },
@@ -35,40 +34,126 @@ const chartConfig = {
   admin: { label: "Admin", color: "hsl(var(--chart-3))" },
 } satisfies ChartConfig;
 
-const successRates = [
-  {
-    category: "Deep Work",
-    rate: "82%",
-    color: "text-purple-400",
-    insight: "Vous êtes particulièrement efficace pour les tâches de fond.",
-  },
-  {
-    category: "Créatif",
-    rate: "75%",
-    color: "text-blue-400",
-    insight: "Votre créativité s'exprime pleinement sur les idées nouvelles.",
-  },
-  {
-    category: "Admin",
-    rate: "91%",
-    color: "text-gray-400",
-    insight: "Excellente gestion des tâches qui demandent de l'organisation.",
-  },
-  {
-    category: "Social",
-    rate: "68%",
-    color: "text-green-400",
-    insight: "Vos interactions sont productives et bien menées.",
-  },
-  {
-    category: "Tâches rapides",
-    rate: "95%",
-    color: "text-yellow-400",
-    insight: "Vous excellez dans l'art de finaliser rapidement les petites tâches.",
-  },
-];
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function toCategory(task: DBTask | undefined): "focus" | "creative" | "admin" {
+  const c = (task?.category || "").toLowerCase();
+  if (c.includes("creative") || c.includes("créa") || c.includes("crea")) return "creative";
+  if (c.includes("admin") || c.includes("orga") || c.includes("bureau")) return "admin";
+  return "focus";
+}
+
+function timeBucketLabel(d: Date): "Matin" | "Midi" | "Après-midi" | "Soir" {
+  const h = d.getHours();
+  if (h >= 6 && h < 12) return "Matin";
+  if (h >= 12 && h < 14) return "Midi";
+  if (h >= 14 && h < 18) return "Après-midi";
+  return "Soir";
+}
+
+function pct(n: number) {
+  return `${Math.round(n * 100)}%`;
+}
 
 export function EnergyProfile() {
+  const [energyData, setEnergyData] = useState<EnergyPoint[]>([
+    { time: "Matin", focus: 0, creative: 0, admin: 0 },
+    { time: "Midi", focus: 0, creative: 0, admin: 0 },
+    { time: "Après-midi", focus: 0, creative: 0, admin: 0 },
+    { time: "Soir", focus: 0, creative: 0, admin: 0 },
+  ]);
+  const [successRates, setSuccessRates] = useState<SuccessPoint[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const now = new Date();
+      const start = new Date(now);
+      start.setDate(start.getDate() - 30);
+      start.setHours(0, 0, 0, 0);
+
+      const [history, tasksDone, tasksTodo] = await Promise.all([
+        db.taskHistory.where('timestamp').between(start, now, true, true).toArray(),
+        db.tasks.where('status').equals('done').toArray(),
+        db.tasks.where('status').anyOf(['todo', 'active', 'frozen']).toArray(),
+      ]);
+
+      const taskIndex = new Map<string, DBTask>();
+      for (const t of [...tasksDone, ...tasksTodo]) taskIndex.set(t.id, t);
+
+      const buckets: Record<string, { focus: number; creative: number; admin: number }> = {
+        "Matin": { focus: 0, creative: 0, admin: 0 },
+        "Midi": { focus: 0, creative: 0, admin: 0 },
+        "Après-midi": { focus: 0, creative: 0, admin: 0 },
+        "Soir": { focus: 0, creative: 0, admin: 0 },
+      };
+
+      const completed = history.filter((h: DBTaskHistory) => h.action === 'completed');
+      for (const h of completed) {
+        const d = new Date(h.timestamp);
+        const bucket = timeBucketLabel(d);
+        const cat = toCategory(taskIndex.get(h.taskId));
+        buckets[bucket][cat] += 1;
+      }
+
+      const maxCount = Math.max(
+        1,
+        ...Object.values(buckets).flatMap(v => [v.focus, v.creative, v.admin])
+      );
+
+      const points: EnergyPoint[] = (Object.keys(buckets) as Array<keyof typeof buckets>).map((time) => {
+        const v = buckets[time];
+        return {
+          time,
+          focus: clamp(Math.round((v.focus / maxCount) * 10), 0, 10),
+          creative: clamp(Math.round((v.creative / maxCount) * 10), 0, 10),
+          admin: clamp(Math.round((v.admin / maxCount) * 10), 0, 10),
+        };
+      });
+
+      const doneCount = tasksDone.length;
+      const todoCount = tasksTodo.length;
+      const total = doneCount + todoCount;
+      const overallRate = total > 0 ? doneCount / total : 0;
+
+      const byCat = new Map<string, { done: number; total: number; color: string; insight: string }>();
+      const catMeta = {
+        Deep: { color: 'text-purple-400', insight: "Tâches longues: progression sur le fond." },
+        Créatif: { color: 'text-blue-400', insight: "Créativité: exploration et production." },
+        Admin: { color: 'text-gray-400', insight: "Organisation: exécution et suivi." },
+      };
+
+      for (const t of [...tasksDone, ...tasksTodo]) {
+        const cat = toCategory(t);
+        const key = cat === 'creative' ? 'Créatif' : cat === 'admin' ? 'Admin' : 'Deep';
+        const meta = (catMeta as any)[key] ?? { color: 'text-muted-foreground', insight: '' };
+        const slot = byCat.get(key) ?? { done: 0, total: 0, color: meta.color, insight: meta.insight };
+        slot.total += 1;
+        if (t.status === 'done') slot.done += 1;
+        byCat.set(key, slot);
+      }
+
+      const rates: SuccessPoint[] = Array.from(byCat.entries())
+        .map(([category, v]) => ({
+          category,
+          rate: v.total > 0 ? pct(v.done / v.total) : '0%',
+          color: v.color,
+          insight: v.insight,
+        }))
+        .sort((a, b) => parseInt(b.rate) - parseInt(a.rate))
+        .slice(0, 5);
+
+      if (cancelled) return;
+      setEnergyData(points);
+      setSuccessRates(rates.length ? rates : [{ category: 'Global', rate: pct(overallRate), color: 'text-muted-foreground', insight: "Pas assez de données pour une répartition fine." }]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="space-y-8">
       <Card className="bg-card border-border rounded-3xl">

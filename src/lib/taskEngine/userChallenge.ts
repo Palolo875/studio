@@ -1,5 +1,8 @@
 // Système de contestation utilisateur - Phase 3.4
 import { OverrideEvent } from './brainContracts';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('UserChallenge');
 
 /**
  * Type d'action de contestation
@@ -28,7 +31,7 @@ let challengeDatabase: UserChallenge[] = [];
  */
 export function logUserChallenge(challenge: UserChallenge): void {
   challengeDatabase.push(challenge);
-  console.log(`[UserChallenge] Contestation enregistrée: ${challenge.id}`);
+  logger.info('Contestation enregistrée', { challengeId: challenge.id });
 }
 
 /**
@@ -87,9 +90,10 @@ export function applyUserOverride(
     userReason,
     estimatedCognitiveDebt,
     acknowledged: true,
-    timestamp: new Date()
+    timestamp: new Date(),
+    reversible: true
   };
   
-  console.log(`[UserOverride] Override appliqué: ${userReason}`);
+  logger.info('Override appliqué', { userReason, invariantTouched, estimatedCognitiveDebt });
   return overrideEvent;
 }

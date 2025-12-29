@@ -63,6 +63,15 @@ import {
 type ReservoirStatus = 'todo' | 'active' | 'frozen' | 'done';
 type ReservoirTask = Task & { status?: ReservoirStatus };
 
+function dbStatusToReservoirStatus(status: DBTask['status']): ReservoirStatus {
+  if (status === 'cancelled') return 'frozen';
+  return status;
+}
+
+function reservoirStatusToDbStatus(status?: ReservoirStatus): DBTask['status'] {
+  return status ?? 'todo';
+}
+
 type Filters = {
   status: 'all' | 'completed' | 'not_completed';
   priorities: ('low' | 'medium' | 'high')[];
@@ -83,7 +92,7 @@ function dbToUiTask(t: DBTask): ReservoirTask {
     id: t.id,
     name: t.title,
     completed: t.status === 'done',
-    status: t.status === 'done' ? 'done' : 'todo',
+    status: dbStatusToReservoirStatus(t.status),
     subtasks: [],
     lastAccessed: (t.updatedAt || t.createdAt).toISOString(),
     completionRate: t.status === 'done' ? 100 : 0,
@@ -238,6 +247,8 @@ export function ReservoirClient() {
     }
     
     finalTaskData.completed = finalTaskData.completionRate === 100;
+    const nextStatus: ReservoirStatus = finalTaskData.completed ? 'done' : (finalTaskData.status ?? 'todo');
+    finalTaskData.status = nextStatus;
 
     void (async () => {
       const now = new Date();
@@ -255,7 +266,7 @@ export function ReservoirClient() {
           deadline: finalTaskData.scheduledDate ? new Date(finalTaskData.scheduledDate) : undefined,
           scheduledTime: undefined,
           category: 'reservoir',
-          status: finalTaskData.completed ? 'done' : 'todo',
+          status: reservoirStatusToDbStatus(nextStatus),
           lastActivated: undefined,
           completedAt: finalTaskData.completed ? now : undefined,
           tags: finalTaskData.tags,
@@ -272,7 +283,7 @@ export function ReservoirClient() {
           urgency: uiPriorityToUrgency(finalTaskData.priority),
           deadline: finalTaskData.scheduledDate ? new Date(finalTaskData.scheduledDate) : undefined,
           tags: finalTaskData.tags,
-          status: finalTaskData.completed ? 'done' : 'todo',
+          status: reservoirStatusToDbStatus(nextStatus),
           completedAt: finalTaskData.completed ? now : undefined,
         });
 
@@ -889,6 +900,23 @@ export function ReservoirClient() {
                     <div className="space-y-2"><Label className="flex items-center gap-2 font-semibold"><Zap size={16} /> Énergie</Label><Select name="energyRequired" value={sheetTaskData.energyRequired} onValueChange={(value: 'low' | 'medium' | 'high') => handleSheetDataChange('energyRequired', value)}><SelectTrigger className="h-12 rounded-xl"><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{energyLevels.map((level) => (<SelectItem key={level.value} value={level.value}>{level.label}</SelectItem>))}</SelectContent></Select></div>
                     <div className="space-y-2"><Label htmlFor="effort" className="font-semibold">Effort</Label><Select name="effort" value={sheetTaskData.effort} onValueChange={(value: 'S' | 'M' | 'L') => handleSheetDataChange('effort', value)}><SelectTrigger className="h-12 rounded-xl"><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent><SelectItem value="S">Simple (&lt; 15min)</SelectItem><SelectItem value="M">Moyen (15-120min)</SelectItem><SelectItem value="L">Long (&gt; 2h)</SelectItem></SelectContent></Select></div>
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="status" className="font-semibold">Statut</Label>
+                    <Select
+                      name="status"
+                      value={sheetTaskData.status || 'todo'}
+                      onValueChange={(value: ReservoirStatus) => handleSheetDataChange('status', value)}
+                    >
+                      <SelectTrigger className="h-12 rounded-xl"><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todo">À faire</SelectItem>
+                        <SelectItem value="active">En cours</SelectItem>
+                        <SelectItem value="frozen">En attente</SelectItem>
+                        <SelectItem value="done">Terminé</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="space-y-2"><Label htmlFor="tags" className="font-semibold">Tags</Label><Input id="tags" name="tags" value={Array.isArray(sheetTaskData.tags) ? sheetTaskData.tags.join(', ') : ''} onChange={(e) => handleSheetDataChange('tags', e.target.value.split(',').map(t => t.trim()))} placeholder="Ex: UI/UX, Dev, Marketing" className="h-12 rounded-xl" /></div>
                 </div>
               </ScrollArea>
@@ -917,6 +945,7 @@ export function ReservoirClient() {
                  
                  <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                   <ReadOnlyField label="Deadline" value={formatDeadline(sheetTaskData.scheduledDate)} />
+                  <ReadOnlyField label="Statut" value={sheetTaskData.status || 'todo'} />
                   <ReadOnlyField label="Priorité">{getPriorityDisplay(sheetTaskData.priority)}</ReadOnlyField>
                   <ReadOnlyField label="Énergie">{getEnergyBadge(sheetTaskData.energyRequired)}</ReadOnlyField>
                   <ReadOnlyField label="Effort" value={getEffortDisplay(sheetTaskData.effort)} />

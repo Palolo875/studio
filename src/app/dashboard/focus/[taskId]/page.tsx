@@ -2,7 +2,7 @@
 
 import { useParams, useSearchParams } from 'next/navigation';
 import { FocusMode } from '@/components/focus/focus-mode';
-import { completeTask } from '@/lib/database';
+import { addTaskHistory, completeTask } from '@/lib/database';
 
 export default function FocusPage() {
   const params = useParams();
@@ -21,12 +21,18 @@ export default function FocusPage() {
     await completeTask(completedTaskId);
   };
 
+  const handleNoteSaved = async (id: string, note: string) => {
+    if (!id || id === 'task-id-placeholder') return;
+    await addTaskHistory(id, 'started', { notes: note });
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
       <FocusMode 
         taskName={taskName}
         taskId={taskId}
         onTaskComplete={handleTaskComplete}
+        onNoteSaved={handleNoteSaved}
       />
     </div>
   );

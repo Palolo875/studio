@@ -9,15 +9,23 @@ import Confetti from 'react-confetti';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { calculateFocusScore, getFocusScoreMessage as getFocusScoreMessageInternal } from '@/lib/focus-score-calculator';
+import { getLatestEveningEntry, upsertEveningEntry, upsertTasks } from '@/lib/database';
+import { useToast } from '@/hooks/use-toast';
+import { LanguageDetector } from '@/lib/nlp/LanguageDetector';
+import { extractTasks } from '@/lib/nlp/TaskExtractor';
+import { classifyTask } from '@/lib/nlp/TaskClassifier';
+import { createFullTask } from '@/lib/nlp/TaskFactory';
 
 function EveningContent() {
   const searchParams = useSearchParams();
   const { width, height } = useWindowSize();
+  const { toast } = useToast();
   const [showConfetti, setShowConfetti] = useState(true);
   const [brainDump, setBrainDump] = useState('');
   const [lastSavedBrainDump, setLastSavedBrainDump] = useState('');
   const [actionsDetected, setActionsDetected] = useState(0);
   const [showActionBadge, setShowActionBadge] = useState(false);
+  const [eveningEntryId, setEveningEntryId] = useState<string | null>(null);
 
   const completedTasksParam = searchParams.get('completed');
   const totalTasksParam = searchParams.get('total');
@@ -39,6 +47,28 @@ function EveningContent() {
   useEffect(() => {
     const timer = setTimeout(() => setShowConfetti(false), 2500);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const latest = await getLatestEveningEntry();
+        if (cancelled) return;
+        if (!latest) return;
+
+        setEveningEntryId(latest.id);
+        setBrainDump(latest.brainDump);
+        setLastSavedBrainDump(latest.brainDump);
+        setActionsDetected(latest.actionsDetected);
+        setShowActionBadge(latest.actionsDetected > 0);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const name = 'Junior';
@@ -93,20 +123,99 @@ function EveningContent() {
   useEffect(() => {
     if (!brainDump || brainDump === lastSavedBrainDump) return;
     const timer = setTimeout(() => {
-      console.log("Brain dump auto-saved:", brainDump);
+      const detected = brainDump
+        .split(/[.!?]+/)
+        .filter(s => s.toLowerCase().includes('demain') || s.toLowerCase().includes('je dois') || s.toLowerCase().includes('il faut')).length;
+
+      const now = new Date();
+      const id = eveningEntryId ?? `evening_${now.getTime()}`;
+      void upsertEveningEntry({
+        id,
+        timestamp: now.getTime(),
+        brainDump,
+        actionsDetected: detected,
+        transformedToTasks: false,
+      });
+
+      setEveningEntryId(id);
       setLastSavedBrainDump(brainDump);
-      const detected = brainDump.split(/[.!?]+/).filter(s => s.toLowerCase().includes('demain') || s.toLowerCase().includes('je dois') || s.toLowerCase().includes('il faut')).length;
       setActionsDetected(detected);
       if (detected > 0) setShowActionBadge(true);
     }, 2000);
     return () => clearTimeout(timer);
-  }, [brainDump, lastSavedBrainDump]);
+  }, [brainDump, lastSavedBrainDump, eveningEntryId]);
 
   useEffect(() => {
     if (!showActionBadge) return;
     const timer = setTimeout(() => setShowActionBadge(false), 5000);
     return () => clearTimeout(timer);
   }, [showActionBadge]);
+
+  const handleSave = async () => {
+    const text = brainDump.trim();
+    if (!text) return;
+
+    const detected = text
+      .split(/[.!?]+/)
+      .filter(s => s.toLowerCase().includes('demain') || s.toLowerCase().includes('je dois') || s.toLowerCase().includes('il faut')).length;
+
+    const now = new Date();
+    const id = eveningEntryId ?? `evening_${now.getTime()}`;
+    await upsertEveningEntry({
+      id,
+      timestamp: now.getTime(),
+      brainDump: text,
+      actionsDetected: detected,
+      transformedToTasks: false,
+    });
+
+    setEveningEntryId(id);
+    setLastSavedBrainDump(text);
+    setActionsDetected(detected);
+    setShowActionBadge(detected > 0);
+
+    toast({
+      title: 'Sauvegardé',
+      description: 'Journal du soir sauvegardé localement.',
+    });
+  };
+
+  const handleTransformToTasks = async () => {
+    const text = brainDump.trim();
+    if (!text) return;
+
+    try {
+      const lang = LanguageDetector.detect(text) as 'fr' | 'en' | 'es';
+      const rawTasks = extractTasks(text, lang);
+      const classified = await Promise.all(
+        rawTasks.map(async (task) => ({ raw: task, classification: await classifyTask(task) }))
+      );
+      const fullTasks = classified.map(({ raw, classification }) => createFullTask(raw, classification));
+      await upsertTasks(fullTasks);
+
+      const now = new Date();
+      const id = eveningEntryId ?? `evening_${now.getTime()}`;
+      await upsertEveningEntry({
+        id,
+        timestamp: now.getTime(),
+        brainDump: text,
+        actionsDetected,
+        transformedToTasks: true,
+      });
+      setEveningEntryId(id);
+
+      toast({
+        title: 'Transformé en tâches',
+        description: `${fullTasks.length} tâche(s) ajoutée(s) à la base locale.`,
+      });
+    } catch (e) {
+      toast({
+        title: 'Erreur',
+        description: e instanceof Error ? e.message : 'Transformation échouée',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -170,8 +279,8 @@ function EveningContent() {
             <p className="text-sm text-muted-foreground/80 mt-1 mb-4">Libérez votre esprit des pensées restantes avant de conclure la journée.</p>
             <Textarea value={brainDump} onChange={(e) => setBrainDump(e.target.value)} placeholder="Qu'est-ce qui occupe encore votre esprit ? Notez-le ici pour y penser demain." className="bg-muted/50 border-0" rows={4} />
             <div className="flex gap-2 mt-3">
-              <Button variant="outline" size="sm" onClick={() => { if (brainDump.trim() && brainDump !== lastSavedBrainDump) { console.log("Brain dump saved:", brainDump); setLastSavedBrainDump(brainDump); } }}>Sauvegarder et classer</Button>
-              {showActionBadge && <Button variant="default" size="sm" onClick={() => alert(`${actionsDetected} action(s) détectée(s).`)}>Transformer en tâches</Button>}
+              <Button variant="outline" size="sm" onClick={() => void handleSave()}>Sauvegarder et classer</Button>
+              {showActionBadge && <Button variant="default" size="sm" onClick={() => void handleTransformToTasks()}>Transformer en tâches</Button>}
             </div>
           </div>
         </motion.div>

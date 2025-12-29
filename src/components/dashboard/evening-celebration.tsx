@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Textarea } from '@/components/ui/textarea';
 import { calculateFocusScore, getFocusScoreMessage } from '@/lib/focus-score-calculator';
+import { useToast } from '@/hooks/use-toast';
 
 interface EveningCelebrationProps {
   completedTasks: string[];
@@ -27,6 +28,7 @@ export function EveningCelebration({
   onCelebrationComplete,
   userEnergyLevel = null
 }: EveningCelebrationProps) {
+  const { toast } = useToast();
   const { width, height } = useWindowSize();
   const [showConfetti, setShowConfetti] = useState(true);
   const [brainDump, setBrainDump] = useState('');
@@ -40,7 +42,6 @@ export function EveningCelebration({
     
     const timer = setTimeout(() => {
       // In a real app, this would save to a database
-      console.log("Brain dump auto-saved:", brainDump);
       setLastSavedBrainDump(brainDump);
       
       // Simulate NLP analysis to detect actions
@@ -353,8 +354,11 @@ export function EveningCelebration({
                 onClick={() => {
                   if (brainDump.trim() && brainDump !== lastSavedBrainDump) {
                     // Force save
-                    console.log("Brain dump saved:", brainDump);
                     setLastSavedBrainDump(brainDump);
+                    toast({
+                      title: 'Sauvegardé',
+                      description: 'Pensée sauvegardée.',
+                    });
                   }
                 }}
               >
@@ -366,7 +370,10 @@ export function EveningCelebration({
                   size="sm"
                   onClick={() => {
                     // In a real app, this would open a modal to triage detected actions
-                    alert(`${actionsDetected} action(s) détectée(s). Dans une vraie application, cela ouvrirait une modale pour trier ces actions.`);
+                    toast({
+                      title: 'Actions détectées',
+                      description: `${actionsDetected} action(s) détectée(s).`,
+                    });
                   }}
                 >
                   Trier les actions
@@ -390,9 +397,6 @@ export function EveningCelebration({
               onClick={() => {
                 // Show final confetti
                 setShowConfetti(true);
-                
-                // In a real app, this would play a subtle sound if enabled
-                console.log("Playing subtle closing sound");
                 
                 // Call the onComplete callback
                 if (onCelebrationComplete) {

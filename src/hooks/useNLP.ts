@@ -6,13 +6,28 @@ import { useCallback, useState } from 'react';
 import { useSettingsStore } from '@/hooks/useSettingsStore';
 import { LanguageDetector } from '@/lib/nlp/LanguageDetector';
 import { extractTasks } from '@/lib/nlp/TaskExtractor';
-import { classifyTask, type TaskClassification } from '@/lib/nlp/TaskClassifier';
+import { classifyTask } from '@/lib/nlp/TaskClassifier';
 import { createFullTask } from '@/lib/nlp/TaskFactory';
 import { NlpTaskStorage } from '@/lib/nlp/TaskStorage';
 import { nlpTelemetryService } from '@/lib/nlp/TelemetryService';
 import { createNLPContractResult } from '@/lib/nlp/NLPContract';
 import { basicRawCapture } from '@/lib/nlp/basicRawCapture';
 import { db, type DBTask } from '@/lib/database';
+
+function toContractMode(mode: unknown): 'RAW_CAPTURE_ONLY' | 'NORMAL' | undefined {
+  if (mode === 'RAW_CAPTURE_ONLY') return 'RAW_CAPTURE_ONLY';
+  if (mode === 'NORMAL' || mode === 'DEGRADED') return 'NORMAL';
+  return undefined;
+}
+
+function ensureClassificationShape(classification: unknown): unknown {
+  if (classification && typeof classification === 'object') {
+    const c = classification as Record<string, unknown>;
+    if (typeof c.isUncertain === 'boolean') return classification;
+    return { ...c, isUncertain: false };
+  }
+  return { isUncertain: true };
+}
 
 // Type pour les tâches créées
 interface CreatedTask {
@@ -31,24 +46,8 @@ interface CreatedTask {
   urgency?: number; // Score d'urgence
 }
 
-// Type pour le store de tâches (simulation)
-interface TaskStore {
-  addTasks: (tasks: CreatedTask[]) => void;
-}
-
-// Simulation du store de tâches
-const useTaskStore = (): TaskStore => {
-  return {
-    addTasks: (tasks: CreatedTask[]) => {
-      console.log('Tâches ajoutées au store:', tasks);
-      // Dans une vraie implémentation, cela ajouterait les tâches au store Zustand
-    }
-  };
-};
-
 export function useNLP() {
   const { settings } = useSettingsStore();
-  const { addTasks } = useTaskStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,12 +80,13 @@ export function useNLP() {
       );
       
       // ÉTAPE 4 : Fusion + Stockage ✅ NOUVEAU
-      const fullTasks: DBTask[] = classifiedTasks.map(({ raw, classification }) => 
-        createFullTask(raw, classification)
-      );
+      const fullTasks: DBTask[] = classifiedTasks.map(({ raw, classification }) => {
+        const safeClassification = ensureClassificationShape(classification);
+        return createFullTask(raw, safeClassification as any);
+      });
       
       // Créer le résultat avec contrat NLP
-      const contractResult = createNLPContractResult(rawTasks, nlpTelemetryService.getMode());
+      const contractResult = createNLPContractResult(rawTasks, toContractMode(nlpTelemetryService.getMode()));
       
       // Stockage optimisé
       const storage = new NlpTaskStorage(db);
@@ -115,19 +115,16 @@ export function useNLP() {
       if (nlpTelemetryService.getMode() === 'RAW_CAPTURE_ONLY') {
         // Mode capture brute uniquement
         const rawCaptureTasks = basicRawCapture(text);
-        console.log('Mode RAW_CAPTURE_ONLY activé:', rawCaptureTasks);
         return { tasks: rawCaptureTasks, success: true, detectedLang: settings.language, mode: 'RAW_CAPTURE_ONLY' };
       }
       
       // Fallbacks multiples
       const fallbackTasks = basicRegexFallback(text);
-      // await db.table('tasks').bulkAdd(fallbackTasks);
-      console.log('Tâches de secours stockées:', fallbackTasks);
       return { tasks: fallbackTasks, success: false, detectedLang: settings.language };
     } finally {
       setIsProcessing(false);
     }
-  }, [settings, addTasks]);
+  }, [settings]);
 
   return {
     processText,

@@ -15,13 +15,15 @@ interface FocusModeProps {
   taskId: string;
   onClose?: () => void;
   onTaskComplete?: (taskId: string) => void | Promise<void>;
+  onNoteSaved?: (taskId: string, note: string) => void | Promise<void>;
 }
 
 export function FocusMode({ 
   taskName, 
   taskId,
   onClose,
-  onTaskComplete
+  onTaskComplete,
+  onNoteSaved
 }: FocusModeProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -110,7 +112,10 @@ export function FocusMode({
             </p>
             
             {/* Notes Section */}
-            <NotesSection autoSaveDelay={settings.autoSaveNotes ? 2000 : 0} />
+            <NotesSection
+              autoSaveDelay={settings.autoSaveNotes ? 2000 : 0}
+              onSave={(note) => void Promise.resolve(onNoteSaved?.(taskId, note))}
+            />
         </main>
 
       </motion.div>

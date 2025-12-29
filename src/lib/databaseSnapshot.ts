@@ -15,6 +15,7 @@ export interface DatabaseSnapshot {
     taskHistory: any[];
     overrides: any[];
     sleepData: any[];
+    eveningEntries: any[];
     brainDecisions: any[];
     decisionExplanations: any[];
     adaptationSignals: any[];
@@ -46,6 +47,7 @@ export class DatabaseSnapshotManager {
         overrides,
         sleepData,
         taskHistory,
+        eveningEntries,
         brainDecisions,
         decisionExplanations,
         adaptationSignals,
@@ -56,6 +58,7 @@ export class DatabaseSnapshotManager {
         db.overrides.toArray(),
         db.sleepData.toArray(),
         db.taskHistory.toArray(),
+        (db as any).eveningEntries?.toArray?.() ?? Promise.resolve([]),
         db.brainDecisions.toArray(),
         db.decisionExplanations.toArray(),
         db.adaptationSignals.toArray(),
@@ -71,6 +74,7 @@ export class DatabaseSnapshotManager {
           overrides,
           sleepData,
           taskHistory,
+          eveningEntries,
           brainDecisions,
           decisionExplanations,
           adaptationSignals,
@@ -82,6 +86,7 @@ export class DatabaseSnapshotManager {
             overrides.length +
             sleepData.length +
             taskHistory.length +
+            eveningEntries.length +
             brainDecisions.length +
             decisionExplanations.length +
             adaptationSignals.length +
@@ -92,6 +97,7 @@ export class DatabaseSnapshotManager {
             overrides,
             sleepData,
             taskHistory,
+            eveningEntries,
             brainDecisions,
             decisionExplanations,
             adaptationSignals,
@@ -103,6 +109,7 @@ export class DatabaseSnapshotManager {
             overrides,
             sleepData,
             taskHistory,
+            eveningEntries,
             brainDecisions,
             decisionExplanations,
             adaptationSignals,
@@ -135,6 +142,7 @@ export class DatabaseSnapshotManager {
         db.overrides,
         db.sleepData,
         db.taskHistory,
+        (db as any).eveningEntries,
         db.brainDecisions,
         db.decisionExplanations,
         db.adaptationSignals,
@@ -146,6 +154,7 @@ export class DatabaseSnapshotManager {
             db.overrides.clear(),
             db.sleepData.clear(),
             db.taskHistory.clear(),
+            (db as any).eveningEntries?.clear?.(),
             db.brainDecisions.clear(),
             db.decisionExplanations.clear(),
             db.adaptationSignals.clear(),
@@ -158,6 +167,7 @@ export class DatabaseSnapshotManager {
             db.overrides.bulkAdd(snapshot.data.overrides),
             db.sleepData.bulkAdd(snapshot.data.sleepData),
             db.taskHistory.bulkAdd(snapshot.data.taskHistory),
+            (db as any).eveningEntries?.bulkAdd?.(snapshot.data.eveningEntries ?? []),
             db.brainDecisions.bulkAdd(snapshot.data.brainDecisions),
             db.decisionExplanations.bulkAdd(snapshot.data.decisionExplanations),
             db.adaptationSignals.bulkAdd(snapshot.data.adaptationSignals),

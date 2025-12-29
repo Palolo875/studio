@@ -1,12 +1,14 @@
 "use client"
 
-import { useState } from "react"
-import { format, startOfMonth, getDaysInMonth, getDay, addMonths, subMonths } from "date-fns"
+import { useEffect, useState } from "react"
+import { format, startOfMonth, getDaysInMonth, getDay, addMonths, endOfMonth } from "date-fns"
 import { fr } from "date-fns/locale"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+import { db, type DBTaskHistory } from "@/lib/database"
 
 const intensityColors = {
   0: "bg-muted/50", // repos
@@ -22,28 +24,51 @@ const legend = [
   { label: "Repos", color: "bg-muted" },
 ]
 
-// Generate random data for the heatmap
-const generateHeatmapData = (date: Date) => {
-  const daysInMonth = getDaysInMonth(date)
-  const data = {} as Record<string, number>
-  for (let i = 1; i <= daysInMonth; i++) {
-    const dayKey = format(new Date(date.getFullYear(), date.getMonth(), i), "yyyy-MM-dd")
-    let hash = 0
-    for (let j = 0; j < dayKey.length; j++) hash = (hash * 31 + dayKey.charCodeAt(j)) | 0
-    data[dayKey] = Math.abs(hash) % 4
-  }
-  return data
+function intensityFromCount(count: number): 0 | 1 | 2 | 3 {
+  if (count <= 0) return 0
+  if (count <= 2) return 1
+  if (count <= 5) return 2
+  return 3
 }
 
 
 export function AccomplishmentCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [heatmapData, setHeatmapData] = useState(() => generateHeatmapData(currentDate))
+  const [heatmapData, setHeatmapData] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const start = startOfMonth(currentDate)
+      const end = endOfMonth(currentDate)
+      const history = await db.taskHistory.where('timestamp').between(start, end, true, true).toArray()
+      const completed = history.filter((h: DBTaskHistory) => h.action === 'completed')
+
+      const countByDay = new Map<string, number>()
+      for (const h of completed) {
+        const d = new Date(h.timestamp)
+        const key = format(d, 'yyyy-MM-dd')
+        countByDay.set(key, (countByDay.get(key) || 0) + 1)
+      }
+
+      const daysInMonth = getDaysInMonth(currentDate)
+      const data: Record<string, number> = {}
+      for (let i = 1; i <= daysInMonth; i++) {
+        const key = format(new Date(currentDate.getFullYear(), currentDate.getMonth(), i), "yyyy-MM-dd")
+        data[key] = intensityFromCount(countByDay.get(key) || 0)
+      }
+
+      if (cancelled) return
+      setHeatmapData(data)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [currentDate])
 
   const handleMonthChange = (amount: number) => {
     const newDate = addMonths(currentDate, amount)
     setCurrentDate(newDate)
-    setHeatmapData(generateHeatmapData(newDate))
   }
 
   const firstDayOfMonth = getDay(startOfMonth(currentDate)) // 0 (Sun) - 6 (Sat)

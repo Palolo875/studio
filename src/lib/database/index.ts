@@ -175,6 +175,16 @@ export interface DBSnapshot {
     snapshot: unknown;
 }
 
+export interface DBEveningEntry {
+    id: string;
+    timestamp: number;
+    brainDump: string;
+    actionsDetected: number;
+    transformedToTasks: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
 // ============================================
 // Classe de base de données
 // ============================================
@@ -193,6 +203,7 @@ class KairuFlowDatabase extends Dexie {
     adaptationSignals!: Table<DBAdaptationSignal, number>;
     adaptationHistory!: Table<DBAdaptationHistory, number>;
     snapshots!: Table<DBSnapshot, number>;
+    eveningEntries!: Table<DBEveningEntry, string>;
 
     constructor() {
         super('KairuFlowDB');
@@ -223,7 +234,7 @@ class KairuFlowDatabase extends Dexie {
             snapshots: '++id, timestamp, name',
         });
 
-        // Version 3: table dédiée pour les versions du cerveau
+        // Version 3: table dedicated to brain versions
         this.version(3).stores({
             tasks: 'id, status, urgency, deadline, category, createdAt, updatedAt',
             sessions: 'id, timestamp, state, createdAt',
@@ -240,7 +251,27 @@ class KairuFlowDatabase extends Dexie {
             snapshots: '++id, timestamp, name',
         });
 
+        // Version 4: rituel du soir
+        this.version(4).stores({
+            tasks: 'id, status, urgency, deadline, category, createdAt, updatedAt',
+            sessions: 'id, timestamp, state, createdAt',
+            taskHistory: '++id, taskId, action, timestamp',
+            userPatterns: 'id, userId, patternType, updatedAt',
+            overrides: '++id, timestamp',
+            sleepData: '++id, date, createdAt',
+
+            brainDecisions: 'id, timestamp, brainVersion',
+            brainVersions: 'id, releasedAt',
+            decisionExplanations: 'id, decisionId, timestamp',
+            adaptationSignals: '++id, timestamp, type',
+            adaptationHistory: '++id, timestamp',
+            snapshots: '++id, timestamp, name',
+
+            eveningEntries: 'id, timestamp, updatedAt',
+        });
+
         logger.info('Database initialized');
+
     }
 
     /**
@@ -260,14 +291,39 @@ class KairuFlowDatabase extends Dexie {
 
         const finalCount = await this.taskHistory.count();
         const removedCount = initialCount - finalCount;
-        
-        console.log(`[Database] Nettoyage : ${removedCount} entrées d'historique supprimées (> ${days} jours)`);
+
+        logger.info('Database prune completed', { removedCount, days });
         return removedCount;
     }
 }
 
 // Instance singleton
 export const db = new KairuFlowDatabase();
+
+// ============================================
+// Fonctions Evening (journal du soir)
+// ============================================
+
+export async function upsertEveningEntry(entry: {
+    id: string;
+    timestamp: number;
+    brainDump: string;
+    actionsDetected: number;
+    transformedToTasks: boolean;
+}): Promise<void> {
+    const now = new Date();
+    const existing = await db.eveningEntries.get(entry.id);
+    const payload: DBEveningEntry = {
+        ...entry,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+    };
+    await db.eveningEntries.put(payload);
+}
+
+export async function getLatestEveningEntry(): Promise<DBEveningEntry | undefined> {
+    return await db.eveningEntries.orderBy('timestamp').reverse().first();
+}
 
 // ============================================
 // Fonctions utilitaires pour les tâches
