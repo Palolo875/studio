@@ -3,6 +3,10 @@
  * Implémente les vérifications de cohérence des données pour détecter les corruptions logiques
  */
 
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('DataIntegrity');
+
 // Types pour les erreurs d'intégrité
 export interface IntegrityError {
   type: 'ORPHAN_TASK' | 'DUPLICATE_DECISION' | 'INVALID_REFERENCE' | 'DATA_CORRUPTION';
@@ -108,7 +112,7 @@ export async function repairIntegrityErrors(db: any, report: IntegrityReport): P
           // Supprimer les tâches orphelines
           if (error.entityId) {
             await db.tasks.delete(error.entityId);
-            console.log(`[DataIntegrity] Tâche orpheline ${error.entityId} supprimée`);
+            logger.info('Tâche orpheline supprimée', { taskId: error.entityId });
           }
           break;
           
@@ -123,7 +127,7 @@ export async function repairIntegrityErrors(db: any, report: IntegrityReport): P
             // Supprimer toutes sauf la première
             for (let i = 1; i < decisions.length; i++) {
               await db.brainDecisions.delete(decisions[i].id);
-              console.log(`[DataIntegrity] Décision dupliquée ${decisions[i].id} supprimée`);
+              logger.info('Décision dupliquée supprimée', { decisionId: decisions[i].id });
             }
           }
           break;
@@ -132,12 +136,12 @@ export async function repairIntegrityErrors(db: any, report: IntegrityReport): P
           // Supprimer les overrides avec des références invalides
           if (error.entityId) {
             await db.overrides.delete(error.entityId);
-            console.log(`[DataIntegrity] Override invalide ${error.entityId} supprimé`);
+            logger.info('Override invalide supprimé', { overrideId: error.entityId });
           }
           break;
       }
     } catch (repairError) {
-      console.error(`[DataIntegrity] Erreur lors de la réparation de ${error.type}:`, repairError);
+      logger.error(`Erreur lors de la réparation de ${error.type}`, repairError as Error);
     }
   }
 }
@@ -147,14 +151,14 @@ export async function repairIntegrityErrors(db: any, report: IntegrityReport): P
  * @param db Instance de la base de données
  */
 export async function performStartupIntegrityCheck(db: any): Promise<void> {
-  console.log('[DataIntegrity] Démarrage de la vérification d\'intégrité...');
+  logger.info("Démarrage de la vérification d'intégrité");
   
   const report = await validateDataIntegrity(db);
   
   if (!report.valid) {
-    console.warn(`[DataIntegrity] ${report.errors.length} erreurs d'intégrité détectées:`);
+    logger.warn('Erreurs d\'intégrité détectées', { count: report.errors.length });
     report.errors.forEach(error => {
-      console.warn(`  - ${error.message}`);
+      logger.warn(error.message);
     });
     
     // Tenter de réparer les erreurs
@@ -163,11 +167,11 @@ export async function performStartupIntegrityCheck(db: any): Promise<void> {
     // Revérifier après réparation
     const newReport = await validateDataIntegrity(db);
     if (newReport.valid) {
-      console.log('[DataIntegrity] Toutes les erreurs ont été réparées');
+      logger.info('Toutes les erreurs ont été réparées');
     } else {
-      console.error(`[DataIntegrity] ${newReport.errors.length} erreurs persistent après réparation`);
+      logger.error(`Erreurs persistent après réparation: ${newReport.errors.length}`, new Error('Integrity errors persist'));
     }
   } else {
-    console.log('[DataIntegrity] Aucune erreur d\'intégrité détectée');
+    logger.info("Aucune erreur d'intégrité détectée");
   }
 }

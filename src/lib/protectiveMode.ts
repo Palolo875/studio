@@ -3,6 +3,9 @@
 
 import { SovereigntyManager, SovereigntyMode } from './modeEngine';
 import { type BurnoutDetectionResult } from './burnout/BurnoutEngine';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('ProtectiveMode');
 
 // Interface pour les paramètres du mode protectif
 export interface ProtectiveModeSettings {
@@ -39,9 +42,9 @@ export class ProtectiveModeManager {
       this.sovereigntyManager.enforceTransition(SovereigntyMode.PROTECTIVE, reason);
       this.startTime = Date.now();
       this.escapeRequested = false;
-      console.log("Mode protectif activé:", reason);
+      logger.info('Mode protectif activé', { reason });
     } catch (error) {
-      console.error("Erreur lors de l'activation du mode protectif:", error);
+      logger.error("Erreur lors de l'activation du mode protectif", error as Error);
     }
   }
 
@@ -51,7 +54,7 @@ export class ProtectiveModeManager {
       this.sovereigntyManager.resetToDefault();
       this.startTime = null;
       this.escapeRequested = false;
-      console.log("Mode protectif désactivé");
+      logger.info('Mode protectif désactivé');
     }
   }
 
@@ -86,12 +89,12 @@ export class ProtectiveModeManager {
   // Demander à sortir du mode protectif
   requestExit(): boolean {
     if (!this.canExit()) {
-      console.log("Pour votre bien, il est préférable de rester en mode protégé encore un peu.");
+      logger.info('Exit refusé: rester en mode protégé encore un peu');
       return false;
     }
     
     this.escapeRequested = true;
-    console.log("Demande de sortie du mode protectif enregistrée.");
+    logger.info('Demande de sortie du mode protectif enregistrée');
     return true;
   }
 
@@ -106,14 +109,14 @@ export class ProtectiveModeManager {
     
     // Après 48 heures, sortir automatiquement
     if (hoursElapsed >= 48) {
-      console.log("48 heures écoulées en mode protectif. Le système vous redonne la main.");
+      logger.info('48 heures écoulées en mode protectif. Le système vous redonne la main.');
       this.deactivate();
       return;
     }
     
     // Après 24 heures, proposer de sortir
     if (hoursElapsed >= 24 && hoursElapsed < 25) {
-      console.log("Mode protectif actif depuis 24h. Souhaitez-vous évaluer la situation ?");
+      logger.info('Mode protectif actif depuis 24h. Souhaitez-vous évaluer la situation ?');
       // Dans une implémentation réelle, cela afficherait une notification à l'utilisateur
     }
   }
@@ -124,10 +127,11 @@ export class ProtectiveModeManager {
       return;
     }
     
-    console.log("Restrictions du mode protectif appliquées:");
-    console.log(`- Nombre de tâches limité à ${this.settings.maxTasksPerSession} par session.`);
-    console.log(`- Tâches à fort effort (${this.settings.allowHeavyTasks ? 'autorisées' : 'limitées'}).`);
-    console.log(`- Coach proactif ${this.settings.coachEnabled ? 'activé' : 'en retrait'}.`);
+    logger.info('Restrictions du mode protectif appliquées', {
+      maxTasksPerSession: this.settings.maxTasksPerSession,
+      allowHeavyTasks: this.settings.allowHeavyTasks,
+      coachEnabled: this.settings.coachEnabled,
+    });
   }
 
   // Vérifier si une tâche est autorisée en mode protectif

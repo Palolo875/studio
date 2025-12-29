@@ -3,6 +3,9 @@
 
 import { ConsensusMode, VoteEngine, Task, RejectionReason, VoteResult } from './voteEngine';
 import { SovereigntyManager } from './modeEngine';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('ConflictResolution');
 
 // Interface pour un conflit
 export interface Conflict {
@@ -90,7 +93,7 @@ export class ConflictResolver {
     }
     
     // Simuler l'envoi d'une demande à l'arbitre externe
-    console.log(`Envoi d'une demande d'arbitrage à ${arbitrator.name} (${arbitrator.contact})`);
+    logger.info('Envoi demande arbitrage', { name: arbitrator.name, contact: arbitrator.contact });
     
     // Dans une implémentation réelle, cela enverrait une notification à l'arbitre
     // et attendrait sa réponse. Pour cet exemple, nous simulons une réponse.

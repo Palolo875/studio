@@ -1,5 +1,8 @@
 import { modelMemoryManager } from './modelMemoryManager';
 import { progressiveFallback, FallbackLevel } from './progressiveFallback';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('MemoryMonitor');
 
 // Interface pour les statistiques de mémoire
 export interface MemoryStats {
@@ -100,7 +103,7 @@ export class MemoryMonitor {
    * Actions de dégradation progressive (Phase 4.5)
    */
   private handleCriticalMemory(stats: MemoryStats): void {
-    console.warn(`[MemoryMonitor] Utilisation mémoire critique: ${stats.percent.toFixed(2)}%`);
+    logger.warn('Utilisation mémoire critique', { percent: Number(stats.percent.toFixed(2)) });
 
     // 1. Décharger tous les modèles (Poids lourd)
     modelMemoryManager.unloadAllModels();
@@ -120,7 +123,7 @@ export class MemoryMonitor {
   }
 
   private handleWarningMemory(stats: MemoryStats): void {
-    console.warn(`[MemoryMonitor] Utilisation mémoire élevée: ${stats.percent.toFixed(2)}%`);
+    logger.warn('Utilisation mémoire élevée', { percent: Number(stats.percent.toFixed(2)) });
 
     // 1. Décharger les modèles inutilisés
     // modelMemoryManager.unloadUnusedModels(); // À implémenter si besoin
@@ -135,7 +138,7 @@ export class MemoryMonitor {
    */
   private alertUser(message: string): void {
     // Cette fonction dépend de l'implémentation spécifique des notifications
-    console.info(`[MemoryMonitor] Alerte utilisateur: ${message}`);
+    logger.info('Alerte utilisateur', { message });
 
     // Exemple d'implémentation hypothétique:
     /*
@@ -150,7 +153,7 @@ export class MemoryMonitor {
    */
   startMonitoring(): void {
     if (this.intervalId) {
-      console.warn('[MemoryMonitor] Monitoring déjà actif');
+      logger.warn('Monitoring déjà actif');
       return;
     }
 
@@ -159,7 +162,7 @@ export class MemoryMonitor {
       this.enforce();
     }, this.limits.checkInterval);
 
-    console.log('[MemoryMonitor] Monitoring démarré');
+    logger.info('Monitoring démarré');
   }
 
   /**
@@ -170,7 +173,7 @@ export class MemoryMonitor {
       clearInterval(this.intervalId);
       this.intervalId = null;
       this.isActive = false;
-      console.log('[MemoryMonitor] Monitoring arrêté');
+      logger.info('Monitoring arrêté');
     }
   }
 

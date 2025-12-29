@@ -7,6 +7,10 @@ import {
   ADAPTATION_CONSTRAINTS
 } from './adaptationMemory';
 
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('AdaptationController');
+
 // Fonction pour inverser les deltas de paramètres (pour rollback)
 export function invertDelta(delta: ParameterDelta[]): ParameterDelta[] {
   return delta.map(d => ({
@@ -37,20 +41,20 @@ export async function rollbackAdaptation(adaptationId: string) {
   
   const rollback = invertDelta(adaptation.parameterChanges);
   await applyParameters(rollback);
-  console.log("ADAPTATION_ROLLEDBACK", { adaptationId });
+  logger.info('ADAPTATION_ROLLEDBACK', { adaptationId });
 }
 
 // Fonction pour appliquer les paramètres
 export async function applyParameters(delta: ParameterDelta[]) {
   // Implémentation dépendante de la structure du système
   // Mettre à jour les paramètres du système avec les deltas fournis
-  console.log("Application des paramètres", delta);
+  logger.info('Application des paramètres', { delta });
 }
 
 // Fonction pour afficher une proposition d'adaptation
 export function showAdaptationProposal(adjustment: any) {
   // Dans une implémentation réelle, cela afficherait une modale
-  console.log(`Proposition d'adaptation :`, adjustment);
+  logger.info("Proposition d'adaptation", { adjustment });
   return {
     title: "Proposition d'adaptation",
     body: `Le système suggère d'augmenter maxTasks à ${adjustment.maxTasks}`,
@@ -65,25 +69,25 @@ export function showAdaptationProposal(adjustment: any) {
 // Fonction pour afficher un bouton de rollback
 export function showButton(label: string) {
   // Dans une implémentation réelle, cela afficherait un bouton dans l'UI
-  console.log(label);
+  logger.info('Button', { label });
 }
 
 // Fonction pour afficher un message
 export function showMessage(message: string) {
   // Dans une implémentation réelle, cela afficherait un message à l'utilisateur
-  console.log(message);
+  logger.info('Message', { message });
 }
 
 // Fonction pour afficher un toast
 export function showToast(message: string) {
   // Dans une implémentation réelle, cela afficherait un toast
-  console.log(message);
+  logger.info('Toast', { message });
 }
 
 // Fonction pour exporter une archive chiffrée
 export async function exportEncryptedArchive(signals: any) {
   // Dans une implémentation réelle, cela exporterait les signaux vers un stockage sécurisé
-  console.log("Exportation des signaux d'adaptation", signals);
+  logger.info("Exportation des signaux d'adaptation", { signals });
 }
 
 // Pruning hebdomadaire
@@ -101,7 +105,7 @@ export function setupAdaptationPruning() {
     if (oldSignals.length > 0) {
       await exportEncryptedArchive(oldSignals);
       // await oldSignals.delete();
-      console.log(`Suppression de ${oldSignals.length} anciens signaux d'adaptation`);
+      logger.info('Suppression anciens signaux d\'adaptation', { count: oldSignals.length });
     }
   }, 7 * 24 * 60 * 60 * 1000); // Toutes les semaines
 }

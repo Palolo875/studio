@@ -1,4 +1,7 @@
 import { db } from './database/index';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('StorageGuard');
 /**
  * Storage Guard pour IndexedDB - Phase 4
  * Implémente la surveillance active des quotas de stockage
@@ -49,6 +52,7 @@ export class StorageGuard {
   async estimateStorage(): Promise<StorageStats> {
     try {
       const estimate = await navigator.storage.estimate();
+
       const usage = estimate.usage || 0;
       const quota = estimate.quota || null;
 
@@ -67,7 +71,7 @@ export class StorageGuard {
         percentage
       };
     } catch (error) {
-      console.error('[StorageGuard] Erreur lors de l\'estimation du stockage:', error);
+      logger.error("Erreur lors de l'estimation du stockage", error as Error);
       return {
         usage: 0,
         quota: null,
@@ -86,7 +90,7 @@ export class StorageGuard {
 
       // Vérifier si nous avons dépassé le seuil d'avertissement
       if (stats.usage > this.config.hardLimit * this.config.warnThreshold) {
-        console.warn(`[StorageGuard] Utilisation du stockage élevée: ${stats.percentage.toFixed(2)}%`);
+        logger.warn('Utilisation du stockage élevée', { percentage: Number(stats.percentage.toFixed(2)) });
 
         // Déclencher le pruning des anciennes données
         await this.pruneOldData(30); // Archiver les données de plus de 30 jours
@@ -97,7 +101,7 @@ export class StorageGuard {
 
       // Vérifier si nous avons dépassé la limite stricte
       if (stats.usage > this.config.hardLimit) {
-        console.error(`[StorageGuard] Limite de stockage dépassée: ${stats.usage / MB} MB > ${this.config.hardLimit / MB} MB`);
+        logger.error('Limite de stockage dépassée', new Error(`${stats.usage / MB} MB > ${this.config.hardLimit / MB} MB`));
 
         // Déclencher un pruning plus agressif
         await this.pruneOldData(7); // Archiver les données de plus de 7 jours
@@ -106,7 +110,7 @@ export class StorageGuard {
         this.notifyUser("Saturation imminente - archivage intensif activé");
       }
     } catch (error) {
-      console.error('[StorageGuard] Erreur lors de l\'application du Storage Guard:', error);
+      logger.error("Erreur lors de l'application du Storage Guard", error as Error);
     }
   }
 
@@ -115,14 +119,14 @@ export class StorageGuard {
    */
   async pruneOldData(days: number): Promise<void> {
     try {
-      console.log(`[StorageGuard] Déclenchement du pruning (> ${days} jours)`);
+      logger.info('Déclenchement du pruning', { days });
       const removedCount = await db.pruneData(days);
 
       if (removedCount > 0) {
         this.notifyUser(`${removedCount} éléments anciens ont été archivés pour libérer de l'espace.`);
       }
     } catch (error) {
-      console.error('[StorageGuard] Erreur lors du pruning:', error);
+      logger.error('Erreur lors du pruning', error as Error);
     }
   }
 
@@ -133,7 +137,7 @@ export class StorageGuard {
   notifyUser(message: string): void {
     // Dans une implémentation réelle, cela utiliserait le système de notifications
     // de l'application pour afficher un message à l'utilisateur
-    console.info(`[StorageGuard] Notification utilisateur: ${message}`);
+    logger.info('Notification utilisateur', { message });
 
     // Exemple d'implémentation avec un toast ou une notification
     /*
@@ -150,7 +154,7 @@ export class StorageGuard {
    */
   startMonitoring(): void {
     if (this.intervalId) {
-      console.warn('[StorageGuard] Surveillance déjà active');
+      logger.warn('Surveillance déjà active');
       return;
     }
 
@@ -159,7 +163,7 @@ export class StorageGuard {
       this.enforce();
     }, this.config.checkInterval);
 
-    console.log('[StorageGuard] Surveillance démarrée');
+    logger.info('Surveillance démarrée');
   }
 
   /**
@@ -170,7 +174,7 @@ export class StorageGuard {
       clearInterval(this.intervalId);
       this.intervalId = null;
       this.isActive = false;
-      console.log('[StorageGuard] Surveillance arrêtée');
+      logger.info('Surveillance arrêtée');
     }
   }
 

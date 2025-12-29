@@ -3,6 +3,10 @@
  * Implémente le suivi et la mesure de la qualité des décisions du cerveau
  */
 
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('DecisionQuality');
+
 // Types pour la qualité des décisions
 export interface DecisionQualityMetrics {
   forcingRate: number;        // Taux de forcing des décisions
@@ -113,7 +117,7 @@ export class DecisionQualityTracker {
    * @param averageQuality Qualité moyenne qui a déclenché l'alerte
    */
   private triggerAlert(averageQuality: number): void {
-    console.warn(`[DecisionQuality] Alerte : Qualité des décisions basse (${(averageQuality * 100).toFixed(1)}%)`);
+    logger.warn('Alerte : Qualité des décisions basse', { averageQuality });
 
     // Dans une application réelle, cela pourrait :
     // - Afficher une notification à l'utilisateur
@@ -122,10 +126,13 @@ export class DecisionQualityTracker {
     // - Proposer des actions de récupération
 
     // Pour cette implémentation, nous nous contentons de logger
-    console.log("[DecisionQuality] Suggestions d'amélioration :");
-    console.log("  - Réviser les heuristiques de décision");
-    console.log("  - Ajuster les paramètres d'apprentissage");
-    console.log("  - Considérer un recalibrage du modèle");
+    logger.info("Suggestions d'amélioration", {
+      suggestions: [
+        'Réviser les heuristiques de décision',
+        "Ajuster les paramètres d'apprentissage",
+        'Considérer un recalibrage du modèle',
+      ],
+    });
   }
 
   /**
@@ -192,7 +199,7 @@ export const decisionQualityTracker = new DecisionQualityTracker();
  * Initialise le suivi de la qualité des décisions
  */
 export function initializeDecisionQualityTracking(): void {
-  console.log('[DecisionQuality] Initialisation du suivi de la qualité des décisions');
+  logger.info('Initialisation du suivi de la qualité des décisions');
 
   // Dans une application réelle, vous pourriez :
   // - Charger l'historique depuis la base de données
@@ -200,5 +207,5 @@ export function initializeDecisionQualityTracking(): void {
   // - Connecter aux événements de décision du cerveau
 
   // Pour cette implémentation, nous nous contentons de logger
-  console.log('[DecisionQuality] Suivi initialisé');
+  logger.info('Suivi initialisé');
 }

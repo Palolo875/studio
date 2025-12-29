@@ -3,6 +3,10 @@
  * Implémente l'adaptation de l'application selon l'état de la batterie
  */
 
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('BatteryAwareness');
+
 // Interface pour l'état de la batterie
 export interface BatteryState {
   charging: boolean;        // En charge
@@ -56,12 +60,12 @@ export class BatteryAwareness {
         // Vérifier l'état initial
         this.handleBatteryChange();
         
-        console.log('[BatteryAwareness] Système initialisé avec succès');
+        logger.info('Système initialisé avec succès');
       } else {
-        console.warn('[BatteryAwareness] API Battery non disponible');
+        logger.warn('API Battery non disponible');
       }
     } catch (error) {
-      console.error('[BatteryAwareness] Erreur lors de l\'initialisation:', error);
+      logger.error("Erreur lors de l'initialisation", error as Error);
     }
   }
   
@@ -79,7 +83,7 @@ export class BatteryAwareness {
     // Adapter le mode économie d'énergie
     this.adaptPowerSaveMode(batteryState);
     
-    console.log(`[BatteryAwareness] État de la batterie: ${JSON.stringify(batteryState)}`);
+    logger.debug('État de la batterie', { batteryState });
   }
   
   /**
@@ -108,7 +112,7 @@ export class BatteryAwareness {
       const oldState = { ...this.powerSaveState };
       this.powerSaveState = newPowerSaveState;
       
-      console.log(`[BatteryAwareness] Mode économie d'énergie: ${JSON.stringify(newPowerSaveState)}`);
+      logger.info('Mode économie d\'énergie', { powerSaveState: newPowerSaveState });
       
       // Appeler le callback si défini
       if (this.onPowerSaveChangeCallback) {
@@ -153,7 +157,7 @@ export class BatteryAwareness {
     
     if (newRefreshRate !== this.currentRefreshRate) {
       this.currentRefreshRate = newRefreshRate;
-      console.log(`[BatteryAwareness] Fréquence de rafraîchissement ajustée: ${newRefreshRate}s`);
+      logger.info('Fréquence de rafraîchissement ajustée', { refreshRateSeconds: newRefreshRate });
       
       // Notifier les autres parties de l'application
       this.notifyRefreshRateChange(newRefreshRate);
@@ -166,7 +170,8 @@ export class BatteryAwareness {
    */
   private deferNonCriticalTasks(powerSaveState: PowerSaveState): void {
     if (powerSaveState.enabled) {
-      console.log('[BatteryAwareness] Opérations non critiques différées');
+      logger.debug('Opérations non critiques différées');
+      
       // Implémentation spécifique à l'application
       /*
       if (typeof taskScheduler !== 'undefined') {
@@ -182,7 +187,8 @@ export class BatteryAwareness {
    */
   private reduceCPUUsage(powerSaveState: PowerSaveState): void {
     if (powerSaveState.enabled) {
-      console.log('[BatteryAwareness] Utilisation CPU réduite');
+      logger.debug('Utilisation CPU réduite');
+      
       // Implémentation spécifique à l'application
       /*
       if (typeof animationController !== 'undefined') {
@@ -281,7 +287,7 @@ export class BatteryAwareness {
     const oldState = { ...this.powerSaveState };
     this.powerSaveState = { enabled, level };
     
-    console.log(`[BatteryAwareness] Mode économie d'énergie forcé: ${enabled ? 'activé' : 'désactivé'}`);
+    logger.info('Mode économie d\'énergie forcé', { enabled, level });
     
     // Appeler le callback si défini
     if (this.onPowerSaveChangeCallback) {

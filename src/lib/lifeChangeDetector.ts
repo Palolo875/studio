@@ -1,6 +1,10 @@
 // Life Change Detector - Détection des changements de vie de l'utilisateur
 // Implémentation de l'étape 3.4 : Adaptation aux Changements de Vie de l'Utilisateur
 
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('LifeChangeDetector');
+
 // Interface pour les données de comportement utilisateur
 export interface UserBehavior {
   userId: string;
@@ -60,7 +64,7 @@ export class LifeChangeDetector {
     
     if (!baselineData) {
       // Pas de données historiques, impossible de détecter des changements
-      console.log(`No historical data for user ${userBehaviorData.userId}`);
+      logger.info('No historical data for user', { userId: userBehaviorData.userId });
       return false;
     }
     
@@ -208,13 +212,13 @@ export class LifeChangeDetector {
   
   // Journaliser un événement
   private log(event: string, data: any): void {
-    console.log(`EVENT: ${event}`, data);
+    logger.info(event, { data });
     // Dans une implémentation réelle, cela enregistrerait l'événement dans un système de journalisation
   }
   
   // Notifier l'utilisateur d'un changement
   private notifyUser(message: string, userId: string): void {
-    console.log(`NOTIFICATION to user ${userId}: ${message}`);
+    logger.info('NOTIFICATION', { userId, message });
     // Dans une implémentation réelle, cela afficherait une notification dans l'UI
     
     // Proposer une réinitialisation des adaptations
@@ -223,7 +227,7 @@ export class LifeChangeDetector {
   
   // Proposer une réinitialisation des adaptations
   private proposeAdaptationReset(userId: string): void {
-    console.log("Showing adaptation reset proposal modal:", {
+    logger.info('Showing adaptation reset proposal modal', {
       title: "Réinitialisation des adaptations",
       body: "Un changement majeur de votre comportement a été détecté. Souhaitez-vous réinitialiser les adaptations du système ?",
       actions: [
@@ -238,7 +242,7 @@ export class LifeChangeDetector {
   
   // Réinitialiser les adaptations pour un utilisateur
   resetUserAdaptations(userId: string): void {
-    console.log(`Resetting adaptations for user ${userId}`);
+    logger.info('Resetting adaptations for user', { userId });
     // Dans une implémentation réelle, cela réinitialiserait les adaptations de l'utilisateur
   }
   
@@ -249,10 +253,10 @@ export class LifeChangeDetector {
     if (existingData) {
       // Mettre à jour les données existantes
       // Note: Dans une implémentation réelle, cela serait plus complexe
-      console.log(`Updating historical data for user ${userId}`);
+      logger.info('Updating historical data for user', { userId });
     } else {
       // Créer de nouvelles données historiques
-      console.log(`Creating historical data for user ${userId}`);
+      logger.info('Creating historical data for user', { userId });
     }
   }
 }

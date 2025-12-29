@@ -3,6 +3,9 @@
 
 import { SovereigntyMode } from './phase7Implementation';
 import { Session, UserAction } from './types';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('ModeEngine');
 
 // Interface pour les transitions de mode
 export interface ModeTransition {
@@ -40,7 +43,7 @@ export class SovereigntyManager {
     const allowedTransitions = this.getAllowedTransitions();
     
     if (!allowedTransitions.some(t => t.from === from && t.to === to)) {
-      console.warn(`Transition non autorisée: ${SovereigntyMode[from]} → ${SovereigntyMode[to]}`);
+      logger.warn('Transition non autorisée', { from: SovereigntyMode[from], to: SovereigntyMode[to] });
       return;
     }
     
@@ -53,8 +56,7 @@ export class SovereigntyManager {
     });
     
     // Notification (simulée)
-    console.log(`Suggestion de transition: ${SovereigntyMode[from]} → ${SovereigntyMode[to]}`);
-    console.log(`Raison: ${reason}`);
+    logger.info('Suggestion de transition', { from: SovereigntyMode[from], to: SovereigntyMode[to], reason });
   }
 
   // Forcer une transition de mode (uniquement pour le mode PROTECTIVE)
@@ -81,7 +83,7 @@ export class SovereigntyManager {
       this.protectiveModeStartTime = Date.now();
     }
     
-    console.log(`Transition forcée: ${SovereigntyMode[this.previousMode]} → ${SovereigntyMode[to]}`);
+    logger.info('Transition forcée', { from: SovereigntyMode[this.previousMode], to: SovereigntyMode[to], reason });
   }
 
   // Obtenir les transitions autorisées
@@ -188,7 +190,7 @@ export class SovereigntyManager {
       
       if (hoursInProtective > 24) {
         // Afficher une notification pour sortir du mode protectif
-        console.log("Mode protectif actif depuis 24h. Voulez-vous sortir ?");
+        logger.info('Mode protectif actif depuis 24h. Voulez-vous sortir ?');
       }
     }
     
@@ -198,7 +200,7 @@ export class SovereigntyManager {
       
       if (daysInManual > 30) {
         // Afficher une alerte
-        console.log("Mode MANUAL actif depuis 30 jours. Recommandation de passer en mode assisté.");
+        logger.info('Mode MANUAL actif depuis 30 jours. Recommandation de passer en mode assisté.');
       }
     }
   }

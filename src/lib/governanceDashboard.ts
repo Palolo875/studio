@@ -34,7 +34,34 @@ export class GovernanceDashboard {
     };
   }
 
-  // ... (méthodes update inchangées)
+  getMetrics(): GovernanceMetrics {
+    return { ...this.metrics };
+  }
+
+  updateBurnoutRisk(score: number): void {
+    this.metrics = { ...this.metrics, burnoutRisk: Math.max(0, Math.min(1, score)) };
+    this.notifyUpdate();
+  }
+
+  updateCurrentMode(mode: SovereigntyMode): void {
+    this.metrics = { ...this.metrics, currentMode: mode, lastModeChange: Date.now() };
+    this.notifyUpdate();
+  }
+
+  private getIntegrityAssessment(): string {
+    const score = this.metrics.autonomyIntegrityScore;
+    if (score >= 0.8) return 'Excellent';
+    if (score >= 0.6) return 'Bon';
+    if (score >= 0.4) return 'Moyen';
+    return 'Faible';
+  }
+
+  private getRecommendations(): string[] {
+    const recs: string[] = [];
+    if (this.metrics.burnoutRisk > 0.75) recs.push('Réduire la charge et privilégier les tâches légères');
+    if (this.metrics.overrideRate > 0.7) recs.push("Réévaluer les règles: taux d'override élevé");
+    return recs.length ? recs : ['Continuer le suivi'];
+  }
 
   // Enregistrer un listener pour les mises à jour
   // Retourne une fonction de désabonnement

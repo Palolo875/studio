@@ -5,12 +5,16 @@ import { AuthorityContract, AuthorityContext, NON_NEGOTIABLES } from './phase7Im
 import { calculateBurnoutScore, type BurnoutDetectionResult } from './burnout/BurnoutEngine';
 import { SovereigntyManager, SovereigntyMode } from './modeEngine';
 import { computeOverrideCost, UserContext } from './costEngine';
-import { VoteEngine, ConsensusMode } from './voteEngine';
+import { VoteEngine, ConsensusMode, type Task as VoteTask } from './voteEngine';
+
 import { GovernanceDashboard } from './governanceDashboard';
 import { ConflictResolver } from './conflictResolution';
 import { ProtectiveModeManager } from './protectiveMode';
 import { Task } from './types';
 import { getSessionsByDate, getOverridesByPeriod } from './database/index';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('Phase7Main');
 
 // Classe principale pour la Phase 7
 export class Phase7Manager {
@@ -93,7 +97,7 @@ export class Phase7Manager {
       if (burnoutResult.score > 0.75) {
         // Générer une notification
         const notification = this.protectiveModeManager.generateNotification(burnoutResult);
-        console.log("Burnout Alert:", notification);
+        logger.warn('Burnout Alert', { notification });
 
         // Activer le mode protectif
         this.protectiveModeManager.activate("Signaux de burnout détectés");
@@ -104,7 +108,7 @@ export class Phase7Manager {
         this.protectiveModeManager.applyRestrictions();
       }
     } catch (error) {
-      console.error("Erreur lors de la vérification du burnout:", error);
+      logger.error('Erreur lors de la vérification du burnout', error as Error);
     }
   }
 
@@ -137,12 +141,12 @@ export class Phase7Manager {
   }
 
   // Trouver un consensus en cas de conflit
-  findConsensus(userWants: Task, systemRefuses: any) {
+  findConsensus(userWants: VoteTask, systemRefuses: any) {
     return this.voteEngine.findConsensus(userWants, systemRefuses);
   }
 
   // Enregistrer un conflit
-  registerConflict(userRequest: Task, systemRejection: any) {
+  registerConflict(userRequest: VoteTask, systemRejection: any) {
     return this.conflictResolver.registerConflict(userRequest, systemRejection);
   }
 
@@ -159,7 +163,7 @@ export class Phase7Manager {
     // Certains changements de mode nécessitent une confirmation
     if (currentMode === SovereigntyMode.PROTECTIVE) {
       if (!this.protectiveModeManager.canExit()) {
-        console.log("Impossible de changer de mode. Le mode protectif est actif.");
+        logger.info('Impossible de changer de mode. Le mode protectif est actif.');
         return false;
       }
     }
@@ -172,10 +176,10 @@ export class Phase7Manager {
       this.sovereigntyManager.lastActivityTimestamp = Date.now();
       this.governanceDashboard.updateCurrentMode(newMode);
 
-      console.log(`Mode changé: ${SovereigntyMode[currentMode]} → ${SovereigntyMode[newMode]}`);
+      logger.info('Mode changé', { from: SovereigntyMode[currentMode], to: SovereigntyMode[newMode] });
       return true;
     } catch (error) {
-      console.error("Erreur lors du changement de mode:", error);
+      logger.error('Erreur lors du changement de mode', error as Error);
       return false;
     }
   }
@@ -238,7 +242,7 @@ export class Phase7Manager {
       }
 
     } catch (error) {
-      console.error("Erreur lors de la vérification des non-négociables:", error);
+      logger.error('Erreur lors de la vérification des non-négociables', error as Error);
     }
 
     return violations;

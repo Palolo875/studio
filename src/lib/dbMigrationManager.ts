@@ -1,5 +1,8 @@
 import { validateDataIntegrity } from './dataIntegrityValidator';
 import { DatabaseSnapshotManager } from './databaseSnapshot';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('DBMigration');
 /**
  * Gestionnaire de migrations de base de données - Phase 5
  * Implémente les migrations avec rollback atomique et validation
@@ -26,7 +29,7 @@ export interface MigrationResult {
 export async function exportEncryptedBackup(): Promise<string> {
   // Dans une implémentation réelle, cela chiffrerait l'export de la base
   // Pour cette implémentation, nous simulons simplement
-  console.log('[DBMigration] Création d’un backup chiffré...');
+  logger.info('Création d’un backup chiffré');
   return "encrypted_backup_data_" + Date.now();
 }
 
@@ -36,7 +39,7 @@ export async function exportEncryptedBackup(): Promise<string> {
  */
 export async function importEncryptedBackup(backup: string): Promise<void> {
   // Dans une implémentation réelle, cela déchiffrerait et importerait le backup
-  console.log(`[DBMigration] Restauration du backup: ${backup.substring(0, 30)}...`);
+  logger.info('Restauration du backup', { prefix: backup.substring(0, 30) });
 }
 
 /**
@@ -54,7 +57,7 @@ export function hash(data: string): string {
  * Applique une migration avec rollback atomique (Phase 5.3)
  */
 export async function migrateWithRollback(db: any, migration: Migration): Promise<MigrationResult> {
-  console.log(`[DBMigration] Préparation migration V${migration.version}...`);
+  logger.info('Préparation migration', { version: migration.version, name: migration.name });
 
   // 1. Snapshot complet (Pre-migration)
   const snapshot = await DatabaseSnapshotManager.createSnapshot();
@@ -80,7 +83,7 @@ export async function migrateWithRollback(db: any, migration: Migration): Promis
 
     return { success: true, backupCreated: true };
   } catch (error) {
-    console.error(`[DBMigration] Échec V${migration.version}. Rollback immédiat.`, error);
+    logger.error(`Échec V${migration.version}. Rollback immédiat.`, error as Error);
 
     // 5. Rollback Atomique
     await DatabaseSnapshotManager.restoreSnapshot(snapshot);
@@ -126,33 +129,33 @@ export const MIGRATIONS: Migration[] = [
  * @param db Instance de la base de données
  */
 export async function applyPendingMigrations(db: any): Promise<void> {
-  console.log('[DBMigration] Vérification des migrations en attente...');
+  logger.info('Vérification des migrations en attente');
 
   // Obtenir la version actuelle de la base de données
   const currentVersion = db.verno || 0;
-  console.log(`[DBMigration] Version actuelle: ${currentVersion}`);
+  logger.info('Version actuelle', { version: currentVersion });
 
   // Filtrer les migrations qui n'ont pas encore été appliquées
   const pendingMigrations = MIGRATIONS.filter(m => m.version > currentVersion);
 
   if (pendingMigrations.length === 0) {
-    console.log('[DBMigration] Aucune migration en attente');
+    logger.info('Aucune migration en attente');
     return;
   }
 
-  console.log(`[DBMigration] ${pendingMigrations.length} migrations en attente`);
+  logger.info('Migrations en attente', { count: pendingMigrations.length });
 
   // Appliquer chaque migration avec rollback
   for (const migration of pendingMigrations) {
     const result = await migrateWithRollback(db, migration);
 
     if (!result.success) {
-      console.error(`[DBMigration] Échec de la migration ${migration.version}: ${result.error}`);
+      logger.error(`Échec de la migration ${migration.version}: ${result.error}`, new Error(result.error));
       throw new Error(`Échec de la migration ${migration.version}: ${result.error}`);
     }
 
-    console.log(`[DBMigration] Migration ${migration.version} appliquée avec succès`);
+    logger.info('Migration appliquée avec succès', { version: migration.version, name: migration.name });
   }
 
-  console.log('[DBMigration] Toutes les migrations ont été appliquées');
+  logger.info('Toutes les migrations ont été appliquées');
 }
