@@ -7,13 +7,15 @@ import { Save, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { useFocusSettings } from '@/hooks/use-focus-settings';
+import { getTaskHistory } from '@/lib/database';
 
 interface NotesSectionProps {
+  taskId?: string;
   onSave?: (note: string) => void;
   autoSaveDelay?: number; // en millisecondes
 }
 
-export function NotesSection({ onSave, autoSaveDelay = 2000 }: NotesSectionProps) {
+export function NotesSection({ taskId, onSave, autoSaveDelay = 2000 }: NotesSectionProps) {
   const { toast } = useToast();
   const { settings } = useFocusSettings();
   const [notes, setNotes] = useState('');
@@ -21,6 +23,32 @@ export function NotesSection({ onSave, autoSaveDelay = 2000 }: NotesSectionProps
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const notesRef = useRef<HTMLTextAreaElement>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!taskId) return;
+      if (taskId === 'task-id-placeholder') return;
+      try {
+        const history = await getTaskHistory(taskId);
+        if (cancelled) return;
+        const extracted = history
+          .map((h) => {
+            const note = (h as any)?.notes;
+            return typeof note === 'string' ? note : null;
+          })
+          .filter((v): v is string => Boolean(v));
+
+        setSavedNotes(extracted);
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [taskId]);
 
   // Gestion de la sauvegarde automatique
   useEffect(() => {
@@ -44,7 +72,24 @@ export function NotesSection({ onSave, autoSaveDelay = 2000 }: NotesSectionProps
     };
   }, [notes, autoSaveDelay, settings.autoSaveNotes]);
 
-  const handleAutoSave = () => {
+  const refreshFromDb = async () => {
+    if (!taskId) return;
+    if (taskId === 'task-id-placeholder') return;
+    try {
+      const history = await getTaskHistory(taskId);
+      const extracted = history
+        .map((h) => {
+          const note = (h as any)?.notes;
+          return typeof note === 'string' ? note : null;
+        })
+        .filter((v): v is string => Boolean(v));
+      setSavedNotes(extracted);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleAutoSave = async () => {
     if (notes.trim()) {
       setSavedNotes(prev => [...prev, notes]);
       setNotes('');
@@ -56,10 +101,11 @@ export function NotesSection({ onSave, autoSaveDelay = 2000 }: NotesSectionProps
       });
       
       onSave?.(notes);
+      await refreshFromDb();
     }
   };
 
-  const handleManualSave = () => {
+  const handleManualSave = async () => {
     if (notes.trim()) {
       setSavedNotes(prev => [...prev, notes]);
       setNotes('');
@@ -71,6 +117,7 @@ export function NotesSection({ onSave, autoSaveDelay = 2000 }: NotesSectionProps
       });
       
       onSave?.(notes);
+      await refreshFromDb();
     }
   };
 
@@ -89,7 +136,7 @@ export function NotesSection({ onSave, autoSaveDelay = 2000 }: NotesSectionProps
             size="sm"
             variant="ghost"
             className="absolute bottom-2 right-2"
-            onClick={handleManualSave}
+            onClick={() => void handleManualSave()}
           >
             <Save className="h-4 w-4" />
           </Button>

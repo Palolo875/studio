@@ -116,6 +116,48 @@ export function EveningCelebration({
     return () => clearTimeout(timer);
   }, []);
 
+  const handleManualSaveBrainDump = async () => {
+    const text = brainDump.trim();
+    if (!text) return;
+
+    const detectedActions = text
+      .split(/[.!?]+/)
+      .filter(sentence =>
+        sentence.toLowerCase().includes('demain') ||
+        sentence.toLowerCase().includes('je dois') ||
+        sentence.toLowerCase().includes('il faut')
+      ).length;
+
+    const now = new Date();
+    const id = eveningEntryId ?? `evening_${now.getTime()}`;
+
+    try {
+      await upsertEveningEntry({
+        id,
+        timestamp: now.getTime(),
+        brainDump: text,
+        actionsDetected: detectedActions,
+        transformedToTasks: false,
+      });
+
+      setEveningEntryId(id);
+      setLastSavedBrainDump(text);
+      setActionsDetected(detectedActions);
+      if (detectedActions > 0) setShowActionBadge(true);
+
+      toast({
+        title: 'Sauvegardé',
+        description: 'Pensée sauvegardée.',
+      });
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: 'Impossible de sauvegarder la pensée.',
+      });
+    }
+  };
+
   const getTitle = () => {
     if (focusScore >= 100) {
       return `Bravo, ${name}. Mission accomplie.`;
@@ -386,12 +428,7 @@ export function EveningCelebration({
                 size="sm"
                 onClick={() => {
                   if (brainDump.trim() && brainDump !== lastSavedBrainDump) {
-                    // Force save
-                    setLastSavedBrainDump(brainDump);
-                    toast({
-                      title: 'Sauvegardé',
-                      description: 'Pensée sauvegardée.',
-                    });
+                    void handleManualSaveBrainDump();
                   }
                 }}
               >

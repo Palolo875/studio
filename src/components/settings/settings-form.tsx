@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -90,6 +90,105 @@ export function SettingsForm() {
   const { toast } = useToast();
   const { setTheme, theme } = useTheme();
   const restoreFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [backupPassphrase, setBackupPassphrase] = useState('');
+
+  async function encryptPayload(plainText: string, passphrase: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(passphrase),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveKey']
+    );
+
+    const key = await crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt,
+        iterations: 150000,
+        hash: 'SHA-256',
+      },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt']
+    );
+
+    const cipherBuf = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      encoder.encode(plainText)
+    );
+
+    const toB64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
+
+    return JSON.stringify(
+      {
+        kairuEncrypted: true,
+        v: 1,
+        salt: toB64(salt),
+        iv: toB64(iv),
+        data: toB64(new Uint8Array(cipherBuf)),
+      },
+      null,
+      2
+    );
+  }
+
+  async function decryptPayload(text: string, passphrase: string): Promise<string> {
+    let parsed: any;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return text;
+    }
+
+    if (!parsed || parsed.kairuEncrypted !== true) return text;
+    if (!passphrase) {
+      throw new Error('Mot de passe requis pour restaurer cette sauvegarde.');
+    }
+
+    const fromB64 = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const salt = fromB64(parsed.salt);
+    const iv = fromB64(parsed.iv);
+    const data = fromB64(parsed.data);
+
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(passphrase),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveKey']
+    );
+
+    const key = await crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt,
+        iterations: 150000,
+        hash: 'SHA-256',
+      },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['decrypt']
+    );
+
+    const plainBuf = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      data
+    );
+
+    return decoder.decode(plainBuf);
+  }
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -164,7 +263,9 @@ export function SettingsForm() {
     try {
       const snapshot = await DatabaseSnapshotManager.createSnapshot();
       await DatabaseSnapshotManager.saveSnapshotToStorage(snapshot, `manual_export_${Date.now()}`);
-      const payload = DatabaseSnapshotManager.exportSnapshot(snapshot);
+      const plainPayload = DatabaseSnapshotManager.exportSnapshot(snapshot);
+      const passphrase = backupPassphrase.trim();
+      const payload = passphrase ? await encryptPayload(plainPayload, passphrase) : plainPayload;
 
       const blob = new Blob([payload], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -196,7 +297,9 @@ export function SettingsForm() {
       );
       if (!confirmed) return;
 
-      const text = await file.text();
+      const rawText = await file.text();
+      const passphrase = backupPassphrase.trim();
+      const text = await decryptPayload(rawText, passphrase);
       const snapshot = DatabaseSnapshotManager.importSnapshot(text);
       await DatabaseSnapshotManager.restoreSnapshot(snapshot);
 
@@ -598,6 +701,19 @@ export function SettingsForm() {
                 <p className="text-sm text-muted-foreground">
                   Exportez une sauvegarde JSON ou restaurez une sauvegarde existante.
                 </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label>Mot de passe (optionnel)</Label>
+                  <Input
+                    type="password"
+                    value={backupPassphrase}
+                    onChange={(e) => setBackupPassphrase(e.target.value)}
+                    placeholder="Laisser vide pour export JSON"
+                    className="h-12 rounded-xl"
+                  />
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">

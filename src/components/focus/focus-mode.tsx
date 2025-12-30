@@ -113,6 +113,7 @@ export function FocusMode({
             
             {/* Notes Section */}
             <NotesSection
+              taskId={taskId}
               autoSaveDelay={settings.autoSaveNotes ? 2000 : 0}
               onSave={(note) => void Promise.resolve(onNoteSaved?.(taskId, note))}
             />
