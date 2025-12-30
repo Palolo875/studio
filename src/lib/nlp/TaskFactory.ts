@@ -3,7 +3,7 @@
  * Fusionne les données brutes et la classification pour créer des objets Task complets
  */
 import type { RawTaskWithContract } from '@/lib/nlp/NLPContract';
-import type { TaskClassification } from './TaskClassifier';
+import type { TaskClassification } from './RealTaskClassifier';
 import type { DBTask } from '@/lib/database';
 
 export function createFullTask(

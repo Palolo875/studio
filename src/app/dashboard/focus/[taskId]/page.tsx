@@ -1,20 +1,33 @@
 'use client';
 
-import { useParams, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { FocusMode } from '@/components/focus/focus-mode';
-import { addTaskHistory, completeTask } from '@/lib/database';
+import { addTaskHistory, completeTask, getTaskById } from '@/lib/database';
 
 export default function FocusPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
-  const { taskId: taskNameParam } = params;
-  
-  const taskName = taskNameParam 
-    ? decodeURIComponent(taskNameParam as string)
-    : 'votre tâche';
-    
-  // Récupérer l'ID de la tâche depuis les paramètres de recherche
-  const taskId = searchParams.get('id') || 'task-id-placeholder';
+  const { taskId } = params as { taskId?: string };
+
+  const decodedTaskId = taskId ? decodeURIComponent(taskId) : 'task-id-placeholder';
+  const [taskName, setTaskName] = useState('votre tâche');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      if (!decodedTaskId || decodedTaskId === 'task-id-placeholder') return;
+      const task = await getTaskById(decodedTaskId);
+      if (cancelled) return;
+      if (task?.title) setTaskName(task.title);
+    }
+
+    load().catch(() => null);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [decodedTaskId]);
   
   // Fonction pour marquer la tâche comme terminée
   const handleTaskComplete = async (completedTaskId: string) => {
@@ -30,7 +43,7 @@ export default function FocusPage() {
     <div className="flex items-center justify-center min-h-screen bg-background">
       <FocusMode 
         taskName={taskName}
-        taskId={taskId}
+        taskId={decodedTaskId}
         onTaskComplete={handleTaskComplete}
         onNoteSaved={handleNoteSaved}
       />

@@ -3,14 +3,27 @@
  * Enregistre le texte tel quel sans traitement NLP avancé
  */
 
-import { CreatedTask } from '@/hooks/useNLP';
+export interface RawCaptureTask {
+  id: string;
+  content: string;
+  effort: 'S' | 'M' | 'L';
+  priority: 'low' | 'medium' | 'high';
+  status: 'todo';
+  createdAt: Date;
+  sourceType: 'nlp_capture' | 'nlp_full';
+  notes?: string;
+  confidence?: number;
+  entities?: Record<string, string>;
+  tags?: string[];
+  urgency?: number;
+}
 
 /**
  * Crée des tâches de capture brute à partir d'un texte
  * @param text Texte à capturer
  * @returns Tableau de tâches de capture brute
  */
-export function basicRawCapture(text: string): CreatedTask[] {
+export function basicRawCapture(text: string): RawCaptureTask[] {
   // Séparer le texte en phrases
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
   

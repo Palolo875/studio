@@ -5,6 +5,18 @@ import { z } from "zod";
 import { generateMagicalPlaylist } from "@/lib/magical-playlist-algorithm";
 import { getAllTasks, type DBTask } from "@/lib/database";
 
+function toLegacyPriority(urgency: DBTask['urgency']): Task['priority'] {
+  if (urgency === 'urgent' || urgency === 'high') return 'high';
+  if (urgency === 'medium') return 'medium';
+  return 'low';
+}
+
+function toLegacyEnergy(effort: DBTask['effort']): Task['energyRequired'] {
+  if (effort === 'high') return 'high';
+  if (effort === 'medium') return 'medium';
+  return 'low';
+}
+
 const generatePlaylistSchema = z.object({
   goals: z.string().min(3, "Goals must be at least 3 characters long."),
   priorities: z.string().min(3, "Priorities must be at least 3 characters long."),
@@ -60,8 +72,8 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
       subtasks: [],
       lastAccessed: (t.lastActivated ?? t.updatedAt ?? new Date()).toISOString(),
       completionRate: t.completedAt ? 100 : 0,
-      priority: t.urgency as Task["priority"],
-      energyRequired: t.effort,
+      priority: toLegacyPriority(t.urgency),
+      energyRequired: toLegacyEnergy(t.effort),
       estimatedDuration: t.duration,
       tags: t.tags,
       scheduledDate: t.deadline?.toISOString(),
@@ -71,6 +83,7 @@ export async function handleGeneratePlaylist(prevState: any, formData: FormData)
     const scored = generateMagicalPlaylist(tasks, {
       energyLevel,
       intention,
+      currentTime: new Date(),
     });
 
     return {

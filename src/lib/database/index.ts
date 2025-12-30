@@ -64,6 +64,18 @@ export async function getAllTasks(): Promise<DBTask[]> {
     }
 }
 
+ /**
+  * Récupère une tâche par son ID
+  */
+ export async function getTaskById(taskId: string): Promise<DBTask | undefined> {
+     try {
+         return await db.tasks.get(taskId);
+     } catch (error) {
+         logger.error('Failed to get task by id', error as Error, { taskId });
+         return undefined;
+     }
+ }
+
 // ============================================
 // Fonctions Settings (remplace localStorage)
 // ============================================

@@ -8,6 +8,14 @@ import { useState } from 'react';
 import { useNLP } from '@/hooks/useNLP';
 import { useToast } from '@/hooks/use-toast';
 
+function hasCategory(task: unknown): task is { category: string } {
+  return typeof task === 'object' && task !== null && 'category' in task;
+}
+
+function hasTags(task: unknown): task is { tags?: string[] } {
+  return typeof task === 'object' && task !== null && 'tags' in task;
+}
+
 export function Capture() {
   const [text, setText] = useState('');
   const { processText, isProcessing, error } = useNLP();
@@ -18,11 +26,25 @@ export function Capture() {
     if (result.success) {
       setText(''); // Reset
       // Afficher un message de succès avec des détails
-      const avgConfidence = result.tasks.reduce((acc, task) => acc + (task.confidence || 0), 0) / result.tasks.length;
-      const energyTypes = result.tasks.map(t => t.energy).filter(Boolean).join(', ');
+      const categories = result.tasks
+        .map((t) => (hasCategory(t) ? t.category : undefined))
+        .filter(Boolean)
+        .join(', ');
+
+      const tags = result.tasks
+        .flatMap((t) => (hasTags(t) ? (t.tags ?? []) : []))
+        .filter(Boolean)
+        .slice(0, 6)
+        .join(', ');
+
+      const description = categories
+        ? `Catégories: ${categories}`
+        : tags
+          ? `Tags: ${tags}`
+          : 'Création effectuée.';
       toast({
         title: `${result.tasks.length} tâche(s) créée(s)`,
-        description: `Confiance moyenne: ${(avgConfidence * 100).toFixed(1)}% | Types d'énergie: ${energyTypes || 'non spécifiés'}`,
+        description,
       });
     } else {
       toast({

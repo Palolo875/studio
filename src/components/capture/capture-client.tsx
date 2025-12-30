@@ -13,9 +13,13 @@ import { useToast } from '@/hooks/use-toast';
 import { extractTasks, type RawTaskWithContract } from '@/lib/nlp/TaskExtractor';
 import { basicRawCapture } from '@/lib/nlp/basicRawCapture';
 import { createNLPContractResult } from '@/lib/nlp/NLPContract';
+import { classifyTask } from '@/lib/nlp/RealTaskClassifier';
+import { createFullTask } from '@/lib/nlp/TaskFactory';
 
 type AnalyzeCaptureOutput = {
+  rawTasks: RawTaskWithContract[];
   tasks: Array<{ title: string; deadline?: string; priority?: 'high' | 'medium' | 'low' }>;
+  dbTasks: DBTask[];
   notes?: string;
   sentiment?: string;
 };
@@ -47,10 +51,16 @@ function deriveNotes(text: string, tasks: RawTaskWithContract[]): string | undef
 
 async function analyzeCaptureLocal(text: string): Promise<AnalyzeCaptureOutput> {
   const input = text.trim();
-  if (!input) return { tasks: [], notes: undefined, sentiment: undefined };
+  if (!input) return { rawTasks: [], tasks: [], dbTasks: [], notes: undefined, sentiment: undefined };
 
   try {
     const rawTasks = extractTasks(input);
+
+    const classified = await Promise.all(
+      rawTasks.map(async (task) => ({ raw: task, classification: await classifyTask(task) }))
+    );
+    const dbTasks = classified.map(({ raw, classification }) => createFullTask(raw, classification));
+
     const tasks = rawTasks.map((t) => {
       const title = [t.action, t.object].filter(Boolean).join(' ').trim() || t.rawText;
       return { title, deadline: t.deadline ?? undefined, priority: inferPriority(t) };
@@ -59,18 +69,41 @@ async function analyzeCaptureLocal(text: string): Promise<AnalyzeCaptureOutput> 
     createNLPContractResult(rawTasks);
 
     return {
+      rawTasks,
       tasks,
+      dbTasks,
       notes: deriveNotes(input, rawTasks),
       sentiment: inferSentiment(input),
     };
   } catch {
     const fallback = basicRawCapture(input);
+    const now = new Date();
+    const dbTasks: DBTask[] = fallback.map((t, index) => ({
+      id: `capture_${now.getTime()}_${index}`,
+      title: t.content,
+      description: t.notes,
+      duration: 30,
+      effort: 'medium',
+      urgency: 'medium',
+      impact: 'medium',
+      deadline: undefined,
+      scheduledTime: undefined,
+      category: 'capture',
+      status: 'todo',
+      activationCount: 0,
+      lastActivated: now,
+      createdAt: now,
+      updatedAt: now,
+      completedAt: undefined,
+      tags: t.tags,
+    }));
     const tasks = fallback.map(t => ({
       title: t.content,
       deadline: undefined,
       priority: 'medium' as const,
     }));
-    return { tasks, notes: undefined, sentiment: inferSentiment(input) };
+
+    return { rawTasks: [], tasks, dbTasks, notes: undefined, sentiment: inferSentiment(input) };
   }
 }
 
@@ -89,32 +122,11 @@ export function CaptureClient() {
   const handleAddToTasks = async () => {
     if (!analysis) return;
 
-    const now = new Date();
-    const tasks: DBTask[] = analysis.tasks.map((t, index) => ({
-      id: `capture_${now.getTime()}_${index}`,
-      title: t.title,
-      description: analysis?.notes ?? undefined,
-      duration: 30,
-      effort: 'medium',
-      urgency: t.priority ?? 'medium',
-      impact: 'medium',
-      deadline: undefined,
-      scheduledTime: undefined,
-      category: 'capture',
-      status: 'todo',
-      activationCount: 0,
-      lastActivated: now,
-      createdAt: now,
-      updatedAt: now,
-      completedAt: undefined,
-      tags: ['capture'],
-    }));
-
     try {
-      await upsertTasks(tasks);
+      await upsertTasks(analysis.dbTasks);
       toast({
         title: 'Ajouté',
-        description: `${tasks.length} tâche(s) ajoutée(s) à la bibliothèque.`,
+        description: `${analysis.dbTasks.length} tâche(s) ajoutée(s) à la bibliothèque.`,
       });
       setContent('');
       setAnalysis(null);

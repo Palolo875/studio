@@ -13,7 +13,7 @@ import { getLatestEveningEntry, upsertEveningEntry, upsertTasks } from '@/lib/da
 import { useToast } from '@/hooks/use-toast';
 import { LanguageDetector } from '@/lib/nlp/LanguageDetector';
 import { extractTasks } from '@/lib/nlp/TaskExtractor';
-import { classifyTask } from '@/lib/nlp/TaskClassifier';
+import { classifyTask } from '@/lib/nlp/RealTaskClassifier';
 import { createFullTask } from '@/lib/nlp/TaskFactory';
 
 function EveningContent() {

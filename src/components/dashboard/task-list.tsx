@@ -180,7 +180,7 @@ export function TaskList({ tasks, onToggleCompletion }: TaskListProps) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <FocusButton taskId={task.id} taskName={task.name} />
+                  <FocusButton taskId={task.id} />
                   <Popover>
                       <PopoverTrigger asChild>
                            <Button variant="ghost" size="sm">

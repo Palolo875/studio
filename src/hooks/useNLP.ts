@@ -6,12 +6,12 @@ import { useCallback, useState } from 'react';
 import { useSettingsStore } from '@/hooks/useSettingsStore';
 import { LanguageDetector } from '@/lib/nlp/LanguageDetector';
 import { extractTasks } from '@/lib/nlp/TaskExtractor';
-import { classifyTask } from '@/lib/nlp/TaskClassifier';
+import { classifyTask } from '@/lib/nlp/RealTaskClassifier';
 import { createFullTask } from '@/lib/nlp/TaskFactory';
 import { NlpTaskStorage } from '@/lib/nlp/TaskStorage';
 import { nlpTelemetryService } from '@/lib/nlp/TelemetryService';
 import { createNLPContractResult } from '@/lib/nlp/NLPContract';
-import { basicRawCapture } from '@/lib/nlp/basicRawCapture';
+import { basicRawCapture, type RawCaptureTask } from '@/lib/nlp/basicRawCapture';
 import { db, type DBTask } from '@/lib/database';
 
 function toContractMode(mode: unknown): 'RAW_CAPTURE_ONLY' | 'NORMAL' | undefined {
@@ -29,24 +29,40 @@ function ensureClassificationShape(classification: unknown): unknown {
   return { isUncertain: true };
 }
 
-// Type pour les tâches créées
-interface CreatedTask {
-  id: string;
-  content: string;
-  effort: 'S' | 'M' | 'L';
-  energy?: 'creative' | 'focus' | 'admin' | 'relationnel' | 'perso';
-  priority: 'low' | 'medium' | 'high';
-  status: 'todo';
-  createdAt: Date;
-  sourceType: 'nlp_capture' | 'nlp_full';
-  notes?: string;
-  confidence?: number; // Score de confiance de l'extraction
-  entities?: Record<string, string>; // Entités extraites
-  tags?: string[]; // Tags générés automatiquement
-  urgency?: number; // Score d'urgence
+function rawCaptureToDbTasks(items: RawCaptureTask[], source: 'raw' | 'fallback'): DBTask[] {
+  const now = new Date();
+
+  return items.map((t, index) => {
+    const idBase = source === 'raw' ? 'raw' : 'fallback';
+    const id = t.id || `${idBase}-${now.getTime()}-${index}`;
+
+    const urgency: DBTask['urgency'] =
+      t.priority === 'high' ? 'high' : t.priority === 'low' ? 'low' : 'medium';
+
+    return {
+      id,
+      title: t.content,
+      description: t.notes,
+      duration: 30,
+      effort: 'medium',
+      urgency,
+      impact: 'medium',
+      deadline: undefined,
+      scheduledTime: undefined,
+      category: 'capture',
+      status: 'todo',
+      activationCount: 0,
+      lastActivated: undefined,
+      createdAt: t.createdAt ?? now,
+      updatedAt: now,
+      completedAt: undefined,
+      tags: t.tags,
+    };
+  });
 }
 
 export function useNLP() {
+
   const { settings } = useSettingsStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,12 +131,30 @@ export function useNLP() {
       if (nlpTelemetryService.getMode() === 'RAW_CAPTURE_ONLY') {
         // Mode capture brute uniquement
         const rawCaptureTasks = basicRawCapture(text);
-        return { tasks: rawCaptureTasks, success: true, detectedLang: settings.language, mode: 'RAW_CAPTURE_ONLY' };
+        const dbTasks = rawCaptureToDbTasks(rawCaptureTasks, 'raw');
+
+        try {
+          const storage = new NlpTaskStorage(db);
+          await storage.bulkStoreTasks(dbTasks);
+        } catch {
+          // ignore
+        }
+
+        return { tasks: dbTasks, success: true, detectedLang: settings.language, mode: 'RAW_CAPTURE_ONLY' };
       }
       
       // Fallbacks multiples
       const fallbackTasks = basicRegexFallback(text);
-      return { tasks: fallbackTasks, success: false, detectedLang: settings.language };
+      const dbTasks = rawCaptureToDbTasks(fallbackTasks, 'fallback');
+
+      try {
+        const storage = new NlpTaskStorage(db);
+        await storage.bulkStoreTasks(dbTasks);
+      } catch {
+        // ignore
+      }
+
+      return { tasks: dbTasks, success: false, detectedLang: settings.language };
     } finally {
       setIsProcessing(false);
     }
@@ -137,7 +171,7 @@ export function useNLP() {
 /**
  * Fallback basique avec regex pour les cas d'erreur
  */
-function basicRegexFallback(text: string): CreatedTask[] {
+function basicRegexFallback(text: string): RawCaptureTask[] {
   // Séparer le texte en phrases
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
   
