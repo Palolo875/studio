@@ -35,7 +35,7 @@ export function filterEligibleTasks(tasks: Task[], currentDate: Date): Task[] {
     // Tâches sans deadline ou avec deadline future
     if (!task.deadline || task.deadline > today) {
       // Vérifier si la tâche a été démarrée par l'utilisateur
-      return task.completionHistory.length > 0 || task.status === 'active';
+      return task.completionHistory.length > 0 || task.status === 'active' || task.status === 'todo';
     }
 
     return false;

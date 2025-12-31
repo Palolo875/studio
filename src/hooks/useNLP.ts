@@ -12,7 +12,7 @@ import { NlpTaskStorage } from '@/lib/nlp/TaskStorage';
 import { nlpTelemetryService } from '@/lib/nlp/TelemetryService';
 import { createNLPContractResult } from '@/lib/nlp/NLPContract';
 import { basicRawCapture, type RawCaptureTask } from '@/lib/nlp/basicRawCapture';
-import { db, type DBTask } from '@/lib/database';
+import type { DBTask } from '@/lib/database';
 
 function toContractMode(mode: unknown): 'RAW_CAPTURE_ONLY' | 'NORMAL' | undefined {
   if (mode === 'RAW_CAPTURE_ONLY') return 'RAW_CAPTURE_ONLY';
@@ -105,7 +105,7 @@ export function useNLP() {
       const contractResult = createNLPContractResult(rawTasks, toContractMode(nlpTelemetryService.getMode()));
       
       // Stockage optimisé
-      const storage = new NlpTaskStorage(db);
+      const storage = new NlpTaskStorage();
       await storage.bulkStoreTasks(fullTasks);
       
       // Refresh UI
@@ -134,7 +134,7 @@ export function useNLP() {
         const dbTasks = rawCaptureToDbTasks(rawCaptureTasks, 'raw');
 
         try {
-          const storage = new NlpTaskStorage(db);
+          const storage = new NlpTaskStorage();
           await storage.bulkStoreTasks(dbTasks);
         } catch {
           // ignore
@@ -148,7 +148,7 @@ export function useNLP() {
       const dbTasks = rawCaptureToDbTasks(fallbackTasks, 'fallback');
 
       try {
-        const storage = new NlpTaskStorage(db);
+        const storage = new NlpTaskStorage();
         await storage.bulkStoreTasks(dbTasks);
       } catch {
         // ignore

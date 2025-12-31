@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect } from 'react';
 import type { DailyRituals, Task } from '@/lib/types';
 import { Recommendations } from './recommendations';
-import { TaskList } from './task-list';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { RefreshCw, Search, Siren, CalendarClock, Shield } from 'lucide-react';
@@ -11,6 +11,7 @@ import { PlaylistGenerator } from './playlist-generator';
 import { Button } from '../ui/button';
 import { DailyGreeting } from './daily-greeting';
 import { generatePlaylistClient } from '@/lib/playlistClient';
+import { dbTaskToUiTask, uiTaskToDbTask } from '@/lib/taskMapping';
 import { useToast } from '@/hooks/use-toast';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -33,7 +34,6 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { useRouter } from 'next/navigation';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TimelineView } from './timeline-view';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
@@ -59,7 +59,6 @@ import {
   getSessionsByDate,
   recordOverride,
   recordSleepData,
-  type DBTask,
   getSetting,
   setSetting,
 } from '@/lib/database';
@@ -81,52 +80,11 @@ const dynamicMessages: Record<string, string> = {
   creative: "L'inspiration est là ! Voici comment la canaliser et créer quelque chose de génial :",
 };
 
-function toDbTask(task: Task): DBTask {
-  const now = new Date();
-  return {
-    id: task.id,
-    title: task.name,
-    description: task.description,
-    duration: task.estimatedDuration ?? 30,
-    effort: (task.energyRequired as DBTask['effort']) ?? 'medium',
-    urgency: (task.priority as DBTask['urgency']) ?? 'medium',
-    impact: 'medium',
-    deadline: task.scheduledDate ? new Date(task.scheduledDate) : undefined,
-    scheduledTime: undefined,
-    category: (task.tags && task.tags[0]) || 'general',
-    status: task.completed ? 'done' : 'todo',
-    activationCount: 0,
-    lastActivated: task.lastAccessed ? new Date(task.lastAccessed) : now,
-    createdAt: now,
-    updatedAt: now,
-    completedAt: task.completedAt ? new Date(task.completedAt) : undefined,
-    tags: task.tags,
-  };
-}
-
 function toDbEnergyLevel(energy: EnergyState): 'low' | 'medium' | 'high' | undefined {
   if (!energy) return undefined;
   if (energy === 'slow') return 'low';
   if (energy === 'normal') return 'medium';
   return 'high';
-}
-
-function fromDbTask(dbTask: DBTask): Task {
-  return {
-    id: dbTask.id,
-    name: dbTask.title,
-    completed: dbTask.status === 'done',
-    subtasks: [],
-    lastAccessed: (dbTask.lastActivated ?? dbTask.updatedAt ?? new Date()).toISOString(),
-    completionRate: dbTask.completedAt ? 100 : 0,
-    description: dbTask.description,
-    priority: dbTask.urgency as Task['priority'],
-    energyRequired: dbTask.effort,
-    estimatedDuration: dbTask.duration,
-    tags: dbTask.tags,
-    completedAt: dbTask.completedAt?.toISOString(),
-    scheduledDate: dbTask.deadline?.toISOString(),
-  };
 }
 
 export function DashboardClient() {
@@ -189,7 +147,7 @@ export function DashboardClient() {
       // Charger depuis Dexie
       getAllTasks()
         .then(dbTasks => {
-          const adapted = dbTasks.map(fromDbTask);
+          const adapted = dbTasks.map(dbTaskToUiTask);
           if (!cancelled) {
             setTasks(adapted);
             setInitialTaskCount(adapted.length);
@@ -247,7 +205,7 @@ export function DashboardClient() {
   const persistTasks = async (newTasks: Task[], options: { incrementShuffle?: boolean } = {}) => {
     setTasks(newTasks);
     setInitialTaskCount(newTasks.length);
-    const dbTasks = newTasks.map(toDbTask);
+    const dbTasks = newTasks.map(uiTaskToDbTask);
     await upsertTasks(dbTasks);
     if (options.incrementShuffle) {
       setDailyRituals((prev: DailyRituals) => ({
@@ -320,7 +278,7 @@ export function DashboardClient() {
           state: 'IN_PROGRESS',
           energyLevel: toDbEnergyLevel(energyLevel),
           energyStability: 'stable',
-          taskIds: response.tasks.map((t: Task) => t.id),
+          taskIds: response.tasks.map((t) => t.task.id),
         }).catch(() => null);
         setCurrentSessionId(nextSessionId);
 

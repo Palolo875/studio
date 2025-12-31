@@ -44,8 +44,26 @@ export interface DBTask {
  */
 export async function upsertTasks(tasks: DBTask[]): Promise<void> {
     try {
-        await db.tasks.bulkPut(tasks);
-        logger.debug('Tasks upserted', { count: tasks.length });
+        const ids = tasks.map(t => t.id);
+        const existing = await db.tasks.bulkGet(ids);
+        const existingById = new Map<string, DBTask>();
+        for (const item of existing) {
+            if (item) existingById.set(item.id, item);
+        }
+
+        const merged = tasks.map((t) => {
+            const prev = existingById.get(t.id);
+            if (!prev) return t;
+
+            return {
+                ...t,
+                createdAt: prev.createdAt,
+                activationCount: prev.activationCount,
+            };
+        });
+
+        await db.tasks.bulkPut(merged);
+        logger.debug('Tasks upserted', { count: merged.length });
     } catch (error) {
         logger.error('Failed to upsert tasks', error as Error);
         throw error;
@@ -732,6 +750,18 @@ export async function getSessionsByDate(date: Date): Promise<DBSession[]> {
     }
 }
 
+export async function getSessionsByPeriod(startTimestamp: number, endTimestamp: number): Promise<DBSession[]> {
+    try {
+        return await db.sessions
+            .where('timestamp')
+            .between(startTimestamp, endTimestamp)
+            .toArray();
+    } catch (error) {
+        logger.error('Failed to get sessions by period', error as Error);
+        return [];
+    }
+}
+
 /**
  * Met à jour une session
  */
@@ -785,6 +815,29 @@ export async function getTaskHistory(taskId: string): Promise<DBTaskHistory[]> {
     }
 }
 
+export async function getTaskHistoryForTaskIds(taskIds: string[]): Promise<Map<string, DBTaskHistory[]>> {
+    const uniqueIds = Array.from(new Set(taskIds)).filter(Boolean);
+    if (uniqueIds.length === 0) return new Map();
+
+    try {
+        const records = await db.taskHistory.where('taskId').anyOf(uniqueIds).toArray();
+        const byTaskId = new Map<string, DBTaskHistory[]>();
+        for (const record of records) {
+            const bucket = byTaskId.get(record.taskId);
+            if (bucket) bucket.push(record);
+            else byTaskId.set(record.taskId, [record]);
+        }
+        for (const [taskId, bucket] of byTaskId) {
+            bucket.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+            byTaskId.set(taskId, bucket);
+        }
+        return byTaskId;
+    } catch (error) {
+        logger.error('Failed to get task history for task ids', error as Error, { count: uniqueIds.length });
+        return new Map();
+    }
+}
+
 /**
  * Récupère l'historique global sur une période
  */
@@ -797,6 +850,80 @@ export async function getHistoryByPeriod(startDate: Date, endDate: Date): Promis
     } catch (error) {
         logger.error('Failed to get history by period', error as Error);
         return [];
+    }
+}
+
+export async function addAdaptationSignal(signal: Omit<DBAdaptationSignal, 'id'>): Promise<number | undefined> {
+    try {
+        const id = await db.adaptationSignals.add(signal);
+        logger.debug('Adaptation signal recorded', { id, type: signal.type });
+        return id;
+    } catch (error) {
+        logger.error('Failed to record adaptation signal', error as Error);
+        return undefined;
+    }
+}
+
+export async function getAdaptationSignalsByPeriod(startTimestamp: number, endTimestamp: number): Promise<DBAdaptationSignal[]> {
+    try {
+        return await db.adaptationSignals
+            .where('timestamp')
+            .between(startTimestamp, endTimestamp)
+            .toArray();
+    } catch (error) {
+        logger.error('Failed to get adaptation signals by period', error as Error);
+        return [];
+    }
+}
+
+export async function pruneAdaptationSignals(maxAgeMs: number, maxSize: number): Promise<number> {
+    const now = Date.now();
+    const cutoffTs = now - maxAgeMs;
+    try {
+        const deletedByAge = await db.adaptationSignals.where('timestamp').below(cutoffTs).delete();
+
+        const remainingCount = await db.adaptationSignals.count();
+        if (remainingCount <= maxSize) return deletedByAge;
+
+        const toDelete = remainingCount - maxSize;
+        const oldest: DBAdaptationSignal[] = await db.adaptationSignals.orderBy('timestamp').limit(toDelete).toArray();
+        const ids = oldest
+            .map((s: DBAdaptationSignal) => s.id)
+            .filter((id: number | undefined): id is number => typeof id === 'number');
+        if (ids.length === 0) return deletedByAge;
+        const deletedBySize = await db.adaptationSignals.where('id').anyOf(ids).delete();
+        return deletedByAge + deletedBySize;
+    } catch (error) {
+        logger.error('Failed to prune adaptation signals', error as Error);
+        return 0;
+    }
+}
+
+export async function recordAdaptationHistory(entry: Omit<DBAdaptationHistory, 'id'>): Promise<number | undefined> {
+    try {
+        const id = await db.adaptationHistory.add(entry);
+        logger.info('Adaptation history recorded', { id });
+        return id;
+    } catch (error) {
+        logger.error('Failed to record adaptation history', error as Error);
+        return undefined;
+    }
+}
+
+export async function getLatestAdaptationHistory(): Promise<DBAdaptationHistory | undefined> {
+    try {
+        return await db.adaptationHistory.orderBy('timestamp').reverse().first();
+    } catch (error) {
+        logger.error('Failed to get latest adaptation history', error as Error);
+        return undefined;
+    }
+}
+
+export async function markAdaptationHistoryReverted(id: number): Promise<void> {
+    try {
+        await db.adaptationHistory.update(id, { reverted: true });
+    } catch (error) {
+        logger.error('Failed to mark adaptation reverted', error as Error, { id });
     }
 }
 

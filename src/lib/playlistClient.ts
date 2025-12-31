@@ -1,36 +1,33 @@
 import { z } from "zod";
 
 import type { DailyRituals, Task } from "@/lib/types";
-import { generateMagicalPlaylist } from "@/lib/magical-playlist-algorithm";
-import { getAllTasks, type DBTask } from "@/lib/database";
+import { getAllTasks, getTaskHistoryForTaskIds } from "@/lib/database";
+import type { EnergyState as EngineEnergyState, TaskPlaylist as EngineTaskPlaylist } from "@/lib/taskEngine/types";
+import { generateTaskPlaylist } from "@/lib/taskEngine";
+import { dbTaskToEngineTask } from "@/lib/taskEngine/dbTaskMapping";
 
-function toLegacyPriority(urgency: DBTask["urgency"]): Task["priority"] {
-  if (urgency === "urgent" || urgency === "high") return "high";
-  if (urgency === "medium") return "medium";
-  return "low";
-}
+export type PlaylistItem = {
+  task: Task;
+  score: number;
+  reason: string;
+  reasonDetails?: string[];
+};
 
-function toLegacyEnergy(effort: DBTask["effort"]): Task["energyRequired"] {
-  if (effort === "high") return "high";
-  if (effort === "medium") return "medium";
-  return "low";
-}
-
-function dbTaskToLegacyTask(t: DBTask): Task {
+function engineTaskToLegacyTask(task: import("@/lib/taskEngine/types").Task): Task {
   return {
-    id: t.id,
-    name: t.title,
-    completed: t.status === "done",
+    id: task.id,
+    name: task.title,
+    completed: task.status === "done",
     subtasks: [],
-    lastAccessed: (t.lastActivated ?? t.updatedAt ?? new Date()).toISOString(),
-    completionRate: t.completedAt ? 100 : 0,
-    priority: toLegacyPriority(t.urgency),
-    energyRequired: toLegacyEnergy(t.effort),
-    estimatedDuration: t.duration,
-    tags: t.tags,
-    scheduledDate: t.deadline?.toISOString(),
-    description: t.description,
-    completedAt: t.completedAt?.toISOString(),
+    lastAccessed: (task.lastActivated ?? new Date()).toISOString(),
+    completionRate: task.status === "done" ? 100 : 0,
+    description: task.description,
+    priority: task.urgency === "urgent" ? "high" : (task.urgency as Task["priority"]),
+    energyRequired: task.effort,
+    estimatedDuration: task.duration,
+    tags: task.category ? [task.category] : undefined,
+    completedAt: task.status === "done" ? (task.completionHistory[0]?.date ?? new Date()).toISOString() : undefined,
+    scheduledDate: task.deadline?.toISOString(),
   };
 }
 
@@ -45,7 +42,7 @@ const generatePlaylistSchema = z.object({
 export type GeneratePlaylistClientResult = {
   message: string;
   errors: Record<string, string[]> | null;
-  tasks: ReturnType<typeof generateMagicalPlaylist>;
+  tasks: PlaylistItem[];
   playlistShuffledCount?: number;
 };
 
@@ -67,7 +64,7 @@ export async function generatePlaylistClient(formData: FormData): Promise<Genera
       };
     }
 
-    const { dailyRituals: dailyRitualsString, energyLevel, intention } = validatedFields.data;
+    const { dailyRituals: dailyRitualsString, energyLevel } = validatedFields.data;
 
     const dailyRituals: DailyRituals = JSON.parse(dailyRitualsString);
 
@@ -81,16 +78,33 @@ export async function generatePlaylistClient(formData: FormData): Promise<Genera
     }
 
     const dbTasks = await getAllTasks();
-    const tasks = dbTasks.map(dbTaskToLegacyTask);
 
-    const scored = generateMagicalPlaylist(tasks, {
-      energyLevel,
-      intention,
-      currentTime: new Date(),
+    const now = new Date();
+    const taskIds = dbTasks.map((t) => t.id);
+    const historyByTaskId = await getTaskHistoryForTaskIds(taskIds);
+
+    const engineTasks = dbTasks
+      .filter((t) => t.status !== "cancelled" && t.status !== "done")
+      .map((t) => dbTaskToEngineTask(t, historyByTaskId.get(t.id) ?? []));
+
+    const energyState: EngineEnergyState = {
+      level: energyLevel,
+      stability: "stable",
+    };
+
+    const playlist: EngineTaskPlaylist = generateTaskPlaylist(engineTasks, energyState, 5, now, {
+      sessionDurationMinutes: 120,
     });
 
+    const scored: PlaylistItem[] = playlist.tasks.map((t) => ({
+      task: engineTaskToLegacyTask(t),
+      score: 1,
+      reason: playlist.explanation ?? "Sélection du cerveau (invariants enforce).",
+      reasonDetails: playlist.warnings,
+    }));
+
     return {
-      message: "Playlist magique générée avec succès.",
+      message: playlist.explanation ?? "Playlist générée avec succès.",
       errors: null,
       tasks: scored,
       playlistShuffledCount: dailyRituals.playlistShuffledCount + 1,

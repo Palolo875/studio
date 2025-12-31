@@ -9,15 +9,9 @@ import { createLogger } from '@/lib/logger';
 const logger = createLogger('NlpTaskStorage');
 
 export class NlpTaskStorage {
-  private db: any;
-  private tasks: any;
+  constructor(_db?: unknown) {}
 
-  constructor(db: any) {
-    this.db = db;
-    this.tasks = db?.tasks;
-  }
-
-  async bulkStoreTasks(tasks: any[]): Promise<void> {
+  async bulkStoreTasks(tasks: DBTask[]): Promise<void> {
 
     // Transaction atomique
     // Note: Dans une vraie implémentation, nous utiliserions:
@@ -25,8 +19,7 @@ export class NlpTaskStorage {
     logger.info('Stockage en masse des tâches NLP', { count: tasks.length });
 
     try {
-      const dbTasks = tasks as DBTask[];
-      await upsertTasks(dbTasks);
+      await upsertTasks(tasks);
 
       // 2. Update stats quotidiennes
       await this.updateDailyStats(tasks);
@@ -41,7 +34,7 @@ export class NlpTaskStorage {
     }
   }
 
-  private async updateDailyStats(tasks: any[]) {
+  private async updateDailyStats(tasks: DBTask[]) {
     // Simulation de la mise à jour des statistiques
     logger.debug('Mise à jour des statistiques quotidiennes', { count: tasks.length });
 
@@ -61,10 +54,12 @@ export class NlpTaskStorage {
   private async triggerPlaylistRefresh() {
     // Émettre event pour refresh UI
     logger.info('Déclenchement du rafraîchissement de la playlist');
-    window.dispatchEvent(new CustomEvent('nlptasks:added'));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('nlptasks:added'));
+    }
   }
 
-  private isTodayTask(task: any): boolean {
+  private isTodayTask(task: DBTask): boolean {
     // Vérifier si la tâche est pour aujourd'hui
     if (task.deadline) {
       const today = new Date();

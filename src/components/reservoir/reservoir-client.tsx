@@ -59,6 +59,7 @@ import {
   completeTask as completeDbTask,
   type DBTask,
 } from '@/lib/database';
+import { dbTaskToUiTask } from '@/lib/taskMapping';
 
 type ReservoirStatus = 'todo' | 'active' | 'frozen' | 'done';
 type ReservoirTask = Task & { status?: ReservoirStatus };
@@ -88,22 +89,11 @@ type ViewMode = 'list' | 'grid' | 'masonry' | 'kanban';
 
 function dbToUiTask(t: DBTask): ReservoirTask {
   const uiEffort: ReservoirTask['effort'] = t.duration <= 15 ? 'S' : t.duration <= 120 ? 'M' : 'L';
+  const base = dbTaskToUiTask(t);
   return {
-    id: t.id,
-    name: t.title,
-    completed: t.status === 'done',
+    ...base,
     status: dbStatusToReservoirStatus(t.status),
-    subtasks: [],
-    lastAccessed: (t.updatedAt || t.createdAt).toISOString(),
-    completionRate: t.status === 'done' ? 100 : 0,
-    description: t.description,
-    priority: t.urgency === 'urgent' ? 'high' : (t.urgency as any),
-    energyRequired: t.effort as any,
-    estimatedDuration: t.duration,
     effort: uiEffort,
-    tags: t.tags,
-    completedAt: t.completedAt ? t.completedAt.toISOString() : undefined,
-    scheduledDate: t.deadline ? t.deadline.toISOString() : undefined,
   };
 }
 

@@ -1,20 +1,114 @@
 # Plan d’implémentation SOTA (local-first, zéro cloud)
 
-## État de remédiation (source de vérité)
-- P0 Playlist (options `currentTime` + mapping DBTask -> Task) : ✅
-- P0 Routing Focus (`/dashboard/focus/[taskId]` canonique + fetch Dexie) : ✅
-- P0 Capture (pipeline local extract → RealTaskClassifier → TaskFactory → upsert Dexie) : ✅
-- P0 NLP canonique (RealTaskClassifier utilisé par `useNLP` + Evening + Capture) : ✅
-- P0 Typage/Build : `src/ai/dev.ts` neutralisé (plus d’import `dotenv`/flows) : ✅
+## Objectif
+Livrer une version **cohérente**, **local-first**, **preuve-based** (tests + fichiers) et **sans simulation cachée**.
 
-### P0 Découverts en audit (à corriger)
-- P0 Local-first (server actions) : `src/app/actions.ts` utilise Dexie côté serveur (risque crash / incohérent local-first) : ☐
-- P0 Gouvernance (burnout/protective) : surcharge chronique non atteignable + seuil protectif strict : ☐
-- P0 Tests E2E : Playwright utilise localStorage alors que le produit stocke settings dans Dexie : ☐
+## Principes non négociables
+- Local-first strict : aucune lecture/écriture IndexedDB/Dexie côté serveur. Aucun appel cloud par défaut.
+- Source de vérité : Dexie (IndexedDB) pour données métier (tâches, sessions, décisions, adaptations, snapshots). `localStorage` uniquement pour préférences UI non critiques.
+- Unicité : un seul modèle de tâche métier et un seul moteur “playlist/brain” utilisé en production.
+- Définition du Done : intégré au flux principal, persisté, test (unit + e2e) + preuve (fichiers/paths) + suppression des stubs.
+- Zéro simulation non protégée : pas de `Math.random`, fake data, `console.log`, “Simulation” en prod (sauf flag DEV_ONLY explicite).
 
-Note: les sections "Audit v2" / "Audit état général" ci-dessous contiennent des constats historiques. Le suivi et les actions à exécuter doivent se baser sur la section "Suivi d’avancement" et le backlog.
+## Milestones (ordre d’exécution)
 
-## Audit v2 (exécuté sur le code actuel)
+### M0 — Baseline & garde-fous (P0)
+**But**: empêcher toute régression pendant la refonte.
+
+**Livrables**
+- Un inventaire “Truth Table” (phase → feature → statut → preuve fichier → tests associés).
+- Un `npm run typecheck` + `npm run lint` + `npm run test` + `npm run test:e2e` stable (ou liste de blocages + fix).
+
+**Critères de Done**
+- Tous les écrans critiques (Dashboard, Capture, Focus, Bibliothèque, Evening) utilisent Dexie comme source de vérité.
+- Aucune route/action serveur n’accède à Dexie/IndexedDB.
+
+### M1 — Unification du modèle Task (P0)
+**But**: supprimer la fragmentation `DBTask` vs `legacy Task` vs `taskEngine Task`.
+
+**Décisions d’architecture**
+- Le type de référence devient `DBTask` (persisté), avec un mapping unique vers le type de décision du Brain si nécessaire.
+
+**Livrables**
+- Un module unique de conversion (DBTask ↔ BrainTask) utilisé partout.
+- Suppression/neutralisation des anciennes conversions dispersées.
+
+**Critères de Done**
+- Pas de “legacy Task” utilisé dans les flows principaux.
+- Les dates/efforts/urgences sont cohérents (pas de string ISO vs `Date` divergents).
+
+### M2 — Un seul moteur de playlist/brain en production (P0)
+**But**: la playlist visible par l’utilisateur doit être générée par le moteur qui enforce les invariants.
+
+**Livrables**
+- Dashboard branché sur `taskEngine.generateTaskPlaylist()` (ou équivalent) avec invariants effectifs.
+- Retrait/archivage de l’ancien moteur playlist si non utilisé.
+
+**Critères de Done**
+- Les invariants sont enforce au runtime (pas seulement listés).
+- Tests unit + e2e couvrent le moteur réellement utilisé.
+
+### M3 — Local-first strict : suppression des chemins cloud & server actions Dexie (P0)
+**But**: aucune dépendance implicite au serveur.
+
+**Livrables**
+- `src/app/actions.ts` : aucune lecture Dexie. Les actions cloud sont supprimées ou DEV_ONLY.
+- Toutes les recommandations/playlists sont client-side (ou via worker) uniquement.
+
+**Critères de Done**
+- Recherche grep : aucune référence active à Genkit/Gemini dans le runtime produit.
+
+### M4 — NLP : un pipeline réel, unique, cohérent avec la doc (P1)
+**But**: un seul classificateur, extraction assumée (winkNLP si choisi, sinon heuristique documentée).
+
+**Livrables**
+- Un `classifyTask` canonique (pas de double implémentation concurrente).
+- Un mode fallback explicite + métriques (taux de fallback).
+
+**Critères de Done**
+- Tous les écrans qui créent des tâches utilisent le même pipeline.
+
+### M5 — Phase 6 Adaptation : opérationnelle (P1)
+**But**: passer du proto à un système persistant, gouverné, rollbackable.
+
+**Livrables**
+- Signaux et paramètres persistés dans Dexie.
+- Drift monitor persistant.
+- Rollback réel + journalisation.
+
+**Critères de Done**
+- Une adaptation appliquée/rollbackée laisse des traces consultables (DB + UI minimal).
+
+### M6 — Phase 7 Gouvernance : budget réel & non-negotiables stricts (P1)
+**But**: coûts, budgets et décisions basés sur données réelles.
+
+**Livrables**
+- Budget quotidien calculé à partir de sessions/historique.
+- Non-negotiables appliqués et testés.
+
+**Critères de Done**
+- Tests unitaires sur les seuils (burnout/protective atteignables).
+
+### M7 — Résilience : snapshots/migrations/recovery sans simulation (P2)
+**But**: retirer le “faux solide”.
+
+**Livrables**
+- Migrations réelles, rollback prouvé, intégrité validée.
+- Snapshots export/import/restores alignés sur les tables réelles.
+
+**Critères de Done**
+- Tests d’intégration restauration snapshot + corruption recovery.
+
+### M8 — Qualité transverse & fermeture (P2)
+**Livrables**
+- Nettoyage stubs/simulations.
+- Observabilité minimale (logs structurés + métriques locales).
+- Rapport final + checklist de validation.
+
+## Annexe — Notes d’audit (historique, preuve-based)
+Les sections ci-dessous sont conservées comme référence. Le suivi d’exécution doit se baser sur les milestones ci-dessus.
+
+### Audit v2 (exécuté sur le code actuel)
 1) Cartographie routes (13 page.tsx)
    - Dashboard : /dashboard (DashboardClient) = cœur produit ; /dashboard/capture (CaptureClient) = capture cloud via server action Genkit/Gemini ; /dashboard/bibliotheque (ReservoirClient) démarre sur initialTasks statiques, pas Dexie ; /dashboard/focus/[taskId] (FocusMode) complète via localStorage stub ; /dashboard/evening (console.log + alert, non implémenté) ; /dashboard/settings ; /dashboard/stats.
    - Onboarding : /onboarding/* utilise localStorage (ok pour onboarding) mais non intégré au moteur ensuite. /onboarding-test redirige vers /dashboard.
