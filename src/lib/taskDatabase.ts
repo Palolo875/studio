@@ -1,4 +1,3 @@
-import type { Task, UserPatterns } from '@/lib/types';
 import {
   getTodoTasksBulk as getTodoTasksBulkDexie,
   getTaskHistoryBulk as getTaskHistoryBulkDexie,
@@ -17,13 +16,22 @@ export interface TaskHistoryEntry {
   completed: boolean;
 }
 
+type TaskLike = {
+  id: string;
+  completedAt?: string;
+  lastAccessed: string;
+};
+
+type UserPatternsLike = Record<string, unknown>;
+
 export const db = {} as const;
 
 /**
  * Récupère toutes les tâches 'todo' avec bulkGet
  * Optimisé pour les performances (<200ms)
  */
-export async function getTodoTasksBulk(): Promise<Task[]> {
+export async function getTodoTasksBulk(): Promise<TaskLike[]> {
+
   try {
     return await getTodoTasksBulkDexie();
   } catch (error) {
@@ -36,13 +44,15 @@ export async function getTodoTasksBulk(): Promise<Task[]> {
  * Récupère l'historique des tâches
  */
 export async function getTaskHistoryBulk(): Promise<TaskHistoryEntry[]> {
+
   try {
     const completedTasks = await getTaskHistoryBulkDexie();
-    return completedTasks.map((t: Task) => ({
+    return completedTasks.map((t: TaskLike) => ({
       taskId: t.id,
       timestamp: new Date(t.completedAt || t.lastAccessed),
       completed: true,
     }));
+
   } catch (error) {
     logger.error("Erreur lors de la récupération de l'historique", error as Error);
     return [];
@@ -52,7 +62,8 @@ export async function getTaskHistoryBulk(): Promise<TaskHistoryEntry[]> {
 /**
  * Met à jour les patterns utilisateur dans la base de données
  */
-export async function updateUserPatternsInDB(patterns: UserPatterns): Promise<void> {
+export async function updateUserPatternsInDB(patterns: UserPatternsLike): Promise<void> {
+
   try {
     await updateUserPatternsInDBDexie(patterns);
   } catch (error) {
@@ -63,7 +74,8 @@ export async function updateUserPatternsInDB(patterns: UserPatterns): Promise<vo
 /**
  * Récupère les patterns utilisateur depuis la base de données
  */
-export async function getUserPatternsFromDB(): Promise<UserPatterns | null> {
+export async function getUserPatternsFromDB(): Promise<UserPatternsLike | null> {
+
   try {
     return await getUserPatternsFromDBDexie();
   } catch (error) {

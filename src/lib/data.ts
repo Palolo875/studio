@@ -1,4 +1,14 @@
-import type { Task } from "@/lib/types";
+export type Task = {
+  id: string;
+  name: string;
+  completed: boolean;
+  subtasks: Array<{ id: string; name: string; completed: boolean }>;
+  lastAccessed: string;
+  completionRate: number;
+  priority: 'low' | 'medium' | 'high';
+  description?: string;
+  tags?: string[];
+};
 
 export const initialTasks: Task[] = [
   {

@@ -1,5 +1,3 @@
-import type { Task } from "@/lib/types";
-
 /**
  * Algorithme de Playlist Magique (Instantanée)
  * 
@@ -15,6 +13,19 @@ import type { Task } from "@/lib/types";
  * Position 3-5 : Reste par score décroissant
  */
 
+type TaskLike = {
+  id: string;
+  name: string;
+  description?: string;
+  tags?: string[];
+  energyRequired?: 'high' | 'medium' | 'low';
+  scheduledDate?: string;
+  priority?: 'low' | 'medium' | 'high';
+  completionRate?: number;
+  completed?: boolean;
+  subtasks?: unknown;
+};
+
 export type EnergyLevel = "high" | "medium" | "low";
 export type Intention = "focus" | "learning" | "creativity" | "planning";
 export type Priority = "low" | "medium" | "high";
@@ -23,11 +34,11 @@ export interface MagicalPlaylistOptions {
   energyLevel: EnergyLevel;
   intention: Intention;
   currentTime: Date;
-  taskHistory?: Task[];
+  taskHistory?: TaskLike[];
 }
 
 export interface TaskScore {
-  task: Task;
+  task: TaskLike;
   score: number;
   reason: string;
   reasonDetails?: string[]; // Détails pour les badges
@@ -38,7 +49,7 @@ export interface TaskScore {
  * Et retourne également les raisons détaillées pour l'explication
  */
 function calculateTaskScore(
-  task: Task,
+  task: TaskLike,
   energyLevel: EnergyLevel,
   intention: Intention,
   currentTime: Date
@@ -108,7 +119,7 @@ function calculateTaskScore(
  * Medium → Tâches équilibrées
  * Low → Tâches simples, rapides, de maintenance
  */
-function calculateEnergyScore(task: Task, energyLevel: EnergyLevel): number {
+function calculateEnergyScore(task: TaskLike, energyLevel: EnergyLevel): number {
   // Si la tâche n'a pas d'énergie requise spécifiée, on donne un score neutre
   if (!task.energyRequired) {
     return 0.5;
@@ -146,7 +157,7 @@ function calculateEnergyScore(task: Task, energyLevel: EnergyLevel): number {
  * Deadline <7 jours : Score +5
  * Pas de deadline : Score 0
  */
-function calculateDeadlineScore(task: Task, currentTime: Date): number {
+function calculateDeadlineScore(task: TaskLike, currentTime: Date): number {
   // Si la tâche n'a pas de date planifiée, pas de bonus
   if (!task.scheduledDate) {
     return 0;
@@ -175,7 +186,7 @@ function calculateDeadlineScore(task: Task, currentTime: Date): number {
  * Moyenne : Score +10
  * Basse : Score 0
  */
-function calculatePriorityScore(task: Task): number {
+function calculatePriorityScore(task: TaskLike): number {
   switch (task.priority) {
     case "high": return 20;
     case "medium": return 10;
@@ -190,7 +201,7 @@ function calculatePriorityScore(task: Task): number {
  * Tâches souvent reportées : Score -10
  * Tâches liées à intention du jour : Score +5
  */
-function calculateHistoryScore(task: Task): number {
+function calculateHistoryScore(task: TaskLike): number {
   let score = 0;
 
   // Tâches complétées régulièrement : Score +5
@@ -212,7 +223,7 @@ function calculateHistoryScore(task: Task): number {
  * @param intention L'intention actuelle
  * @returns Un score entre 0 et 1
  */
-function calculateIntentionAlignmentScore(task: Task, intention: Intention): number {
+function calculateIntentionAlignmentScore(task: TaskLike, intention: Intention): number {
   if (!intention) return 0.5;
 
   const taskContent = `${task.name} ${task.description || ""} ${task.tags?.join(" ") || ""}`.toLowerCase();
@@ -245,7 +256,7 @@ function calculateIntentionAlignmentScore(task: Task, intention: Intention): num
  * Détermine si une tâche est un "Quick Win"
  * Tâche facile avec faible énergie requise et/ou faible priorité
  */
-function isQuickWin(task: Task): boolean {
+function isQuickWin(task: TaskLike): boolean {
   // Tâche avec faible énergie requise
   if (task.energyRequired === "low") {
     return true;
@@ -257,7 +268,7 @@ function isQuickWin(task: Task): boolean {
   }
   
   // Tâche avec peu de sous-tâches
-  if (task.subtasks != null && task.subtasks <= 2) {
+  if (Array.isArray(task.subtasks) && task.subtasks.length <= 2) {
     return true;
   }
   
@@ -268,7 +279,7 @@ function isQuickWin(task: Task): boolean {
  * Détermine si une tâche est urgente
  * Basé sur la deadline
  */
-function isUrgent(task: Task, currentTime: Date): boolean {
+function isUrgent(task: TaskLike, currentTime: Date): boolean {
   if (!task.scheduledDate) {
     return false;
   }
@@ -289,7 +300,7 @@ function isUrgent(task: Task, currentTime: Date): boolean {
  * Position 3-5 : Reste par score décroissant
  */
 export function generateMagicalPlaylist(
-  tasks: Task[],
+  tasks: TaskLike[],
   options: MagicalPlaylistOptions
 ): TaskScore[] {
   // Vérification des paramètres

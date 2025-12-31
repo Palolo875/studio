@@ -1,19 +1,41 @@
 import { z } from "zod";
 
-import type { DailyRituals, Task } from "@/lib/types";
 import { getAllTasks, getTaskHistoryForTaskIds } from "@/lib/database";
 import type { EnergyState as EngineEnergyState, TaskPlaylist as EngineTaskPlaylist } from "@/lib/taskEngine/types";
 import { generateTaskPlaylist } from "@/lib/taskEngine";
 import { dbTaskToEngineTask } from "@/lib/taskEngine/dbTaskMapping";
 
+type DailyRitualsLike = {
+  playlistShuffledCount: number;
+  completedTaskCount: number;
+  completedTasks: unknown[];
+};
+
+type TaskLike = {
+  id: string;
+  name: string;
+  completed: boolean;
+  subtasks: unknown[];
+  lastAccessed: string;
+  completionRate: number;
+  description?: string;
+  priority?: 'low' | 'medium' | 'high';
+  energyRequired?: 'low' | 'medium' | 'high';
+  estimatedDuration?: number;
+  tags?: string[];
+  completedAt?: string;
+  scheduledDate?: string;
+  effort?: 'S' | 'M' | 'L';
+};
+
 export type PlaylistItem = {
-  task: Task;
+  task: TaskLike;
   score: number;
   reason: string;
   reasonDetails?: string[];
 };
 
-function engineTaskToLegacyTask(task: import("@/lib/taskEngine/types").Task): Task {
+function engineTaskToLegacyTask(task: import("@/lib/taskEngine/types").Task): TaskLike {
   return {
     id: task.id,
     name: task.title,
@@ -22,7 +44,7 @@ function engineTaskToLegacyTask(task: import("@/lib/taskEngine/types").Task): Ta
     lastAccessed: (task.lastActivated ?? new Date()).toISOString(),
     completionRate: task.status === "done" ? 100 : 0,
     description: task.description,
-    priority: task.urgency === "urgent" ? "high" : (task.urgency as Task["priority"]),
+    priority: task.urgency === "urgent" ? "high" : (task.urgency as TaskLike["priority"]),
     energyRequired: task.effort,
     estimatedDuration: task.duration,
     tags: task.category ? [task.category] : undefined,
@@ -66,7 +88,7 @@ export async function generatePlaylistClient(formData: FormData): Promise<Genera
 
     const { dailyRituals: dailyRitualsString, energyLevel } = validatedFields.data;
 
-    const dailyRituals: DailyRituals = JSON.parse(dailyRitualsString);
+    const dailyRituals: DailyRitualsLike = JSON.parse(dailyRitualsString);
 
     if (dailyRituals.playlistShuffledCount >= 2) {
       return {
@@ -141,7 +163,7 @@ export async function getRecommendationsClient(
     }
 
     const { tasks: tasksString } = validatedFields.data;
-    const tasks: Task[] = JSON.parse(tasksString);
+    const tasks: TaskLike[] = JSON.parse(tasksString);
 
     if (!tasks || tasks.length === 0) {
       return { recommendations: [], error: "No tasks to recommend from." };

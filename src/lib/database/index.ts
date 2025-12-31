@@ -11,7 +11,23 @@
 
 import Dexie, { type Table } from 'dexie';
 import { createLogger } from '@/lib/logger';
-import type { Task as LegacyTask, UserPatterns as LegacyUserPatterns } from '@/lib/types';
+
+type LegacyTask = {
+    id: string;
+    name: string;
+    completed: boolean;
+    subtasks: unknown[];
+    lastAccessed: string;
+    completionRate: number;
+    description?: string;
+    priority?: 'low' | 'medium' | 'high';
+    energyRequired?: 'low' | 'medium' | 'high';
+    estimatedDuration?: number;
+    tags?: string[];
+    completedAt?: string;
+};
+
+type LegacyUserPatterns = Record<string, unknown>;
 
 const logger = createLogger('Database');
 

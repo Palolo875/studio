@@ -139,16 +139,28 @@ export class Phase7Manager {
     const sessions = await getSessionsByDate(today);
     const lastSession = sessions[sessions.length - 1];
 
+    const totalPlanned = sessions.reduce((sum: number, s: { plannedTasks?: number }) => sum + (s.plannedTasks ?? 0), 0);
+    const totalCompleted = sessions.reduce((sum: number, s: { completedTasks?: number }) => sum + (s.completedTasks ?? 0), 0);
+    const budgetTotal = Math.max(totalPlanned, 1);
+    const budgetRemaining = Math.max(budgetTotal - totalCompleted, 0);
+
+    const energy =
+      lastSession?.energyLevel === 'high'
+        ? 'HIGH'
+        : lastSession?.energyLevel === 'low'
+          ? 'LOW'
+          : 'MEDIUM';
+
     // Récupérer les overrides récents (2h)
     const twoHoursAgo = Date.now() - (2 * 60 * 60 * 1000);
     const recentOverrides = await getOverridesByPeriod(twoHoursAgo);
 
     // Construire le contexte utilisateur
     const userContext: UserContext = {
-      energy: (lastSession?.energyLevel as any) || "MEDIUM",
+      energy,
       dailyBudget: {
-        remaining: 10, // TODO: Connecter au système de budget réel
-        total: 20
+        remaining: budgetRemaining,
+        total: budgetTotal,
       },
       burnoutScore: burnoutResult.score,
       overridesLast2h: recentOverrides.length

@@ -1,4 +1,6 @@
-import type { Task } from "@/lib/types";
+type TaskLike = {
+  energyRequired?: 'high' | 'medium' | 'low';
+};
 
 /**
  * Calcule le Focus Score selon la formule spécifiée :
@@ -12,7 +14,7 @@ import type { Task } from "@/lib/types";
  * @returns Le Focus Score calculé
  */
 export function calculateFocusScore(
-  completedTasks: Task[],
+  completedTasks: TaskLike[],
   totalTasksInPlaylist: number,
   userEnergyLevel: "high" | "medium" | "low" | null
 ): number {

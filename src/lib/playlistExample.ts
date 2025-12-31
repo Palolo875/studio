@@ -1,8 +1,24 @@
 import { generatePlaylist } from "./playlistGenerator";
-import type { Task } from "@/lib/types";
 import { getUserPatternsFromDB } from "./database/index"; // Import correct
 import { createLogger } from '@/lib/logger';
 import { getSetting } from '@/lib/database';
+
+type TaskLike = {
+  id: string;
+  name: string;
+  completed: boolean;
+  subtasks: unknown[];
+  lastAccessed: string;
+  completionRate: number;
+  priority: 'low' | 'medium' | 'high';
+  energyRequired?: 'high' | 'medium' | 'low';
+  tags?: string[];
+  scheduledDate?: string;
+  effort?: 'S' | 'M' | 'L';
+  deadlineDisplay?: string;
+  description?: string;
+  completedAt?: string;
+};
 
 const logger = createLogger('playlistExample');
 
@@ -12,13 +28,14 @@ const logger = createLogger('playlistExample');
  * Cette fonction montre comment intégrer l'algorithme dans une application réelle
  */
 export async function generateDailyPlaylist(): Promise<any> {
+
   try {
 
     // 1. Récupérer les tâches depuis la base de données
     // const tasks = await db.tasks.toArray(); // À décommenter quand Dexie sera installé
     
     // Simulation de tâches
-    const tasks: Task[] = [];
+    const tasks: TaskLike[] = [];
     
     // 2. Récupérer l'historique des tâches
     // const taskHistory = await db.taskHistory.toArray(); // À décommenter quand Dexie sera installé
@@ -61,7 +78,7 @@ export async function generateDailyPlaylist(): Promise<any> {
 /**
  * Exemple de tâches pour tester l'algorithme
  */
-export const sampleTasks: Task[] = [
+export const sampleTasks: TaskLike[] = [
   {
     id: "task-1",
     name: "Finaliser le prototype de l'interface utilisateur",

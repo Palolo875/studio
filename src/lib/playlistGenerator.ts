@@ -1,15 +1,61 @@
-import type { Task, EnergyLevel, UserPatterns, TaskScore, PlaylistGeneratorOptions } from "@/lib/types";
 import {
   calculateEnergyScore,
   calculateImpactScore,
   calculateDeadlineScore,
   calculateEffortScore,
   isQuickWin,
-  calculateHistoryScore as calculateHistoryScoreFromRules
+  calculateHistoryScore as calculateHistoryScoreFromRules,
+  type EnergyLevel,
 } from "./scoringRules";
 import { getTodoTasksBulk, getTaskHistoryBulk, getUserPatternsFromDB } from "./database/index";
 import { LanguageDetector } from "@/lib/nlp/LanguageDetector";
 import { createLogger } from '@/lib/logger';
+
+type TaskLike = {
+  id: string;
+  name: string;
+  completed: boolean;
+  subtasks: unknown[];
+  lastAccessed: string;
+  completionRate: number;
+  priority: 'low' | 'medium' | 'high';
+  description?: string;
+  objective?: string;
+  tags?: string[];
+  energyRequired?: EnergyLevel;
+  estimatedDuration?: number;
+  scheduledDate?: string;
+  effort?: 'S' | 'M' | 'L';
+};
+
+type UserPatternsLike = {
+  skippedTaskTypes: Record<string, number>;
+  completedTaskTypes: Record<string, number>;
+  shuffleCount: number;
+};
+
+export type TaskScore = {
+  task: TaskLike;
+  score: number;
+  reason: string;
+  reasonDetails?: string[];
+  isKeystoneHabit?: boolean;
+  impactMetrics?: ImpactMetricsLike;
+};
+
+export type PlaylistGeneratorOptions = {
+  energyLevel: EnergyLevel;
+  currentTime: Date;
+  taskHistory?: TaskLike[];
+  userPatterns?: UserPatternsLike;
+  maxTasks?: number;
+  workdayHours?: number;
+};
+
+type ImpactMetricsLike = {
+  calculatedImpact: number;
+  [key: string]: unknown;
+};
 
 // Importer les nouveaux services SOTA
 import { ImpactAnalyzer } from "@/lib/playlist/services/impactAnalyzer";
@@ -45,7 +91,8 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 /**
  * Analyse le contexte linguistique d'une tâche pour améliorer le scoring
  */
-function analyzeTaskLanguageContext(task: Task): { primaryLanguage: 'fr' | 'en' | 'es', confidence: number } {
+function analyzeTaskLanguageContext(task: TaskLike): { primaryLanguage: 'fr' | 'en' | 'es', confidence: number } {
+
   // Combiner le nom, la description et les tags pour l'analyse
   const textToAnalyze = [
     task.name,
@@ -57,8 +104,10 @@ function analyzeTaskLanguageContext(task: Task): { primaryLanguage: 'fr' | 'en' 
     return { primaryLanguage: 'fr', confidence: 0.5 }; // Fallback par défaut
   }
   
-  const detectedLanguage = LanguageDetector.detect(textToAnalyze);
-  
+  const detected = LanguageDetector.detect(textToAnalyze) as unknown;
+  const detectedLanguage =
+    typeof (detected as any)?.lang === 'string' ? ((detected as any).lang as 'fr' | 'en' | 'es') : 'fr';
+
   // Calculer la confiance basée sur la longueur du texte
   const confidence = Math.min(1, textToAnalyze.length / 50); // 100% de confiance à partir de 50 caractères
   
@@ -70,11 +119,11 @@ function analyzeTaskLanguageContext(task: Task): { primaryLanguage: 'fr' | 'en' 
  * Et retourne également les raisons détaillées pour l'explication
  */
 function calculateTaskScore(
-  task: Task,
+  task: TaskLike,
   energyLevel: EnergyLevel,
   currentTime: Date,
-  taskHistory: Task[] = [],
-  userPatterns?: UserPatterns,
+  taskHistory: TaskLike[] = [],
+  userPatterns?: UserPatternsLike,
   workdayHours: number = 8,
   keystoneHabits: any[] = [] // Pour la détection des keystone habits
 ): TaskScore {
@@ -93,7 +142,7 @@ function calculateTaskScore(
   }
 
   // 2. Impact SOTA (15%) - Nouvelle formule : Impact = (Valeur Perçue + Momentum Passé) / Effort Estimé
-  const impactMetrics = ImpactAnalyzer.calculateImpact(task, taskHistory);
+  const impactMetrics = ImpactAnalyzer.calculateImpact(task, taskHistory) as unknown as ImpactMetricsLike;
   const sotaImpactScore = Math.min(1, impactMetrics.calculatedImpact / 100); // Normaliser entre 0 et 1
   score += sotaImpactScore * 15;
   if (sotaImpactScore > 0) {
@@ -170,7 +219,7 @@ function calculateTaskScore(
  * Tâches souvent reportées : Score -10
  * Intègre l'apprentissage automatique des patterns
  */
-function calculateHistoryScore(task: Task, taskHistory: Task[] = [], userPatterns?: UserPatterns): number {
+function calculateHistoryScore(task: TaskLike, taskHistory: TaskLike[] = [], userPatterns?: UserPatternsLike): number {
   // Utiliser la fonction du module scoringRules
   return calculateHistoryScoreFromRules(task, taskHistory, userPatterns);
 }
@@ -194,15 +243,32 @@ function generateCacheKey(options: PlaylistGeneratorOptions): string {
  * Récupère les tâches depuis la base de données avec bulkGet Dexie
  * Optimisé pour <200ms
  */
-async function fetchTasksWithBulkGet(): Promise<{ tasks: Task[]; taskHistory: any[] }> {
+async function fetchTasksWithBulkGet(): Promise<{ tasks: TaskLike[]; taskHistory: any[] }> {
   try {
     // Récupérer les tâches et l'historique en parallèle
     const [tasks, taskHistory] = await Promise.all([
       getTodoTasksBulk(),
       getTaskHistoryBulk()
     ]);
-    
-    return { tasks, taskHistory };
+
+    const normalized: TaskLike[] = (tasks as any[]).map((t) => ({
+      id: String(t.id),
+      name: String(t.name ?? t.title ?? ''),
+      completed: Boolean(t.completed),
+      subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
+      lastAccessed: typeof t.lastAccessed === 'string' ? t.lastAccessed : new Date().toISOString(),
+      completionRate: typeof t.completionRate === 'number' ? t.completionRate : 0,
+      priority: (t.priority === 'low' || t.priority === 'medium' || t.priority === 'high') ? t.priority : 'medium',
+      description: typeof t.description === 'string' ? t.description : undefined,
+      objective: typeof t.objective === 'string' ? t.objective : undefined,
+      tags: Array.isArray(t.tags) ? t.tags : undefined,
+      energyRequired: (t.energyRequired === 'low' || t.energyRequired === 'medium' || t.energyRequired === 'high') ? t.energyRequired : undefined,
+      estimatedDuration: typeof t.estimatedDuration === 'number' ? t.estimatedDuration : undefined,
+      scheduledDate: typeof t.scheduledDate === 'string' ? t.scheduledDate : undefined,
+      effort: (t.effort === 'S' || t.effort === 'M' || t.effort === 'L') ? t.effort : undefined,
+    }));
+
+    return { tasks: normalized, taskHistory };
   } catch (error) {
     logger.error('Erreur lors de la récupération des tâches', error as Error);
     return { tasks: [], taskHistory: [] };
@@ -220,7 +286,7 @@ async function fetchTasksWithBulkGet(): Promise<{ tasks: Task[]; taskHistory: an
  * - Suivi des tâches high-impact
  */
 export async function generatePlaylist(
-  tasks: Task[],
+  tasks: TaskLike[],
   options: PlaylistGeneratorOptions
 ): Promise<TaskScore[]> {
   try {
@@ -258,7 +324,7 @@ export async function generatePlaylist(
           priority: "low",
           energyRequired: "low",
           effort: "S"
-        } as Task,
+        } as TaskLike,
         score: 100,
         reason: "Playlist vide - suggestion de bien-être",
         reasonDetails: ["Bien-être"]
@@ -285,7 +351,7 @@ export async function generatePlaylist(
           priority: "low",
           energyRequired: "low",
           effort: "S"
-        } as Task,
+        } as TaskLike,
         score: 100,
         reason: "Aucune tâche incomplète - suggestion de bien-être",
         reasonDetails: ["Bien-être"]
@@ -297,10 +363,13 @@ export async function generatePlaylist(
     }
 
     // Récupérer les patterns utilisateur si non fournis
-    let userPatterns = options.userPatterns;
+    let userPatterns: UserPatternsLike | undefined = options.userPatterns;
     if (!userPatterns) {
       try {
-        userPatterns = await getUserPatternsFromDB();
+        const fromDb = await getUserPatternsFromDB();
+        if (fromDb && typeof fromDb === 'object') {
+          userPatterns = fromDb as unknown as UserPatternsLike;
+        }
       } catch (error) {
         logger.warn('Impossible de récupérer les patterns utilisateur', { error });
         // Continuer avec des patterns vides
@@ -308,8 +377,16 @@ export async function generatePlaylist(
           skippedTaskTypes: {},
           completedTaskTypes: {},
           shuffleCount: 0
-        };
+        } satisfies UserPatternsLike;
       }
+    }
+
+    if (!userPatterns) {
+      userPatterns = {
+        skippedTaskTypes: {},
+        completedTaskTypes: {},
+        shuffleCount: 0,
+      };
     }
 
     // Détection des keystone habits
@@ -382,7 +459,7 @@ export async function generatePlaylist(
         priority: "low",
         energyRequired: "low",
         effort: "S"
-      } as Task,
+      } as TaskLike,
       score: 100,
       reason: "Erreur système - fallback de sécurité",
       reasonDetails: ["Erreur", "Bien-être"]
@@ -399,7 +476,7 @@ export async function generatePlaylist(
 function applySOTABalanceRules(
   scoredTasks: TaskScore[],
   energyLevel: EnergyLevel,
-  userPatterns?: UserPatterns,
+  userPatterns?: UserPatternsLike,
   keystoneHabits: any[] = []
 ): TaskScore[] {
   try {
@@ -465,7 +542,7 @@ function applySOTABalanceRules(
           effort: mostRelevantHabit.energyRequirement === 'high' ? 'L' : 
                   mostRelevantHabit.energyRequirement === 'medium' ? 'M' : 'S',
           tags: [mostRelevantHabit.name.toLowerCase()]
-        } as Task,
+        } as TaskLike,
         score: 90, // Score élevé
         reason: "Keystone Habit obligatoire",
         reasonDetails: ["Keystone Habit"],
@@ -516,7 +593,7 @@ function applySOTABalanceRules(
             priority: "low",
             energyRequired: "low",
             effort: "S"
-          } as Task,
+          } as TaskLike,
           score: 100,
           reason: "Fallback - Aucune tâche ne correspond",
           reasonDetails: ["Bien-être"]
@@ -540,7 +617,7 @@ function generateSOTAFeedback(taskScores: TaskScore[]): string {
   if (taskScores.length === 0) return "";
   
   // Calculer l'impact moyen
-  const totalImpact = taskScores.reduce((sum, ts) => sum + (ts.impactMetrics?.calculatedImpact || 0), 0);
+  const totalImpact = taskScores.reduce((sum, ts) => sum + (ts.impactMetrics?.calculatedImpact ?? 0), 0);
   const averageImpact = totalImpact / taskScores.length;
   
   // Générer le feedback approprié
@@ -562,7 +639,7 @@ function updateRewardSystem(taskScores: TaskScore[]): void {
   // Pour l'instant, nous simulons la mise à jour
   
   const highImpactTasks = taskScores.filter(ts => 
-    ts.impactMetrics && ts.impactMetrics.calculatedImpact >= 80
+    typeof ts.impactMetrics?.calculatedImpact === 'number' && ts.impactMetrics.calculatedImpact >= 80
   );
   
   if (highImpactTasks.length > 0) {
@@ -575,11 +652,11 @@ function updateRewardSystem(taskScores: TaskScore[]): void {
  * Appelé après chaque génération de playlist
  */
 export function updateUserPatterns(
-  userPatterns: UserPatterns,
-  selectedTasks: Task[],
-  completedTasks: Task[],
-  skippedTasks: Task[]
-): UserPatterns {
+  userPatterns: UserPatternsLike,
+  selectedTasks: TaskLike[],
+  completedTasks: TaskLike[],
+  skippedTasks: TaskLike[]
+): UserPatternsLike {
   // Mettre à jour les tâches ignorées
   for (const task of skippedTasks) {
     if (task.tags) {

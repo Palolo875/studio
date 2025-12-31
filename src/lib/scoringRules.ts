@@ -1,5 +1,24 @@
-import type { Task } from "@/lib/types";
-import type { EnergyLevel, UserPatterns } from "@/lib/types"; // Import depuis types.ts
+export type EnergyLevel = 'high' | 'medium' | 'low';
+
+type UserPatternsLike = {
+  skippedTaskTypes?: Record<string, number>;
+  completedTaskTypes?: Record<string, number>;
+  shuffleCount?: number;
+};
+
+type TaskLike = {
+  id: string;
+  name: string;
+  description?: string;
+  objective?: string;
+  tags?: string[];
+  scheduledDate?: string;
+  energyRequired?: EnergyLevel;
+  effort?: 'S' | 'M' | 'L';
+  priority?: 'low' | 'medium' | 'high';
+  completed?: boolean;
+  lastAccessed?: string;
+};
 
 /**
  * Module de règles de scoring pour l'algorithme de génération de playlist
@@ -23,7 +42,7 @@ import type { EnergyLevel, UserPatterns } from "@/lib/types"; // Import depuis t
  * Medium → Tâches équilibrées
  * Low → Tâches simples, rapides, de maintenance
  */
-export function calculateEnergyScore(task: Task, energyLevel: EnergyLevel): number {
+export function calculateEnergyScore(task: TaskLike, energyLevel: EnergyLevel): number {
   // Si la tâche n'a pas d'énergie requise spécifiée, on donne un score neutre
   if (!task.energyRequired) {
     return 0.5;
@@ -62,7 +81,7 @@ export function calculateEnergyScore(task: Task, energyLevel: EnergyLevel): numb
  * NOTE: Cette fonction est conservée pour la compatibilité mais l'impact SOTA
  * est maintenant calculé dans playlistGenerator.ts avec la nouvelle formule
  */
-export function calculateImpactScore(task: Task): number {
+export function calculateImpactScore(task: TaskLike): number {
   let score = 0;
   
   // Mots-clés à forte valeur d'impact
@@ -120,7 +139,7 @@ export function calculateImpactScore(task: Task): number {
  * Deadline <7 jours : Score +5
  * Pas de deadline : Score 0
  */
-export function calculateDeadlineScore(task: Task, currentTime: Date): number {
+export function calculateDeadlineScore(task: TaskLike, currentTime: Date): number {
   // Si la tâche n'a pas de date planifiée, pas de bonus
   if (!task.scheduledDate) {
     return 0;
@@ -149,7 +168,7 @@ export function calculateDeadlineScore(task: Task, currentTime: Date): number {
  * L = -5 si énergie low
  * M = 0 (neutre)
  */
-export function calculateEffortScore(task: Task, energyLevel: EnergyLevel): number {
+export function calculateEffortScore(task: TaskLike, energyLevel: EnergyLevel): number {
   switch (task.effort) {
     case "S": // Simple
       return 10;
@@ -184,7 +203,7 @@ export function calculateEffortScore(task: Task, energyLevel: EnergyLevel): numb
  * - Apprentissage adaptatif basé sur les patterns
  * - Ajustement dynamique des poids après génération
  */
-export function calculateHistoryScore(task: Task, taskHistory: Task[] = [], userPatterns?: UserPatterns): number {
+export function calculateHistoryScore(task: TaskLike, taskHistory: TaskLike[] = [], userPatterns?: UserPatternsLike): number {
   let score = 0;
   
   // Calcul basé sur l'historique des tâches
@@ -220,14 +239,16 @@ export function calculateHistoryScore(task: Task, taskHistory: Task[] = [], user
   
   // Intégration de l'apprentissage automatique des patterns
   if (userPatterns) {
+    const shuffleCount = userPatterns.shuffleCount ?? 0;
     // Pénalité si l'utilisateur a souvent ignoré ce type de tâche
     if (task.tags) {
       for (const tag of task.tags) {
-        if (userPatterns.skippedTaskTypes[tag] && userPatterns.skippedTaskTypes[tag] > 2) {
+        const skipped = userPatterns.skippedTaskTypes?.[tag] ?? 0;
+        if (skipped > 2) {
           // Réduire le score si l'utilisateur a mélangé plus de 2 fois
-          if (userPatterns.shuffleCount > 2) {
+          if (shuffleCount > 2) {
             // Réduction progressive basée sur le nombre de fois ignorées
-            const reductionFactor = Math.min(0.5, userPatterns.skippedTaskTypes[tag] / 10);
+            const reductionFactor = Math.min(0.5, skipped / 10);
             score -= 15 * reductionFactor; // Réduction maximale de 15 points
           }
         }
@@ -237,7 +258,8 @@ export function calculateHistoryScore(task: Task, taskHistory: Task[] = [], user
     // Bonus si l'utilisateur complète souvent ce type de tâche
     if (task.tags) {
       for (const tag of task.tags) {
-        if (userPatterns.completedTaskTypes[tag] && userPatterns.completedTaskTypes[tag] > 3) {
+        const completedCount = userPatterns.completedTaskTypes?.[tag] ?? 0;
+        if (completedCount > 3) {
           score += 8; // Bonus plus élevé pour les tâches souvent complétées
         }
       }
@@ -245,14 +267,16 @@ export function calculateHistoryScore(task: Task, taskHistory: Task[] = [], user
     
     // Ajustement basé sur le nombre de shuffles
     // Si l'utilisateur shuffle souvent, cela signifie qu'il cherche peut-être des alternatives
-    if (userPatterns.shuffleCount > 3) {
+    if (shuffleCount > 3) {
       // Augmenter légèrement le poids des tâches non essayées récemment
-      const recentlyAccessed = new Date(task.lastAccessed).getTime();
-      const now = Date.now();
-      const daysSinceAccess = (now - recentlyAccessed) / (1000 * 3600 * 24);
-      
-      if (daysSinceAccess > 7) {
-        score += 2; // Encourager les tâches non touchées depuis longtemps
+      if (task.lastAccessed) {
+        const recentlyAccessed = new Date(task.lastAccessed).getTime();
+        const now = Date.now();
+        const daysSinceAccess = (now - recentlyAccessed) / (1000 * 3600 * 24);
+        
+        if (daysSinceAccess > 7) {
+          score += 2; // Encourager les tâches non touchées depuis longtemps
+        }
       }
     }
   }
@@ -264,7 +288,7 @@ export function calculateHistoryScore(task: Task, taskHistory: Task[] = [], user
  * Détermine si une tâche est un "Quick Win"
  * Tâche facile avec faible énergie requise et/ou faible priorité
  */
-export function isQuickWin(task: Task): boolean {
+export function isQuickWin(task: TaskLike): boolean {
   // Tâche avec faible énergie requise
   if (task.energyRequired === "low") {
     return true;
