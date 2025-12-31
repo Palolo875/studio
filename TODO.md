@@ -21,6 +21,10 @@ La **source de vérité** est `PLAN.md` (audit, matrice Phase→Preuve→État, 
 ## P1 — Qualité & cohérence (M4→M6)
 - [ ] M4: NLP canonique unique (extraction + classification) + métriques de fallback.
 - [ ] M5: Phase 6 Adaptation opérationnelle (persistance Dexie, drift, rollback, journalisation).
+  - [ ] M5.1: Contrat persisted `adaptationHistory.change` type-safe (no `any`) + validation deltas.
+  - [ ] M5.2: UI Transparence adaptation branchée Dexie (history + rollback + exports snapshots).
+  - [ ] M5.3: Mode transitions persistants (ou intégration au logger existant) + exploitation dans brainQuality.
+  - [ ] M5.4: Tests unit/integration sur rollback + pruning + export-before-prune.
 - [ ] M6: Phase 7 Gouvernance durcie (budget réel, non-negotiables stricts, tests seuils).
 
 ## P2 — Résilience & fermeture (M7→M8)

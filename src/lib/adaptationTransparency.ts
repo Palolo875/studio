@@ -1,41 +1,72 @@
 // Transparence des adaptations - Phase 6
 import { Parameters } from './adaptationMemory';
+import { getSetting, getRecentAdaptationHistory, getSnapshotsByNamePrefix, type DBAdaptationHistory } from './database/index';
 
 // Interface pour les logs d'adaptation
 interface AdaptationLogEntry {
   date: number;
   change: string;
   reason: string;
+  adaptationId?: string;
+}
+
+type PersistedAdaptationChange = {
+  id?: string;
+  timestamp?: number;
+  parameterChanges?: Array<{ parameterName?: string; oldValue?: unknown; newValue?: unknown }>;
+  qualityBefore?: number;
+  qualityAfter?: number;
+  progress?: unknown;
+  userConsent?: string;
+};
+
+function getChangeEnvelope(entry: DBAdaptationHistory): PersistedAdaptationChange | undefined {
+  if (!entry.change || typeof entry.change !== 'object') return undefined;
+  return entry.change as PersistedAdaptationChange;
+}
+
+function formatDeltaLine(delta: { parameterName?: string; oldValue?: unknown; newValue?: unknown }): string {
+  const name = typeof delta.parameterName === 'string' ? delta.parameterName : 'unknown';
+  const oldV = delta.oldValue;
+  const newV = delta.newValue;
+  return `${name}: ${String(oldV)} → ${String(newV)}`;
 }
 
 // Component exemple pour l'UI de transparence
-export function AdaptationPanel() {
-  // Simulation des logs d'adaptation
-  const logs: AdaptationLogEntry[] = [
-    {
-      date: Date.now() - 24 * 60 * 60 * 1000,
-      change: "Augmentation de maxTasks de 4 à 5",
-      reason: "Taux de tâches forcées élevé"
-    },
-    {
-      date: Date.now() - 48 * 60 * 60 * 1000,
-      change: "Réduction de strictness de 0.7 à 0.6",
-      reason: "Bon taux de complétion"
-    }
-  ];
-  
-  // Paramètres actuels simulés
-  const currentParams: Parameters = {
+export async function AdaptationPanel() {
+  const currentParams = await getSetting<Parameters>('adaptation_parameters');
+  const safeParams: Parameters = currentParams ?? {
     maxTasks: 5,
     strictness: 0.6,
-    coachFrequency: 1/30,
+    coachFrequency: 1 / 30,
     coachEnabled: true,
-    energyForecastMode: "ACCURATE",
-    defaultMode: "STRICT",
+    energyForecastMode: 'ACCURATE',
+    defaultMode: 'STRICT',
     sessionBuffer: 10,
-    estimationFactor: 1.0
+    estimationFactor: 1.0,
   };
-  
+
+  const history = await getRecentAdaptationHistory(20);
+  const logs: AdaptationLogEntry[] = history.map((h) => {
+    const env = getChangeEnvelope(h);
+    const deltas = Array.isArray(env?.parameterChanges) ? env?.parameterChanges : [];
+    const lines = deltas.map(formatDeltaLine).join(' | ');
+
+    const reason =
+      typeof env?.qualityBefore === 'number' && typeof env?.qualityAfter === 'number'
+        ? `quality ${env.qualityBefore.toFixed(2)} → ${env.qualityAfter.toFixed(2)}`
+        : '—';
+
+    return {
+      date: h.timestamp,
+      change: lines || '—',
+      reason: h.reverted ? `REVERTED • ${reason}` : reason,
+      adaptationId: typeof env?.id === 'string' ? env.id : undefined,
+    };
+  });
+
+  const exports = await getSnapshotsByNamePrefix('adaptation_signals_export_', 10);
+
   return {
     title: "Adaptations du système",
     alert: {
@@ -45,9 +76,9 @@ export function AdaptationPanel() {
     currentParameters: {
       title: "Paramètres actuels",
       parameters: [
-        { label: "Tâches max par session", value: currentParams.maxTasks },
-        { label: "Niveau de structure", value: currentParams.strictness },
-        { label: "Coach proactif", value: currentParams.coachEnabled }
+        { label: "Tâches max par session", value: safeParams.maxTasks },
+        { label: "Niveau de structure", value: safeParams.strictness },
+        { label: "Coach proactif", value: safeParams.coachEnabled }
       ]
     },
     recentChanges: {
@@ -55,11 +86,20 @@ export function AdaptationPanel() {
       logs: logs.map(log => ({
         date: new Date(log.date).toLocaleDateString(),
         change: log.change,
-        reason: log.reason
+        reason: log.reason,
+        adaptationId: log.adaptationId,
       }))
     },
+    exports: {
+      title: "Exports signaux (snapshots)",
+      items: exports.map((s) => ({
+        name: s.name,
+        date: new Date(s.timestamp).toLocaleDateString(),
+      })),
+    },
     actions: [
-      { label: "Réinitialiser tous les ajustements", action: "resetAdaptation" }
+      { label: "Réinitialiser tous les ajustements", action: "resetAdaptation" },
+      { label: "Rollback dernière adaptation", action: "rollbackLatest" }
     ]
   };
 }

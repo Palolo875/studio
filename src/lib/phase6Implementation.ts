@@ -11,6 +11,9 @@ import { aggregateWeek } from './adaptationAggregator';
 import { applyAdjustmentRules, logAdaptation } from './adaptationRules';
 import { 
   rollbackAdaptation, 
+  rollbackLatestAdaptation,
+  resetAdaptationToDefaults,
+  runAdaptationTransparencyAction,
   setupAdaptationPruning, 
   DriftMonitor,
   enterConservativeMode
@@ -21,6 +24,9 @@ import { AdaptationPanel } from './adaptationTransparency';
 import { createLogger } from '@/lib/logger';
 import {
   addAdaptationSignal as addAdaptationSignalToDb,
+  getAllTasks,
+  getOverridesByPeriod,
+  getSessionsByPeriod,
   recordAdaptationHistory,
   setSetting,
 } from './database/index';
@@ -75,7 +81,7 @@ export class AdaptationManager {
   }
   
   // Processus d'adaptation hebdomadaire
-  processWeeklyAdaptation(signals: AdaptationSignal[]) {
+  async processWeeklyAdaptation(signals: AdaptationSignal[]) {
     // Agréger les signaux de la semaine
     const aggregate = aggregateWeek(signals);
     
@@ -83,26 +89,36 @@ export class AdaptationManager {
     const nextParameters = applyAdjustmentRules(aggregate, this.parameters);
     const newParameters = clampParameters(nextParameters);
     
-    // Vérifier si la qualité du cerveau a diminué significativement
-    // (simulation - dans la vraie implémentation, cela utiliserait les vraies données)
-    const brainQualityBefore = 0.7; // Simulation
-    const brainQualityAfter = 0.65; // Simulation
-    
-    if (brainQualityAfter < brainQualityBefore - 0.15) {
-      // Rollback automatique si la qualité diminue trop
-      logger.warn('Qualité du cerveau diminuée significativement, rollback...');
-      // rollbackAdaptation("recent_adaptation_id"); // Dans la vraie implémentation
-    }
+    // Vérifier si la qualité du cerveau a diminué significativement (données réelles Dexie)
+    const now = Date.now();
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    const currentStart = now - weekMs;
+    const previousStart = now - 2 * weekMs;
+
+    const [allTasks, currentWeekSessions, previousWeekSessions, overridesFromPreviousStart] = await Promise.all([
+      getAllTasks(),
+      getSessionsByPeriod(currentStart, now),
+      getSessionsByPeriod(previousStart, currentStart),
+      getOverridesByPeriod(previousStart),
+    ]);
+
+    const currentWeekOverrides = overridesFromPreviousStart.filter(o => o.timestamp >= currentStart && o.timestamp <= now);
+    const previousWeekOverrides = overridesFromPreviousStart.filter(o => o.timestamp >= previousStart && o.timestamp < currentStart);
+
+    const brainQualityBefore = computeBrainQuality(previousWeekSessions, previousWeekOverrides, []);
+    const brainQualityAfter = computeBrainQuality(currentWeekSessions, currentWeekOverrides, []);
+
+    const progress = computeProgressMetrics(allTasks as any, currentWeekSessions as any, currentWeekOverrides as any);
     
     // Mettre à jour les paramètres + persister
     const before = this.parameters;
     this.parameters = newParameters;
-    void setSetting(ADAPTATION_PARAMETERS_SETTING_KEY, this.parameters);
+    await setSetting(ADAPTATION_PARAMETERS_SETTING_KEY, this.parameters);
 
     const deltas = computeParameterDeltas(before, this.parameters);
     if (deltas.length > 0) {
       const adaptationId = `adaptation_${Date.now()}`;
-      void recordAdaptationHistory({
+      await recordAdaptationHistory({
         timestamp: Date.now(),
         change: {
           id: adaptationId,
@@ -110,10 +126,20 @@ export class AdaptationManager {
           parameterChanges: deltas,
           qualityBefore: brainQualityBefore,
           qualityAfter: brainQualityAfter,
+          progress,
           userConsent: 'ACCEPTED',
         },
         reverted: false,
       });
+
+      if (brainQualityAfter < brainQualityBefore - 0.15) {
+        logger.warn('Qualité du cerveau diminuée significativement, rollback...', {
+          adaptationId,
+          brainQualityBefore,
+          brainQualityAfter,
+        });
+        await rollbackAdaptation(adaptationId);
+      }
     }
     
     // Tracker les nouveaux paramètres
@@ -148,8 +174,8 @@ export class AdaptationManager {
   }
   
   // Obtenir l'interface de transparence
-  getTransparencyPanel() {
-    return AdaptationPanel();
+  async getTransparencyPanel() {
+    return await AdaptationPanel();
   }
   
   // Obtenir les paramètres actuels
@@ -198,6 +224,9 @@ export {
   
   // Contrôleur
   rollbackAdaptation,
+  rollbackLatestAdaptation,
+  resetAdaptationToDefaults,
+  runAdaptationTransparencyAction,
   setupAdaptationPruning,
   DriftMonitor,
   enterConservativeMode,

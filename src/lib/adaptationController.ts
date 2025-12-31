@@ -11,14 +11,49 @@ import { createLogger } from '@/lib/logger';
 import {
   getLatestAdaptationHistory,
   markAdaptationHistoryReverted,
+  getAdaptationSignalsByPeriod,
   pruneAdaptationSignals,
   getSetting,
   setSetting,
+  saveSnapshot,
+  recordAdaptationHistory,
 } from './database/index';
 
 const logger = createLogger('AdaptationController');
 
 const ADAPTATION_PARAMETERS_SETTING_KEY = 'adaptation_parameters';
+const ADAPTATION_SIGNALS_LAST_EXPORTED_CUTOFF_KEY = 'adaptation_signals_last_exported_cutoff';
+
+const DEFAULT_ADAPTATION_PARAMETERS: Parameters = {
+  maxTasks: 5,
+  strictness: 0.6,
+  coachFrequency: 1 / 30,
+  coachEnabled: true,
+  energyForecastMode: 'ACCURATE',
+  defaultMode: 'STRICT',
+  sessionBuffer: 10,
+  estimationFactor: 1.0,
+};
+
+type PersistedAdaptationChange = {
+  id: string;
+  parameterChanges: ParameterDelta[];
+};
+
+function isParameterDelta(value: unknown): value is ParameterDelta {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as any;
+  return typeof v.parameterName === 'string' && 'oldValue' in v && 'newValue' in v;
+}
+
+function isPersistedAdaptationChange(value: unknown): value is PersistedAdaptationChange {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as any;
+  if (typeof v.id !== 'string') return false;
+  if (!Array.isArray(v.parameterChanges)) return false;
+  if (!v.parameterChanges.every(isParameterDelta)) return false;
+  return true;
+}
 
 // Fonction pour inverser les deltas de paramètres (pour rollback)
 export function invertDelta(delta: ParameterDelta[]): ParameterDelta[] {
@@ -37,15 +72,14 @@ export async function rollbackAdaptation(adaptationId: string) {
     return;
   }
 
-  const change = latest.change as any;
-  const persistedId = typeof change.id === 'string' ? change.id : undefined;
-  const deltas = Array.isArray(change.parameterChanges) ? (change.parameterChanges as ParameterDelta[]) : undefined;
-  if (!persistedId || persistedId !== adaptationId || !deltas || deltas.length === 0) {
+  const change = latest.change as unknown;
+  if (!isPersistedAdaptationChange(change) || change.id !== adaptationId || change.parameterChanges.length === 0) {
+    const persistedId = (change as any)?.id;
     logger.warn('Rollback refused: adaptation id mismatch or missing deltas', { adaptationId, persistedId });
     return;
   }
 
-  const rollback = invertDelta(deltas);
+  const rollback = invertDelta(change.parameterChanges);
   await applyParameters(rollback);
   if (typeof latest.id === 'number') {
     await markAdaptationHistoryReverted(latest.id);
@@ -53,19 +87,41 @@ export async function rollbackAdaptation(adaptationId: string) {
   logger.info('ADAPTATION_ROLLEDBACK', { adaptationId });
 }
 
+export async function rollbackLatestAdaptation(): Promise<void> {
+  const latest = await getLatestAdaptationHistory();
+  if (!latest || typeof latest.change !== 'object' || latest.change === null) {
+    logger.warn('Rollback latest requested but no persisted adaptation history found');
+    return;
+  }
+
+  const change = latest.change as any;
+  const id = typeof change?.id === 'string' ? change.id : undefined;
+  if (!id) {
+    logger.warn('Rollback latest refused: missing adaptation id');
+    return;
+  }
+
+  await rollbackAdaptation(id);
+}
+
+export async function runAdaptationTransparencyAction(action: string): Promise<void> {
+  switch (action) {
+    case 'resetAdaptation':
+      await resetAdaptationToDefaults();
+      return;
+    case 'rollbackLatest':
+      await rollbackLatestAdaptation();
+      return;
+    default:
+      logger.warn('Unknown adaptation transparency action', { action });
+      return;
+  }
+}
+
 // Fonction pour appliquer les paramètres
 export async function applyParameters(delta: ParameterDelta[]) {
   const current = await getSetting<Parameters>(ADAPTATION_PARAMETERS_SETTING_KEY);
-  const base: Parameters = current ?? {
-    maxTasks: 5,
-    strictness: 0.6,
-    coachFrequency: 1 / 30,
-    coachEnabled: true,
-    energyForecastMode: 'ACCURATE',
-    defaultMode: 'STRICT',
-    sessionBuffer: 10,
-    estimationFactor: 1.0,
-  };
+  const base: Parameters = current ?? DEFAULT_ADAPTATION_PARAMETERS;
 
   const next: Parameters = { ...base };
   for (const d of delta) {
@@ -75,6 +131,42 @@ export async function applyParameters(delta: ParameterDelta[]) {
   const clamped = clampParameters(next);
   await setSetting(ADAPTATION_PARAMETERS_SETTING_KEY, clamped);
   logger.info('Application des paramètres', { delta });
+}
+
+export async function resetAdaptationToDefaults(): Promise<void> {
+  const current = await getSetting<Parameters>(ADAPTATION_PARAMETERS_SETTING_KEY);
+  const before: Parameters = current ?? DEFAULT_ADAPTATION_PARAMETERS;
+  const after: Parameters = DEFAULT_ADAPTATION_PARAMETERS;
+
+  const deltas: ParameterDelta[] = [];
+  const keys = Object.keys(after) as Array<keyof Parameters>;
+  for (const k of keys) {
+    if ((before as any)[k] !== (after as any)[k]) {
+      deltas.push({
+        parameterName: String(k),
+        oldValue: (before as any)[k],
+        newValue: (after as any)[k],
+      });
+    }
+  }
+
+  await applyParameters(deltas);
+
+  if (deltas.length > 0) {
+    const id = `adaptation_reset_${Date.now()}`;
+    await recordAdaptationHistory({
+      timestamp: Date.now(),
+      change: {
+        id,
+        timestamp: Date.now(),
+        parameterChanges: deltas,
+        userConsent: 'ACCEPTED',
+      },
+      reverted: false,
+    });
+  }
+
+  logger.info('Adaptation reset to defaults');
 }
 
 // Fonction pour afficher une proposition d'adaptation
@@ -112,8 +204,19 @@ export function showToast(message: string) {
 
 // Fonction pour exporter une archive chiffrée
 export async function exportEncryptedArchive(signals: any) {
-  // Dans une implémentation réelle, cela exporterait les signaux vers un stockage sécurisé
-  logger.info("Exportation des signaux d'adaptation", { signals });
+  const now = Date.now();
+  const name = `adaptation_signals_export_${now}`;
+  await saveSnapshot({
+    name,
+    timestamp: now,
+    snapshot: {
+      type: 'adaptation_signals_export',
+      createdAt: now,
+      count: Array.isArray(signals) ? signals.length : undefined,
+      signals,
+    },
+  });
+  logger.info("Exportation des signaux d'adaptation", { name });
 }
 
 // Pruning hebdomadaire
@@ -121,6 +224,18 @@ export function setupAdaptationPruning() {
   setInterval(async () => {
     const maxAge = ADAPTATION_CONSTRAINTS.ADAPTATION_MEMORY.maxAge;
     const maxSize = ADAPTATION_CONSTRAINTS.ADAPTATION_MEMORY.maxSize;
+
+    if (ADAPTATION_CONSTRAINTS.ADAPTATION_MEMORY.exportBeforePrune) {
+      const cutoffTs = Date.now() - maxAge;
+      const lastExported = await getSetting<number>(ADAPTATION_SIGNALS_LAST_EXPORTED_CUTOFF_KEY);
+      const startTs = typeof lastExported === 'number' ? lastExported : 0;
+      const safeStart = Math.min(startTs, cutoffTs);
+      const oldSignals = await getAdaptationSignalsByPeriod(safeStart, cutoffTs);
+      if (oldSignals.length > 0) {
+        await exportEncryptedArchive(oldSignals);
+        await setSetting(ADAPTATION_SIGNALS_LAST_EXPORTED_CUTOFF_KEY, cutoffTs);
+      }
+    }
 
     const deletedCount = await pruneAdaptationSignals(maxAge, maxSize);
     if (deletedCount > 0) {

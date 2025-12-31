@@ -10,10 +10,13 @@ import { VoteEngine, ConsensusMode, type Task as VoteTask } from './voteEngine';
 import { GovernanceDashboard } from './governanceDashboard';
 import { ConflictResolver } from './conflictResolution';
 import { ProtectiveModeManager } from './protectiveMode';
-import { Task } from './types';
 import { getSessionsByDate, getOverridesByPeriod } from './database/index';
 import { createLogger } from '@/lib/logger';
 import { db } from '@/lib/database';
+
+type TaskLike = {
+  effort?: string;
+};
 
 const logger = createLogger('Phase7Main');
 
@@ -127,7 +130,7 @@ export class Phase7Manager {
   }
 
   // Calculer le coût d'un override en récupérant le contexte actuel
-  async calculateOverrideCost(task: Task) {
+  async calculateOverrideCost(task: TaskLike) {
     // Récupérer les données pour le contexte
     const burnoutResult = await calculateBurnoutScore();
 

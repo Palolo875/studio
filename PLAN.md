@@ -304,3 +304,23 @@ Les sections ci-dessous sont conservées comme référence. Le suivi d’exécut
 - Brain logger/replay sur Dexie : ☐
 - Capture persistance Dexie : ☐
 - Simulations restantes nettoyées : ☐
+
+### État actuel Phase 6 (Adaptation) — preuves
+- Persistance signaux (`adaptationSignals`) : ✅ (`src/lib/database/index.ts`, `src/lib/phase6Implementation.ts`)
+- Persistance paramètres via settings (`adaptation_parameters`) : ✅ (`src/lib/adaptationController.ts`, `src/lib/phase6Implementation.ts`)
+- Historique adaptations (`adaptationHistory`) : ✅ (`src/lib/database/index.ts`, `src/lib/phase6Implementation.ts`)
+- Rollback réel via inversion des deltas + settings : ✅ (`src/lib/adaptationController.ts`)
+- Rollback automatique (baisse qualité) : ✅ (`src/lib/phase6Implementation.ts`)
+- Pruning hebdomadaire : ✅ (`src/lib/adaptationController.ts`)
+- Export-before-prune local-first (Dexie `snapshots`) : ✅ (`src/lib/database/index.ts`, `src/lib/adaptationController.ts`)
+- Anti-doublon export (lastExportedCutoff) : ✅ (`src/lib/adaptationController.ts`)
+
+### Phase 6 — reste à faire (ordre strict)
+1) Contrat `adaptationHistory.change` type-safe
+   - Valider `parameterChanges` (shape) + accepter champs supplémentaires (quality/progress/etc.) sans `any`.
+2) UI Transparence adaptation
+   - Brancher `AdaptationPanel` sur Dexie (history + snapshots) et afficher: derniers changements, rollback, exports.
+3) Mode transitions / modeTransitions persistant
+   - Définir et persister `modeTransitions` (table) ou intégrer au logger existant.
+4) Metric pipeline
+   - Éliminer les derniers `any` dans Phase 6/7 (sessions/overrides/tasks) et garantir inputs réels Dexie.

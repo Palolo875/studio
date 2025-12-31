@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "../ui/separator";
 import { DatabaseSnapshotManager } from "@/lib/databaseSnapshot";
 import { getSetting, setSetting } from "@/lib/database";
+import { AdaptationPanel, runAdaptationTransparencyAction } from "@/lib/phase6Implementation";
 
 const formSchema = z.object({
   // Profil
@@ -91,6 +92,8 @@ export function SettingsForm() {
   const { setTheme, theme } = useTheme();
   const restoreFileInputRef = useRef<HTMLInputElement | null>(null);
   const [backupPassphrase, setBackupPassphrase] = useState('');
+  const [adaptationPanel, setAdaptationPanel] = useState<any>(null);
+  const [adaptationLoading, setAdaptationLoading] = useState(false);
 
   async function encryptPayload(plainText: string, passphrase: string): Promise<string> {
     const encoder = new TextEncoder();
@@ -258,6 +261,58 @@ export function SettingsForm() {
       description: "Vos informations ont été mises à jour.",
     });
   }
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setAdaptationLoading(true);
+      try {
+        const panel = await AdaptationPanel();
+        if (cancelled) return;
+        setAdaptationPanel(panel);
+      } catch {
+        if (cancelled) return;
+        setAdaptationPanel(null);
+      } finally {
+        if (cancelled) return;
+        setAdaptationLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const refreshAdaptationPanel = async () => {
+    setAdaptationLoading(true);
+    try {
+      const panel = await AdaptationPanel();
+      setAdaptationPanel(panel);
+    } finally {
+      setAdaptationLoading(false);
+    }
+  };
+
+  const runAdaptationAction = async (action: string) => {
+    setAdaptationLoading(true);
+    try {
+      await runAdaptationTransparencyAction(action);
+      await refreshAdaptationPanel();
+      toast({
+        title: "Action appliquée",
+        description: action,
+      });
+    } catch {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'appliquer l'action.",
+        variant: "destructive",
+      });
+    } finally {
+      setAdaptationLoading(false);
+    }
+  };
 
   async function exportBackup(): Promise<void> {
     try {
@@ -663,7 +718,69 @@ export function SettingsForm() {
 
         <SettingsSectionCard id="ia" title="Intelligence Artificielle" description="Paramétrez le comportement du cerveau de KairuFlow.">
           {/* TODO: Add AI settings */}
-          <p className="text-sm text-muted-foreground">Les paramètres de l'IA seront bientôt disponibles ici.</p>
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button type="button" variant="outline" onClick={refreshAdaptationPanel} disabled={adaptationLoading}>
+                Rafraîchir
+              </Button>
+              <Button type="button" variant="outline" onClick={() => runAdaptationAction('rollbackLatest')} disabled={adaptationLoading}>
+                Rollback dernière adaptation
+              </Button>
+              <Button type="button" onClick={() => runAdaptationAction('resetAdaptation')} disabled={adaptationLoading}>
+                Réinitialiser adaptations
+              </Button>
+            </div>
+
+            <Separator />
+
+            {adaptationPanel?.currentParameters?.parameters?.length ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Paramètres actuels</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {adaptationPanel.currentParameters.parameters.map((p: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                      <span className="text-muted-foreground">{p.label}</span>
+                      <span className="font-medium">{String(p.value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Aucun paramètre d'adaptation disponible.</p>
+            )}
+
+            {adaptationPanel?.recentChanges?.logs?.length ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Changements récents</p>
+                <div className="space-y-2">
+                  {adaptationPanel.recentChanges.logs.map((l: any, idx: number) => (
+                    <div key={idx} className="rounded-md border px-3 py-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">{l.date}</span>
+                        <span className="text-muted-foreground">{l.adaptationId ?? ''}</span>
+                      </div>
+                      <div className="font-medium">{l.change}</div>
+                      <div className="text-muted-foreground">{l.reason}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {adaptationPanel?.exports?.items?.length ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Exports signaux</p>
+                <div className="space-y-2">
+                  {adaptationPanel.exports.items.map((it: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                      <span className="truncate">{it.name}</span>
+                      <span className="text-muted-foreground">{it.date}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
         </SettingsSectionCard>
 
 

@@ -247,6 +247,17 @@ export interface DBSnapshot {
     snapshot: unknown;
 }
 
+export async function saveSnapshot(snapshot: Omit<DBSnapshot, 'id'>): Promise<number | undefined> {
+    try {
+        const id = await db.snapshots.add(snapshot);
+        logger.info('Snapshot saved', { id, name: snapshot.name });
+        return id;
+    } catch (error) {
+        logger.error('Failed to save snapshot', error as Error);
+        return undefined;
+    }
+}
+
 export interface DBEveningEntry {
     id: string;
     timestamp: number;
@@ -910,6 +921,15 @@ export async function recordAdaptationHistory(entry: Omit<DBAdaptationHistory, '
     }
 }
 
+export async function getRecentAdaptationHistory(limit: number = 20): Promise<DBAdaptationHistory[]> {
+    try {
+        return await db.adaptationHistory.orderBy('timestamp').reverse().limit(limit).toArray();
+    } catch (error) {
+        logger.error('Failed to get recent adaptation history', error as Error);
+        return [];
+    }
+}
+
 export async function getLatestAdaptationHistory(): Promise<DBAdaptationHistory | undefined> {
     try {
         return await db.adaptationHistory.orderBy('timestamp').reverse().first();
@@ -924,6 +944,16 @@ export async function markAdaptationHistoryReverted(id: number): Promise<void> {
         await db.adaptationHistory.update(id, { reverted: true });
     } catch (error) {
         logger.error('Failed to mark adaptation reverted', error as Error, { id });
+    }
+}
+
+export async function getSnapshotsByNamePrefix(prefix: string, limit: number = 20): Promise<DBSnapshot[]> {
+    try {
+        const all = await db.snapshots.orderBy('timestamp').reverse().limit(limit * 5).toArray();
+        return all.filter((s) => typeof s.name === 'string' && s.name.startsWith(prefix)).slice(0, limit);
+    } catch (error) {
+        logger.error('Failed to get snapshots by prefix', error as Error);
+        return [];
     }
 }
 
