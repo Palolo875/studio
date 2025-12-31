@@ -7,6 +7,11 @@
 - P0 NLP canonique (RealTaskClassifier utilisé par `useNLP` + Evening + Capture) : ✅
 - P0 Typage/Build : `src/ai/dev.ts` neutralisé (plus d’import `dotenv`/flows) : ✅
 
+### P0 Découverts en audit (à corriger)
+- P0 Local-first (server actions) : `src/app/actions.ts` utilise Dexie côté serveur (risque crash / incohérent local-first) : ☐
+- P0 Gouvernance (burnout/protective) : surcharge chronique non atteignable + seuil protectif strict : ☐
+- P0 Tests E2E : Playwright utilise localStorage alors que le produit stocke settings dans Dexie : ☐
+
 Note: les sections "Audit v2" / "Audit état général" ci-dessous contiennent des constats historiques. Le suivi et les actions à exécuter doivent se baser sur la section "Suivi d’avancement" et le backlog.
 
 ## Audit v2 (exécuté sur le code actuel)
@@ -85,6 +90,12 @@ Note: les sections "Audit v2" / "Audit état général" ci-dessous contiennent d
 - Phase 6 (adaptation) : tables adaptation présentes, Settings IA TODO ; État = moteur sans produit ; Risque = adaptation fantôme/consent manquant.
 - Phase 7 (gouvernance/burnout) : burnoutEngine existe, mais actions produit ne nourrissent pas DB ; État = logique plausible, données manquantes ; Risque = gouvernance aveugle.
 
+### Rectifications (audit v3)
+- Local-first : la capture est locale, mais des dépendances et routes/actions historiques cloud existent encore dans le repo. La règle doit être: aucun appel cloud par défaut.
+- Playlist : la génération playlist est actuellement branchée via server action, ce qui contredit le choix Dexie/IndexedDB (browser-only). La génération doit être client-side.
+- Burnout/protective : la surcharge chronique ne peut pas se déclencher si elle est définie comme ratio completed/planned > 1.2 ; le seuil protectif `> 0.75` rend le mode protectif inatteignable si un signal a un poids et ne se déclenche jamais.
+- Tests : Playwright configure/valide encore des états via localStorage (morning ritual) alors que la persistance produit utilise Dexie settings.
+
 ## Scorecard qualité (brutal, preuve-based)
 - Product readiness : Rouge — Bibliothèque/Focus/Evening/Capture “add to lib” non persistés.
 - Data integrity / Source of truth : Rouge — double DB (Dexie vs taskDatabase), localStorage massif, stubs console.
@@ -95,6 +106,9 @@ Note: les sections "Audit v2" / "Audit état général" ci-dessous contiennent d
 
 ## Backlog P0/P1/P2 (corrigés par priorité)
 - P0
+  - Corriger les server actions : aucune lecture Dexie côté serveur. Déplacer playlist/reco en client-side ou via worker/browser.
+  - Corriger BurnoutEngine/Phase 7 : surcharge chronique atteignable + seuil protectif + tests unitaires.
+  - Remettre Playwright E2E en cohérence avec Dexie (seed DB/settings) et supprimer les assertions basées sur localStorage.
   - Supprimer/neutraliser taskDatabase (fake DB) et brancher tout sur Dexie réelle.
   - Persister Bibliothèque/Focus/Evening/Capture add-to-library dans Dexie ; éliminer console/localStorage pour ces flux.
   - Neutraliser handleAnalyzeCapture cloud ou le flagger DEV_ONLY ; brancher pipeline NLP local réel (useNLP refondu avec vraie Dexie).
@@ -188,6 +202,9 @@ Note: les sections "Audit v2" / "Audit état général" ci-dessous contiennent d
 - useNLP: retourne/persiste des `DBTask[]` (même en fallback) : ✅
 - Evening: classification via RealTaskClassifier + création DBTask : ✅
 - `src/ai/dev.ts` neutralisé (pas de dépendances dev au build) : ✅
+- P0 Local-first server actions (pas de Dexie serveur) : ☐
+- P0 Burnout/protective atteignable + tests : ☐
+- P0 Playwright E2E alignés Dexie : ☐
 - Fichiers Genkit à supprimer : ☐
 - Dexie/snapshots alignés : ☐
 - Brain logger/replay sur Dexie : ☐

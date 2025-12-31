@@ -1,8 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
-import { useFormStatus } from "react-dom";
-import { handleGeneratePlaylist } from "@/app/actions";
+import { useEffect, useState, type FormEvent } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -11,37 +9,47 @@ import { useToast } from "@/hooks/use-toast";
 import { Music } from "lucide-react";
 import { decideSessionWithTrace } from "@/lib/taskEngine/brainEngine";
 import type { BrainInput } from "@/lib/taskEngine/brainContracts";
+import { generatePlaylistClient } from "@/lib/playlistClient";
 
 interface PlaylistGeneratorProps {
   onPlaylistGenerated: (tasks: Task[]) => void;
   dailyRituals?: DailyRituals;
 }
 
-const initialState = {
-  message: "",
-  errors: null,
-  tasks: [],
-};
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending} className="w-full">
-      {pending ? "Génération en cours..." : <>
-        <Music className="mr-2 h-4 w-4" /> Générer ma playlist
-      </>
-      }
-    </Button>
-  );
-}
-
 export function PlaylistGenerator({ onPlaylistGenerated, dailyRituals = { playlistShuffledCount: 0, completedTaskCount: 0, completedTasks: [] } }: PlaylistGeneratorProps) {
-  const [state, formAction] = useActionState(handleGeneratePlaylist, initialState);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]> | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (state.message && !state.errors && state.tasks.length > 0) {
-      onPlaylistGenerated(state.tasks);
+    return () => {
+      // noop
+    };
+  }, []);
+
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setFieldErrors(null);
+
+    try {
+      const formData = new FormData(e.currentTarget);
+      const result = await generatePlaylistClient(formData);
+
+      if (result.errors) {
+        setFieldErrors(result.errors);
+        const errorMessages = Object.values(result.errors).flat().join("\n");
+        toast({
+          variant: "destructive",
+          title: "Erreur",
+          description: result.message + (errorMessages ? `\n${errorMessages}` : ""),
+        });
+        return;
+      }
+
+      if (result.tasks.length > 0) {
+        onPlaylistGenerated(result.tasks.map((t) => t.task));
+      }
 
       try {
         const energyLevel = (document.getElementById('energyLevel') as HTMLSelectElement | null)?.value as
@@ -57,7 +65,7 @@ export function PlaylistGenerator({ onPlaylistGenerated, dailyRituals = { playli
           | undefined;
 
         if (energyLevel && intention) {
-          const brainTasks = state.tasks.map((t: Task) => {
+          const brainTasks = result.tasks.map((t) => t.task).map((t: Task) => {
             const now = new Date();
             return {
               id: t.id,
@@ -123,20 +131,15 @@ export function PlaylistGenerator({ onPlaylistGenerated, dailyRituals = { playli
 
       toast({
         title: "Succès",
-        description: state.message,
+        description: result.message,
       });
-    } else if (state.errors) {
-       const errorMessages = Object.values(state.errors).flat().join('\n');
-       toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: state.message + (errorMessages ? `\n${errorMessages}` : ''),
-      });
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [state, onPlaylistGenerated, toast]);
+  };
 
   return (
-    <form action={formAction} className="space-y-4 pt-4">
+    <form onSubmit={onSubmit} className="space-y-4 pt-4">
        <input type="hidden" name="dailyRituals" value={JSON.stringify(dailyRituals)} />
       <div className="space-y-2">
         <Label htmlFor="goals">Objectifs du jour</Label>
@@ -146,8 +149,8 @@ export function PlaylistGenerator({ onPlaylistGenerated, dailyRituals = { playli
           placeholder="Ex: Finaliser la proposition de projet, préparer la réunion d'équipe"
           required
         />
-        {state.errors?.goals && (
-          <p className="text-sm text-destructive">{state.errors.goals[0]}</p>
+        {fieldErrors?.goals && (
+          <p className="text-sm text-destructive">{fieldErrors.goals[0]}</p>
         )}
       </div>
       <div className="space-y-2">
@@ -158,8 +161,8 @@ export function PlaylistGenerator({ onPlaylistGenerated, dailyRituals = { playli
           placeholder="Ex: Se concentrer sur les retours clients, bloquer du temps pour le travail de fond"
           required
         />
-        {state.errors?.priorities && (
-          <p className="text-sm text-destructive">{state.errors.priorities[0]}</p>
+        {fieldErrors?.priorities && (
+          <p className="text-sm text-destructive">{fieldErrors.priorities[0]}</p>
         )}
       </div>
       <div className="space-y-2">
@@ -187,7 +190,12 @@ export function PlaylistGenerator({ onPlaylistGenerated, dailyRituals = { playli
           <option value="planning">Planification</option>
         </select>
       </div>
-      <SubmitButton />
+      <Button type="submit" disabled={isSubmitting} className="w-full">
+        {isSubmitting ? "Génération en cours..." : <>
+          <Music className="mr-2 h-4 w-4" /> Générer ma playlist
+        </>
+        }
+      </Button>
     </form>
   );
 }

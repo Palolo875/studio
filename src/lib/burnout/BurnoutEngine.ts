@@ -97,8 +97,17 @@ async function calculateDailyLoad(date: Date): Promise<number> {
     }
 
     const totalLoad = sessions.reduce((sum, session) => {
-        if (session.plannedTasks === 0) return sum;
-        const ratio = session.completedTasks / session.plannedTasks;
+        const planned = session.plannedTasks ?? 0;
+        const completed = session.completedTasks ?? 0;
+
+        if (planned <= 0) return sum;
+
+        // Charge = sur-planification vs exécution.
+        // planned/completed > 1 signifie que l'utilisateur planifie plus qu'il n'exécute.
+        // Cette métrique peut dépasser 1 (à l'inverse de completed/planned).
+        const rawRatio = planned / Math.max(1, completed);
+        const ratio = Math.min(10, rawRatio);
+
         return sum + ratio;
     }, 0);
 
@@ -107,7 +116,7 @@ async function calculateDailyLoad(date: Date): Promise<number> {
 
 /**
  * Détecte la surcharge chronique
- * Seuil: charge > 120% pendant 5 jours consécutifs
+ * Seuil: sur-planification (planned/completed) >= 120% pendant N jours
  */
 export async function detectChronicOverload(
     thresholds: BurnoutThresholds = DEFAULT_THRESHOLDS
@@ -122,7 +131,7 @@ export async function detectChronicOverload(
         date.setDate(date.getDate() - i);
 
         const dailyLoad = await calculateDailyLoad(date);
-        if (dailyLoad > thresholds.overloadRatio) {
+        if (dailyLoad >= thresholds.overloadRatio) {
             overloadCount++;
         }
     }

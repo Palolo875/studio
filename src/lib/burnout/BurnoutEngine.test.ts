@@ -2,7 +2,9 @@
  * BurnoutEngine Unit Tests
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { BurnoutSignals, BurnoutThresholds } from '../BurnoutEngine';
+import type { BurnoutSignals, BurnoutThresholds } from './BurnoutEngine';
+import { detectChronicOverload } from './BurnoutEngine';
+import { getSessionsByDate } from '@/lib/database';
 
 // Mock the database module
 vi.mock('@/lib/database', () => ({
@@ -39,6 +41,33 @@ vi.mock('@/lib/logger', () => ({
 describe('BurnoutEngine', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+    });
+
+    describe('Chronic overload detection', () => {
+        it('should detect chronic overload when planned/completed is consistently above threshold', async () => {
+            const mockGetSessionsByDate = vi.mocked(getSessionsByDate);
+
+            mockGetSessionsByDate.mockResolvedValue([
+                {
+                    plannedTasks: 12,
+                    completedTasks: 8,
+                } as any,
+            ]);
+
+            const result = await detectChronicOverload({
+                overloadDays: 5,
+                overloadRatio: 1.2,
+                sleepMinHours: 6,
+                sleepCheckDays: 3,
+                overrideRatioThreshold: 0.8,
+                completionCollapseThreshold: 0.3,
+                varianceMultiplier: 2,
+                taskAccumulationLimit: 50,
+                taskGrowthRateLimit: 5,
+            });
+
+            expect(result).toBe(true);
+        });
     });
 
     describe('Signal Weights', () => {

@@ -3,7 +3,7 @@
 
 import { useState, useTransition } from 'react';
 import type { Task } from '@/lib/types';
-import { handleGetRecommendations } from '@/app/actions';
+import { getRecommendationsClient } from '@/lib/playlistClient';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -57,7 +57,7 @@ export function Recommendations({ tasks }: RecommendationsProps) {
         JSON.stringify(tasks.filter((t) => !t.completed))
       );
 
-      const result = await handleGetRecommendations(formData);
+      const result = await getRecommendationsClient(formData);
 
       if (result.error) {
         toast({

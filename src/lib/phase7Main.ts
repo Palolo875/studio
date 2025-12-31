@@ -100,7 +100,7 @@ export class Phase7Manager {
         const periodStart = now - (7 * 24 * 60 * 60 * 1000);
         const overrides = await getOverridesByPeriod(periodStart);
         const sessions = await db.sessions.where('timestamp').above(periodStart).toArray();
-        const totalDecisions = sessions.reduce((sum, s) => sum + (s.plannedTasks ?? 0), 0);
+        const totalDecisions = sessions.reduce((sum: number, s: { plannedTasks?: number }) => sum + (s.plannedTasks ?? 0), 0);
         const overrideRate = totalDecisions > 0 ? overrides.length / totalDecisions : 0;
         this.governanceDashboard.updateOverrideRate(overrideRate);
       } catch {
@@ -108,7 +108,7 @@ export class Phase7Manager {
       }
 
       // Vérifier si le mode protectif doit être activé
-      if (burnoutResult.score > 0.75) {
+      if (burnoutResult.riskLevel === 'high' || burnoutResult.riskLevel === 'critical' || burnoutResult.score >= 0.75) {
         // Générer une notification
         const notification = this.protectiveModeManager.generateNotification(burnoutResult);
         logger.warn('Burnout Alert', { notification });

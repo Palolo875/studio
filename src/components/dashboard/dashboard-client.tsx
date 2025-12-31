@@ -10,7 +10,7 @@ import { RefreshCw, Search, Siren, CalendarClock, Shield } from 'lucide-react';
 import { PlaylistGenerator } from './playlist-generator';
 import { Button } from '../ui/button';
 import { DailyGreeting } from './daily-greeting';
-import { handleGeneratePlaylist } from '@/app/actions';
+import { generatePlaylistClient } from '@/lib/playlistClient';
 import { useToast } from '@/hooks/use-toast';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -279,17 +279,15 @@ export function DashboardClient() {
       formData.append('priorities', 'My top priorities');
       formData.append('dailyRituals', JSON.stringify(dailyRituals));
 
-      if (energyLevel) {
-        formData.append('energyLevel', energyLevel);
+      const mappedEnergy = toDbEnergyLevel(energyLevel);
+      if (mappedEnergy) {
+        formData.append('energyLevel', mappedEnergy);
       }
       if (intention) {
         formData.append('intention', intention);
       }
 
-      const response = await handleGeneratePlaylist(
-        { tasks: tasks, errors: null, message: '' },
-        formData
-      );
+      const response = await generatePlaylistClient(formData);
 
       setIsGenerating(false);
 
@@ -300,7 +298,7 @@ export function DashboardClient() {
           description: response.message,
         });
       } else {
-        await persistTasks(response.tasks, { incrementShuffle: true });
+        await persistTasks(response.tasks.map((t) => t.task), { incrementShuffle: true });
 
         const nowMs = Date.now();
 
