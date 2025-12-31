@@ -54,6 +54,11 @@ import {
   upsertTasks,
   completeTask as completeDbTask,
   updateTask as updateDbTask,
+  createSession as createDbSession,
+  updateSession as updateDbSession,
+  getSessionsByDate,
+  recordOverride,
+  recordSleepData,
   type DBTask,
   getSetting,
   setSetting,
@@ -99,6 +104,13 @@ function toDbTask(task: Task): DBTask {
   };
 }
 
+function toDbEnergyLevel(energy: EnergyState): 'low' | 'medium' | 'high' | undefined {
+  if (!energy) return undefined;
+  if (energy === 'slow') return 'low';
+  if (energy === 'normal') return 'medium';
+  return 'high';
+}
+
 function fromDbTask(dbTask: DBTask): Task {
   return {
     id: dbTask.id,
@@ -120,6 +132,8 @@ function fromDbTask(dbTask: DBTask): Task {
 export function DashboardClient() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [initialTaskCount, setInitialTaskCount] = useState<number>(0);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [sleepHours, setSleepHours] = useState<number | null>(null);
   const [dailyRituals, setDailyRituals] = useState<DailyRituals>({
     playlistShuffledCount: 0,
     completedTaskCount: 0,
@@ -187,6 +201,15 @@ export function DashboardClient() {
             setInitialTaskCount(0);
           }
         });
+
+      try {
+        const sessions = await getSessionsByDate(new Date());
+        if (!cancelled && sessions.length) {
+          setCurrentSessionId(sessions[sessions.length - 1].id);
+        }
+      } catch {
+        // ignore
+      }
     }
 
     void load();
@@ -210,6 +233,13 @@ export function DashboardClient() {
     void setSetting('morning.lastCheckin', today);
     void setSetting('morning.todayEnergyLevel', energyLevel);
     void setSetting('morning.todayIntention', intention || '');
+
+    if (typeof sleepHours === 'number' && Number.isFinite(sleepHours) && sleepHours >= 0 && sleepHours <= 24) {
+      const date = new Date(today);
+      recordSleepData({ date, hours: sleepHours, quality: undefined }).catch(() => null);
+      void setSetting('morning.sleepHours', sleepHours);
+    }
+
     handleRegeneratePlaylist(true);
   };
 
@@ -271,6 +301,31 @@ export function DashboardClient() {
         });
       } else {
         await persistTasks(response.tasks, { incrementShuffle: true });
+
+        const nowMs = Date.now();
+
+        if (currentSessionId) {
+          await updateDbSession(currentSessionId, {
+            endTime: nowMs,
+            state: 'EXHAUSTED',
+          }).catch(() => null);
+        }
+
+        const nextSessionId = `session_${nowMs}`;
+        await createDbSession({
+          id: nextSessionId,
+          timestamp: nowMs,
+          startTime: nowMs,
+          endTime: undefined,
+          plannedTasks: response.tasks.length,
+          completedTasks: 0,
+          state: 'IN_PROGRESS',
+          energyLevel: toDbEnergyLevel(energyLevel),
+          energyStability: 'stable',
+          taskIds: response.tasks.map((t: Task) => t.id),
+        }).catch(() => null);
+        setCurrentSessionId(nextSessionId);
+
         if (response.playlistShuffledCount) {
           setDailyRituals((prev: DailyRituals) => ({
             ...prev,
@@ -314,6 +369,18 @@ export function DashboardClient() {
         completedTasks: updatedCompletedTasks,
       };
       setDailyRituals(newDailyRituals);
+
+      if (currentSessionId) {
+        const nowMs = Date.now();
+        updateDbSession(currentSessionId, {
+          timestamp: nowMs,
+          plannedTasks: newTasks.length,
+          completedTasks: updatedCompletedTasks.length,
+          state: updatedCompletedTasks.length >= newTasks.length ? 'COMPLETED' : 'IN_PROGRESS',
+          endTime: updatedCompletedTasks.length >= newTasks.length ? nowMs : undefined,
+          taskIds: newTasks.map((t: Task) => t.id),
+        }).catch(() => null);
+      }
 
       if (completedTask.completed) {
         completeDbTask(taskId).catch(() => null);
@@ -415,6 +482,16 @@ export function DashboardClient() {
       });
     }
     persistTasks(newTasks).catch(() => null);
+
+    if (currentSessionId) {
+      const nowMs = Date.now();
+      updateDbSession(currentSessionId, {
+        timestamp: nowMs,
+        plannedTasks: newTasks.length,
+        taskIds: newTasks.map((t: Task) => t.id),
+      }).catch(() => null);
+    }
+
     setUrgentTaskName('');
     setReplaceTask(false);
     setIsPanicModalOpen(false);
@@ -444,7 +521,16 @@ export function DashboardClient() {
 
   const handleConfirmOverride = (reason?: string) => {
     setIsOverrideModalOpen(false);
-    if (pendingTask) executeAddTask(pendingTask);
+    if (pendingTask) {
+      recordOverride({
+        timestamp: Date.now(),
+        originalDecision: JSON.stringify(currentConflict?.systemRejection ?? {}),
+        userDecision: JSON.stringify({ action: 'FORCE_TASK', taskId: pendingTask.id }),
+        reason,
+      }).catch(() => null);
+
+      executeAddTask(pendingTask);
+    }
     toast({
       title: "Décision forcée",
       description: `Protections désactivées pour 24h. Coût appliqué: ${(overrideCost.total * 100).toFixed(0)}%`,
@@ -470,6 +556,7 @@ export function DashboardClient() {
           <EnergyCheckIn
             onEnergyChange={setEnergyLevel}
             onIntentionChange={setIntention}
+            onSleepHoursChange={setSleepHours}
           />
           <DialogFooter className="!justify-center pt-4">
             <Button

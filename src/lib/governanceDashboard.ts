@@ -43,6 +43,11 @@ export class GovernanceDashboard {
     this.notifyUpdate();
   }
 
+  updateOverrideRate(rate: number): void {
+    this.metrics = { ...this.metrics, overrideRate: Math.max(0, Math.min(1, rate)) };
+    this.notifyUpdate();
+  }
+
   updateCurrentMode(mode: SovereigntyMode): void {
     this.metrics = { ...this.metrics, currentMode: mode, lastModeChange: Date.now() };
     this.notifyUpdate();

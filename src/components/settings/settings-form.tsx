@@ -311,10 +311,12 @@ export function SettingsForm() {
       setTimeout(() => {
         window.location.reload();
       }, 600);
-    } catch {
+    } catch (error) {
       toast({
         title: "Import impossible",
-        description: "Erreur lors de l'import/restauration de la sauvegarde.",
+        description: error instanceof Error
+          ? error.message
+          : "Erreur lors de l'import/restauration de la sauvegarde.",
         variant: "destructive",
       });
     }

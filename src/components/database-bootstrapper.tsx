@@ -5,6 +5,9 @@ import { db } from '@/lib/database';
 import { createLocalBackupSnapshot, openDbWithCorruptionRecovery, performPeriodicHealthCheck } from '@/lib/dbCorruptionRecovery';
 import { performStartupIntegrityCheck } from '@/lib/dataIntegrityValidator';
 import { storageGuard } from '@/lib/storageGuard';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('DatabaseBootstrapper');
 
 export function DatabaseBootstrapper() {
   useEffect(() => {
@@ -17,7 +20,8 @@ export function DatabaseBootstrapper() {
     async function bootstrap() {
       try {
         await openDbWithCorruptionRecovery(db);
-      } catch {
+      } catch (error) {
+        logger.error('DB bootstrap failed', error as Error);
         return;
       }
 
@@ -25,8 +29,8 @@ export function DatabaseBootstrapper() {
 
       try {
         await performStartupIntegrityCheck(db);
-      } catch {
-        // ignore
+      } catch (error) {
+        logger.warn('Startup integrity check failed', error as Error);
       }
 
       if (cancelled) return;

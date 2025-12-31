@@ -1,5 +1,14 @@
 # Plan d’implémentation SOTA (local-first, zéro cloud)
 
+## État de remédiation (source de vérité)
+- P0 Playlist (options `currentTime` + mapping DBTask -> Task) : ✅
+- P0 Routing Focus (`/dashboard/focus/[taskId]` canonique + fetch Dexie) : ✅
+- P0 Capture (pipeline local extract → RealTaskClassifier → TaskFactory → upsert Dexie) : ✅
+- P0 NLP canonique (RealTaskClassifier utilisé par `useNLP` + Evening + Capture) : ✅
+- P0 Typage/Build : `src/ai/dev.ts` neutralisé (plus d’import `dotenv`/flows) : ✅
+
+Note: les sections "Audit v2" / "Audit état général" ci-dessous contiennent des constats historiques. Le suivi et les actions à exécuter doivent se baser sur la section "Suivi d’avancement" et le backlog.
+
 ## Audit v2 (exécuté sur le code actuel)
 1) Cartographie routes (13 page.tsx)
    - Dashboard : /dashboard (DashboardClient) = cœur produit ; /dashboard/capture (CaptureClient) = capture cloud via server action Genkit/Gemini ; /dashboard/bibliotheque (ReservoirClient) démarre sur initialTasks statiques, pas Dexie ; /dashboard/focus/[taskId] (FocusMode) complète via localStorage stub ; /dashboard/evening (console.log + alert, non implémenté) ; /dashboard/settings ; /dashboard/stats.
@@ -173,6 +182,12 @@
 
 ## Suivi d’avancement
 - Genkit retiré de package.json et actions.ts : ✅
+- Playlist magique: options `currentTime` + mapping DBTask → Task : ✅
+- Focus routing: `taskId` canonique + fetch Dexie : ✅
+- Capture: ajout à la bibliothèque via Dexie (upsert) : ✅
+- useNLP: retourne/persiste des `DBTask[]` (même en fallback) : ✅
+- Evening: classification via RealTaskClassifier + création DBTask : ✅
+- `src/ai/dev.ts` neutralisé (pas de dépendances dev au build) : ✅
 - Fichiers Genkit à supprimer : ☐
 - Dexie/snapshots alignés : ☐
 - Brain logger/replay sur Dexie : ☐

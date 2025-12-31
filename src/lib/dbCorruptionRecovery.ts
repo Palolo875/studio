@@ -9,6 +9,13 @@ import { DatabaseSnapshotManager, type DatabaseSnapshot } from '@/lib/databaseSn
 
 const logger = createLogger('DBRecovery');
 
+class RecoveryAbortError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RecoveryAbortError';
+  }
+}
+
 interface BackupRow {
   id?: number;
   timestamp: number;
@@ -44,7 +51,11 @@ async function pruneBackups(keep: number): Promise<void> {
     const rows = await backupDb.backups.orderBy('timestamp').reverse().toArray();
     const toDelete = rows.slice(keep);
     if (toDelete.length === 0) return;
-    await backupDb.backups.bulkDelete(toDelete.map(r => r.id!).filter((id): id is number => typeof id === 'number'));
+    await backupDb.backups.bulkDelete(
+      toDelete
+        .map((r: BackupRow) => r.id)
+        .filter((id: number | undefined): id is number => typeof id === 'number')
+    );
   } catch (error) {
     logger.error('Impossible de pruner les backups', error as Error);
   }
@@ -105,10 +116,21 @@ async function handleDbCorruption(db: any): Promise<any> {
       return restoredDb;
     }
   } catch (restoreError) {
+    // Si un backup existe mais est invalide (ex: checksum mismatch), on ABORT.
+    // Ne pas supprimer la DB automatiquement: risque de perte irréversible.
+    if (restoreError instanceof RecoveryAbortError) {
+      logger.error('Récupération automatique annulée', restoreError);
+      throw restoreError;
+    }
+
     logger.error("Échec de la restauration à partir d'un backup", restoreError as Error);
+    throw new RecoveryAbortError(
+      'Backup présent mais restauration impossible (intégrité invalide). Réinitialisation automatique annulée.'
+    );
   }
   
   // Étape 2 : Réinitialiser complètement la base de données (dernier recours)
+  // IMPORTANT: uniquement si aucun backup n'était disponible.
   logger.warn('Réinitialisation complète de la base de données (dernier recours)');
   try {
     await db.delete();
@@ -162,7 +184,9 @@ async function attemptBackupRestoration(db: any): Promise<any | null> {
     return restoredDb;
   } catch (error) {
     logger.error('Échec de la restauration du backup', error as Error);
-    return null;
+    throw new RecoveryAbortError(
+      error instanceof Error ? error.message : 'Échec inconnu lors de la restauration du backup'
+    );
   }
 }
 

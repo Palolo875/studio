@@ -21,9 +21,10 @@ type EnergyStateId = "energized" | "normal" | "slow" | "focused" | "creative";
 interface EnergyCheckInProps {
     onEnergyChange: (energy: EnergyStateId) => void;
     onIntentionChange: (intention: string) => void;
+    onSleepHoursChange?: (hours: number | null) => void;
 }
 
-export function EnergyCheckIn({ onEnergyChange, onIntentionChange }: EnergyCheckInProps) {
+export function EnergyCheckIn({ onEnergyChange, onIntentionChange, onSleepHoursChange }: EnergyCheckInProps) {
   const [selectedState, setSelectedState] = useState<string | null>(null);
   const [showIntention, setShowIntention] = useState(false);
 
@@ -36,6 +37,16 @@ export function EnergyCheckIn({ onEnergyChange, onIntentionChange }: EnergyCheck
   const handleIntentionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onIntentionChange(e.target.value);
   }
+
+  const handleSleepHoursChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    if (!raw) {
+      onSleepHoursChange?.(null);
+      return;
+    }
+    const parsed = Number(raw);
+    onSleepHoursChange?.(Number.isFinite(parsed) ? parsed : null);
+  };
 
   return (
     <div className="space-y-6">
@@ -75,13 +86,33 @@ export function EnergyCheckIn({ onEnergyChange, onIntentionChange }: EnergyCheck
             <label htmlFor="intention" className="text-sm font-medium text-muted-foreground text-center block">
               Une intention pour aujourd’hui ? (Optionnel)
             </label>
-            <Input
-              id="intention"
-              name="intention"
-              placeholder="Ex: Terminer la présentation pour le client..."
-              className="bg-background/50 rounded-xl h-12"
-              onChange={handleIntentionChange}
-            />
+            <div className="space-y-4">
+              <Input
+                id="intention"
+                name="intention"
+                placeholder="Ex: Terminer la présentation pour le client..."
+                className="bg-background/50 rounded-xl h-12"
+                onChange={handleIntentionChange}
+              />
+
+              <div className="space-y-2">
+                <label htmlFor="sleepHours" className="text-sm font-medium text-muted-foreground text-center block">
+                  Sommeil (heures) — optionnel
+                </label>
+                <Input
+                  id="sleepHours"
+                  name="sleepHours"
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  max={24}
+                  step={0.25}
+                  placeholder="Ex: 7"
+                  className="bg-background/50 rounded-xl h-12"
+                  onChange={handleSleepHoursChange}
+                />
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

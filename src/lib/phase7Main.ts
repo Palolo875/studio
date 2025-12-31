@@ -13,6 +13,7 @@ import { ProtectiveModeManager } from './protectiveMode';
 import { Task } from './types';
 import { getSessionsByDate, getOverridesByPeriod } from './database/index';
 import { createLogger } from '@/lib/logger';
+import { db } from '@/lib/database';
 
 const logger = createLogger('Phase7Main');
 
@@ -92,6 +93,19 @@ export class Phase7Manager {
 
       // Mettre à jour le risque de burnout dans le tableau de bord
       this.governanceDashboard.updateBurnoutRisk(burnoutResult.score);
+
+      // Mettre à jour le taux d'overrides avec les données réelles (7 jours)
+      try {
+        const now = Date.now();
+        const periodStart = now - (7 * 24 * 60 * 60 * 1000);
+        const overrides = await getOverridesByPeriod(periodStart);
+        const sessions = await db.sessions.where('timestamp').above(periodStart).toArray();
+        const totalDecisions = sessions.reduce((sum, s) => sum + (s.plannedTasks ?? 0), 0);
+        const overrideRate = totalDecisions > 0 ? overrides.length / totalDecisions : 0;
+        this.governanceDashboard.updateOverrideRate(overrideRate);
+      } catch {
+        this.governanceDashboard.updateOverrideRate(0);
+      }
 
       // Vérifier si le mode protectif doit être activé
       if (burnoutResult.score > 0.75) {

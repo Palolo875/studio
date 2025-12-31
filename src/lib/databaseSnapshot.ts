@@ -71,24 +71,29 @@ export class DatabaseSnapshotManager {
         db.adaptationHistory.toArray(),
       ]);
 
+      const data = {
+        tasks,
+        sessions,
+        overrides,
+        sleepData,
+        taskHistory,
+        eveningEntries,
+        settings,
+        brainDecisions,
+        decisionExplanations,
+        adaptationSignals,
+        adaptationHistory,
+      };
+
+      const checksum = await this.calculateChecksum(data);
+
       const snapshot: DatabaseSnapshot = {
         version: (db as any).verno ?? 0,
         timestamp: new Date(),
-        data: {
-          tasks,
-          sessions,
-          overrides,
-          sleepData,
-          taskHistory,
-          eveningEntries,
-          settings,
-          brainDecisions,
-          decisionExplanations,
-          adaptationSignals,
-          adaptationHistory,
-        },
+        data,
         metadata: {
-          totalRecords: tasks.length +
+          totalRecords:
+            tasks.length +
             sessions.length +
             overrides.length +
             sleepData.length +
@@ -99,33 +104,9 @@ export class DatabaseSnapshotManager {
             decisionExplanations.length +
             adaptationSignals.length +
             adaptationHistory.length,
-          estimatedSize: this.estimateSize({
-            tasks,
-            sessions,
-            overrides,
-            sleepData,
-            taskHistory,
-            eveningEntries,
-            settings,
-            brainDecisions,
-            decisionExplanations,
-            adaptationSignals,
-            adaptationHistory,
-          }),
-          checksum: this.calculateChecksum({
-            tasks,
-            sessions,
-            overrides,
-            sleepData,
-            taskHistory,
-            eveningEntries,
-            settings,
-            brainDecisions,
-            decisionExplanations,
-            adaptationSignals,
-            adaptationHistory,
-          })
-        }
+          estimatedSize: this.estimateSize(data),
+          checksum,
+        },
       };
 
       logger.info('Snapshot créé', { totalRecords: snapshot.metadata.totalRecords });
@@ -143,6 +124,14 @@ export class DatabaseSnapshotManager {
   static async restoreSnapshot(snapshot: DatabaseSnapshot): Promise<void> {
     try {
       logger.info('Restauration de la base de données');
+
+      const expected = snapshot.metadata?.checksum;
+      if (expected) {
+        const actual = await this.calculateChecksum(snapshot.data);
+        if (actual !== expected) {
+          throw new Error('Snapshot checksum mismatch');
+        }
+      }
 
       // Transaction atomique: soit tout est restauré, soit rien.
       const tables: any[] = [
@@ -224,8 +213,12 @@ export class DatabaseSnapshotManager {
       const snapshot = JSON.parse(jsonString) as DatabaseSnapshot;
       
       // Validation basique
-      if (!snapshot.version || !snapshot.timestamp || !snapshot.data) {
+      if (typeof snapshot.version !== 'number' || !snapshot.timestamp || !snapshot.data) {
         throw new Error('Format de snapshot invalide');
+      }
+
+      if (typeof (snapshot as any).timestamp === 'string' || typeof (snapshot as any).timestamp === 'number') {
+        (snapshot as any).timestamp = new Date((snapshot as any).timestamp);
       }
 
       return snapshot;
@@ -249,17 +242,19 @@ export class DatabaseSnapshotManager {
    * @param data Données à analyser
    * @returns Checksum MD5 simulé
    */
-  private static calculateChecksum(data: any): string {
+  private static async calculateChecksum(data: any): Promise<string> {
     const jsonString = JSON.stringify(data);
-    let hash = 0;
-    
-    for (let i = 0; i < jsonString.length; i++) {
-      const char = jsonString.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
+
+    const subtle = globalThis.crypto?.subtle;
+    if (subtle) {
+      const bytes = new TextEncoder().encode(jsonString);
+      const digest = await subtle.digest('SHA-256', bytes);
+      return Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
     }
-    
-    return Math.abs(hash).toString(16);
+
+    throw new Error('WebCrypto unavailable: cannot compute SHA-256 checksum');
   }
 
   /**
