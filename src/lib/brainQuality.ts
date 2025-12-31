@@ -1,5 +1,19 @@
 // Auto-évaluation de la qualité du cerveau - Phase 6
-import { Session, Override, ModeTransition } from './types';
+
+type SessionLike = {
+  completionRate?: number;
+  completedTasks?: number;
+  plannedTasks?: number;
+  allowedTasks?: unknown[];
+  rejectedTasks?: unknown[];
+};
+
+type OverrideLike = unknown;
+
+type ModeTransitionLike = {
+  triggeredBy?: string;
+  userConfirmed?: boolean;
+};
 
 export interface BrainQualityComponents {
   // 1. Completion accuracy
@@ -22,17 +36,26 @@ export interface BrainQualityComponents {
 }
 
 export function computeBrainQuality(
-  sessions: Session[],
-  overrides: Override[],
-  modeTransitions: ModeTransition[]
+  sessions: SessionLike[],
+  overrides: OverrideLike[],
+  modeTransitions: ModeTransitionLike[]
 ): number {
   // 1. Completion accuracy
-  const goodSessions = sessions.filter(s => s.completionRate > 0.7);
+  const goodSessions = sessions.filter(s => {
+    if (typeof s.completionRate === 'number') return s.completionRate > 0.7;
+    if (typeof s.completedTasks === 'number' && typeof s.plannedTasks === 'number' && s.plannedTasks > 0) {
+      return (s.completedTasks / s.plannedTasks) > 0.7;
+    }
+    return false;
+  });
   const completionAccuracy = goodSessions.length / Math.max(sessions.length, 1);
   
   // 2. Override penalty
-  const totalDecisions = sessions.reduce((sum, s) => 
-    sum + s.allowedTasks.length + s.rejectedTasks.length, 0);
+  const totalDecisions = sessions.reduce((sum, s) => {
+    const allowed = Array.isArray(s.allowedTasks) ? s.allowedTasks.length : (typeof s.plannedTasks === 'number' ? s.plannedTasks : 0);
+    const rejected = Array.isArray(s.rejectedTasks) ? s.rejectedTasks.length : 0;
+    return sum + allowed + rejected;
+  }, 0);
   
   const overridePenalty = 1 - (overrides.length / Math.max(totalDecisions, 1));
   
@@ -44,8 +67,13 @@ export function computeBrainQuality(
       systemTriggers.length : 0;
   
   const suggestionAcceptance = sessions.length > 0 ? 
-    sessions.reduce((sum, s) => 
-      sum + (s.completedTasks / Math.max(s.allowedTasks.length, 1)), 0) / sessions.length : 0;
+    sessions.reduce((sum, s) => {
+      const completed = typeof s.completedTasks === 'number' ? s.completedTasks : 0;
+      const planned = Array.isArray(s.allowedTasks)
+        ? s.allowedTasks.length
+        : (typeof s.plannedTasks === 'number' ? s.plannedTasks : 0);
+      return sum + (completed / Math.max(planned, 1));
+    }, 0) / sessions.length : 0;
   
   const userAlignmentScore = (modeAcceptance + suggestionAcceptance) / 2;
   

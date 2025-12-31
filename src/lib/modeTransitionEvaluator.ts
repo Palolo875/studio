@@ -2,7 +2,6 @@
 // Implémentation de l'évaluateur de transitions pour détecter l'inactivité de 7 jours
 
 import { SovereigntyManager, SovereigntyMode } from './modeEngine';
-import { Session } from './types';
 import { createLogger } from '@/lib/logger';
 
 const logger = createLogger('ModeTransitionEvaluator');

@@ -2,8 +2,13 @@
 // Implémentation des 4 fonctions de transition avec triggers temporels
 
 import { SovereigntyMode } from './phase7Implementation';
-import { Session, UserAction } from './types';
 import { createLogger } from '@/lib/logger';
+
+type SessionLike = {
+  timestamp: number;
+  plannedTasks: number;
+  completedTasks: number;
+};
 
 const logger = createLogger('ModeEngine');
 
@@ -107,7 +112,7 @@ export class SovereigntyManager {
 
   // Évaluer les transitions automatiques
   async evaluateAutomaticTransitions(
-    sessions: Session[],
+    sessions: SessionLike[],
     overrides: { timestamp: number }[],
     userId: string
   ) {

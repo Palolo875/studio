@@ -1,5 +1,21 @@
 // Métriques de progression utilisateur - Phase 6
-import { Task, Session, Override } from './types';
+
+type TaskLike = {
+  tangibleResult?: boolean;
+  status?: string;
+  estimatedDuration?: number;
+  actualDuration?: number;
+  createdAt?: Date | number;
+};
+
+type SessionLike = {
+  plannedTasks: number;
+  completedTasks: number;
+};
+
+type OverrideLike = {
+  timestamp: number;
+};
 
 // Calcul métriques progression
 export interface UserProgressMetrics {
@@ -48,13 +64,13 @@ export function computeVariance(values: number[]): number {
 }
 
 export function computeProgressMetrics(
-  tasks: Task[],
-  sessions: Session[],
-  overrides: Override[]
+  tasks: TaskLike[],
+  sessions: SessionLike[],
+  overrides: OverrideLike[]
 ): UserProgressMetrics {
   // 1. Tangible completion
   const tangibleTasks = tasks.filter(t => t.tangibleResult === true);
-  const completedTangible = tangibleTasks.filter(t => t.status === "DONE");
+  const completedTangible = tangibleTasks.filter(t => String(t.status).toUpperCase() === "DONE");
   const tangibleRate = tangibleTasks.length > 0 ? completedTangible.length / tangibleTasks.length : 0;
   
   // 2. Session stability
@@ -92,8 +108,12 @@ export function computeProgressMetrics(
   }
   
   // 5. Long-term recurrence
-  const longTermTasks = tasks.filter(t => t.createdAt < now - 7 * DAY_MS);
-  const completedLongTerm = longTermTasks.filter(t => t.status === "DONE");
+  const longTermTasks = tasks.filter(t => {
+    const createdAtMs = t.createdAt instanceof Date ? t.createdAt.getTime() : (typeof t.createdAt === 'number' ? t.createdAt : undefined);
+    if (typeof createdAtMs !== 'number') return false;
+    return createdAtMs < now - 7 * DAY_MS;
+  });
+  const completedLongTerm = longTermTasks.filter(t => String(t.status).toUpperCase() === "DONE");
   const recurrence = longTermTasks.length > 0 ? completedLongTerm.length / longTermTasks.length : 0;
   
   return {

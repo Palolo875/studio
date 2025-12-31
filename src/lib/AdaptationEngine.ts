@@ -14,8 +14,24 @@ import { DriftMonitor } from './adaptationController';
 import { AntiOverfittingEngine, AdaptationSample } from './antiOverfitting';
 import { computeProgressMetrics, UserProgressMetrics } from './progressMetrics';
 import { AdaptationValidationManager, AdaptationProposal } from './adaptationValidation';
-import { Task, Session, Override } from './types';
 import { createLogger } from '@/lib/logger';
+
+type TaskLike = {
+    tangibleResult?: boolean;
+    status?: string;
+    estimatedDuration?: number;
+    actualDuration?: number;
+    createdAt?: Date | number;
+};
+
+type SessionLike = {
+    plannedTasks: number;
+    completedTasks: number;
+};
+
+type OverrideLike = {
+    timestamp: number;
+};
 
 const logger = createLogger('AdaptationEngine');
 
@@ -172,7 +188,7 @@ export class AdaptationEngine {
     /**
      * Calcule les métriques de progression (Phase 6.4)
      */
-    getProgress(tasks: Task[], sessions: Session[], overrides: Override[]): UserProgressMetrics {
+    getProgress(tasks: TaskLike[], sessions: SessionLike[], overrides: OverrideLike[]): UserProgressMetrics {
         return computeProgressMetrics(tasks, sessions, overrides);
     }
 

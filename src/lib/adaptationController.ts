@@ -8,8 +8,17 @@ import {
 } from './adaptationMemory';
 
 import { createLogger } from '@/lib/logger';
+import {
+  getLatestAdaptationHistory,
+  markAdaptationHistoryReverted,
+  pruneAdaptationSignals,
+  getSetting,
+  setSetting,
+} from './database/index';
 
 const logger = createLogger('AdaptationController');
+
+const ADAPTATION_PARAMETERS_SETTING_KEY = 'adaptation_parameters';
 
 // Fonction pour inverser les deltas de paramètres (pour rollback)
 export function invertDelta(delta: ParameterDelta[]): ParameterDelta[] {
@@ -22,32 +31,49 @@ export function invertDelta(delta: ParameterDelta[]): ParameterDelta[] {
 
 // Permet rollback
 export async function rollbackAdaptation(adaptationId: string) {
-  // Dans une implémentation réelle, cela récupérerait l'adaptation depuis la base de données
-  // const adaptation = await db.adaptations.get(adaptationId);
-  
-  // Pour l'exemple, nous simulons une adaptation
-  const adaptation: AdaptationHistory = {
-    id: adaptationId,
-    timestamp: Date.now(),
-    parameterChanges: [{
-      parameterName: "maxTasks",
-      oldValue: 3,
-      newValue: 5
-    }],
-    qualityBefore: 0.6,
-    qualityAfter: 0.7,
-    userConsent: "ACCEPTED"
-  };
-  
-  const rollback = invertDelta(adaptation.parameterChanges);
+  const latest = await getLatestAdaptationHistory();
+  if (!latest || typeof latest.change !== 'object' || latest.change === null) {
+    logger.warn('Rollback requested but no persisted adaptation history found', { adaptationId });
+    return;
+  }
+
+  const change = latest.change as any;
+  const persistedId = typeof change.id === 'string' ? change.id : undefined;
+  const deltas = Array.isArray(change.parameterChanges) ? (change.parameterChanges as ParameterDelta[]) : undefined;
+  if (!persistedId || persistedId !== adaptationId || !deltas || deltas.length === 0) {
+    logger.warn('Rollback refused: adaptation id mismatch or missing deltas', { adaptationId, persistedId });
+    return;
+  }
+
+  const rollback = invertDelta(deltas);
   await applyParameters(rollback);
+  if (typeof latest.id === 'number') {
+    await markAdaptationHistoryReverted(latest.id);
+  }
   logger.info('ADAPTATION_ROLLEDBACK', { adaptationId });
 }
 
 // Fonction pour appliquer les paramètres
 export async function applyParameters(delta: ParameterDelta[]) {
-  // Implémentation dépendante de la structure du système
-  // Mettre à jour les paramètres du système avec les deltas fournis
+  const current = await getSetting<Parameters>(ADAPTATION_PARAMETERS_SETTING_KEY);
+  const base: Parameters = current ?? {
+    maxTasks: 5,
+    strictness: 0.6,
+    coachFrequency: 1 / 30,
+    coachEnabled: true,
+    energyForecastMode: 'ACCURATE',
+    defaultMode: 'STRICT',
+    sessionBuffer: 10,
+    estimationFactor: 1.0,
+  };
+
+  const next: Parameters = { ...base };
+  for (const d of delta) {
+    (next as any)[d.parameterName] = d.newValue;
+  }
+
+  const clamped = clampParameters(next);
+  await setSetting(ADAPTATION_PARAMETERS_SETTING_KEY, clamped);
   logger.info('Application des paramètres', { delta });
 }
 
@@ -93,19 +119,12 @@ export async function exportEncryptedArchive(signals: any) {
 // Pruning hebdomadaire
 export function setupAdaptationPruning() {
   setInterval(async () => {
-    const now = Date.now();
     const maxAge = ADAPTATION_CONSTRAINTS.ADAPTATION_MEMORY.maxAge;
-    
-    // Dans une implémentation réelle, cela récupérerait les anciens signaux depuis la base de données
-    // const oldSignals = db.adaptationSignals.where("timestamp").below(now - maxAge);
-    
-    // Pour l'exemple, nous simulons des anciens signaux
-    const oldSignals = [];
-    
-    if (oldSignals.length > 0) {
-      await exportEncryptedArchive(oldSignals);
-      // await oldSignals.delete();
-      logger.info('Suppression anciens signaux d\'adaptation', { count: oldSignals.length });
+    const maxSize = ADAPTATION_CONSTRAINTS.ADAPTATION_MEMORY.maxSize;
+
+    const deletedCount = await pruneAdaptationSignals(maxAge, maxSize);
+    if (deletedCount > 0) {
+      logger.info("Suppression anciens signaux d'adaptation", { count: deletedCount });
     }
   }, 7 * 24 * 60 * 60 * 1000); // Toutes les semaines
 }
@@ -123,7 +142,7 @@ export function enterConservativeMode() {
 
 // Détecter la dérive progressive
 export class DriftMonitor {
-  private history: Parameters[] = [];
+  private history: Array<Parameters & { timestamp: number }> = [];
   
   track(params: Parameters) {
     this.history.push({ ...params, timestamp: Date.now() });

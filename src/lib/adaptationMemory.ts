@@ -1,5 +1,4 @@
 // Types pour la mémoire d'adaptation - Phase 6
-import { Task, Session, Override, ModeTransition } from './types';
 
 // Types énumérés pour les niveaux d'énergie
 export type EnergyLevel = "HIGH" | "MEDIUM" | "LOW";

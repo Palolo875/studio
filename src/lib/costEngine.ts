@@ -1,8 +1,11 @@
 // Cost Engine - Calcul du coût des overrides et responsabilisation
 // Implémentation du calcul du coût intégré dans l'UI
 
-import { Task } from './types';
 import { OverrideCostCalculation } from './phase7Implementation';
+
+type TaskLike = {
+  effort?: string;
+};
 
 // Interface pour le contexte utilisateur
 export interface UserContext {
@@ -17,7 +20,7 @@ export interface UserContext {
 
 // Fonction pour calculer le coût d'un override
 export function computeOverrideCost(
-  task: Task,
+  task: TaskLike,
   context: UserContext
 ): OverrideCostCalculation {
   const base = 0.2;

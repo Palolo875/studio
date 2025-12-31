@@ -19,8 +19,30 @@ import { computeProgressMetrics } from './progressMetrics';
 import { computeBrainQuality } from './brainQuality';
 import { AdaptationPanel } from './adaptationTransparency';
 import { createLogger } from '@/lib/logger';
+import {
+  addAdaptationSignal as addAdaptationSignalToDb,
+  recordAdaptationHistory,
+  setSetting,
+} from './database/index';
 
 const logger = createLogger('Phase6Implementation');
+
+const ADAPTATION_PARAMETERS_SETTING_KEY = 'adaptation_parameters';
+
+function computeParameterDeltas(before: Parameters, after: Parameters) {
+  const deltas: { parameterName: string; oldValue: any; newValue: any }[] = [];
+  const keys = Object.keys(after) as Array<keyof Parameters>;
+  for (const k of keys) {
+    if ((after as any)[k] !== (before as any)[k]) {
+      deltas.push({
+        parameterName: String(k),
+        oldValue: (before as any)[k],
+        newValue: (after as any)[k],
+      });
+    }
+  }
+  return deltas;
+}
 
 // Classe principale pour la gestion de l'adaptation
 export class AdaptationManager {
@@ -33,12 +55,20 @@ export class AdaptationManager {
     
     // Démarrer le pruning automatique
     setupAdaptationPruning();
+
+    // Persister les paramètres initiaux (best-effort)
+    void setSetting(ADAPTATION_PARAMETERS_SETTING_KEY, this.parameters);
   }
   
   // Ajouter un signal d'adaptation
   addAdaptationSignal(signal: AdaptationSignal) {
-    // Dans une implémentation réelle, cela stockerait le signal
     logger.info("Signal d'adaptation reçu", { signal });
+
+    void addAdaptationSignalToDb({
+      timestamp: signal.timestamp,
+      type: signal.type,
+      payload: signal,
+    });
     
     // Tracker les paramètres pour la détection de dérive
     this.driftMonitor.track(this.parameters);
@@ -50,7 +80,8 @@ export class AdaptationManager {
     const aggregate = aggregateWeek(signals);
     
     // Appliquer les règles d'ajustement
-    const newParameters = applyAdjustmentRules(aggregate, this.parameters);
+    const nextParameters = applyAdjustmentRules(aggregate, this.parameters);
+    const newParameters = clampParameters(nextParameters);
     
     // Vérifier si la qualité du cerveau a diminué significativement
     // (simulation - dans la vraie implémentation, cela utiliserait les vraies données)
@@ -63,8 +94,27 @@ export class AdaptationManager {
       // rollbackAdaptation("recent_adaptation_id"); // Dans la vraie implémentation
     }
     
-    // Mettre à jour les paramètres
+    // Mettre à jour les paramètres + persister
+    const before = this.parameters;
     this.parameters = newParameters;
+    void setSetting(ADAPTATION_PARAMETERS_SETTING_KEY, this.parameters);
+
+    const deltas = computeParameterDeltas(before, this.parameters);
+    if (deltas.length > 0) {
+      const adaptationId = `adaptation_${Date.now()}`;
+      void recordAdaptationHistory({
+        timestamp: Date.now(),
+        change: {
+          id: adaptationId,
+          timestamp: Date.now(),
+          parameterChanges: deltas,
+          qualityBefore: brainQualityBefore,
+          qualityAfter: brainQualityAfter,
+          userConsent: 'ACCEPTED',
+        },
+        reverted: false,
+      });
+    }
     
     // Tracker les nouveaux paramètres
     this.driftMonitor.track(this.parameters);
