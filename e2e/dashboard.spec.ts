@@ -10,11 +10,10 @@ test.describe('Dashboard', () => {
     });
 
     test('should show morning ritual dialog on first visit', async ({ page }) => {
-        // Clear localStorage to simulate first visit
-        await page.evaluate(() => {
-            localStorage.clear();
-        });
-        await page.reload();
+        // Seed DB: reset and force morning ritual incomplete
+        await page.goto('/test/seed?reset=1&morning=incomplete');
+        await page.waitForSelector('[data-testid="seed-status"]');
+        await page.goto('/dashboard');
 
         // Should show the morning ritual dialog
         const dialog = page.getByRole('dialog');
@@ -25,11 +24,10 @@ test.describe('Dashboard', () => {
     });
 
     test('should complete morning ritual and show playlist', async ({ page }) => {
-        // Clear localStorage
-        await page.evaluate(() => {
-            localStorage.clear();
-        });
-        await page.reload();
+        // Seed DB: reset and force morning ritual incomplete
+        await page.goto('/test/seed?reset=1&morning=incomplete');
+        await page.waitForSelector('[data-testid="seed-status"]');
+        await page.goto('/dashboard');
 
         // Wait for dialog
         const dialog = page.getByRole('dialog');
@@ -53,13 +51,10 @@ test.describe('Dashboard', () => {
     });
 
     test('should display search input', async ({ page }) => {
-        // Set up as if morning ritual is complete
-        await page.evaluate(() => {
-            const today = new Date().toISOString().split('T')[0];
-            localStorage.setItem('lastMorningCheckin', today);
-            localStorage.setItem('todayEnergyLevel', 'normal');
-        });
-        await page.reload();
+        // Seed DB: morning ritual complete
+        await page.goto('/test/seed?reset=1&morning=complete&seedTasks=1');
+        await page.waitForSelector('[data-testid="seed-status"]');
+        await page.goto('/dashboard');
 
         // Search input should be visible
         const searchInput = page.getByPlaceholder(/chercher/i);
@@ -71,13 +66,10 @@ test.describe('Dashboard', () => {
     });
 
     test('should toggle between playlist and timeline views', async ({ page }) => {
-        // Set up as if morning ritual is complete
-        await page.evaluate(() => {
-            const today = new Date().toISOString().split('T')[0];
-            localStorage.setItem('lastMorningCheckin', today);
-            localStorage.setItem('todayEnergyLevel', 'normal');
-        });
-        await page.reload();
+        // Seed DB: morning ritual complete
+        await page.goto('/test/seed?reset=1&morning=complete&seedTasks=1');
+        await page.waitForSelector('[data-testid="seed-status"]');
+        await page.goto('/dashboard');
 
         // Should have tabs
         const playlistTab = page.getByRole('tab', { name: /ma playlist/i });
@@ -97,13 +89,10 @@ test.describe('Dashboard', () => {
     });
 
     test('should show panic button for urgent tasks', async ({ page }) => {
-        // Set up as if morning ritual is complete
-        await page.evaluate(() => {
-            const today = new Date().toISOString().split('T')[0];
-            localStorage.setItem('lastMorningCheckin', today);
-            localStorage.setItem('todayEnergyLevel', 'normal');
-        });
-        await page.reload();
+        // Seed DB: morning ritual complete
+        await page.goto('/test/seed?reset=1&morning=complete&seedTasks=1');
+        await page.waitForSelector('[data-testid="seed-status"]');
+        await page.goto('/dashboard');
 
         // Panic button should be visible (Siren icon button)
         const panicButton = page.locator('button').filter({ has: page.locator('svg.lucide-siren') });
@@ -111,13 +100,10 @@ test.describe('Dashboard', () => {
     });
 
     test('should limit playlist regeneration to 2 times', async ({ page }) => {
-        // Set up as if morning ritual is complete and already regenerated twice
-        await page.evaluate(() => {
-            const today = new Date().toISOString().split('T')[0];
-            localStorage.setItem('lastMorningCheckin', today);
-            localStorage.setItem('todayEnergyLevel', 'normal');
-        });
-        await page.reload();
+        // Seed DB: morning ritual complete
+        await page.goto('/test/seed?reset=1&morning=complete&seedTasks=1');
+        await page.waitForSelector('[data-testid="seed-status"]');
+        await page.goto('/dashboard');
 
         // Find refresh button
         const refreshButton = page.getByRole('button', { name: /rafraîchir/i });
@@ -159,13 +145,10 @@ test.describe('Accessibility', () => {
     test('should have no major accessibility violations', async ({ page }) => {
         await page.goto('/dashboard');
 
-        // Set up as if morning ritual is complete
-        await page.evaluate(() => {
-            const today = new Date().toISOString().split('T')[0];
-            localStorage.setItem('lastMorningCheckin', today);
-            localStorage.setItem('todayEnergyLevel', 'normal');
-        });
-        await page.reload();
+        // Seed DB: morning ritual complete
+        await page.goto('/test/seed?reset=1&morning=complete&seedTasks=1');
+        await page.waitForSelector('[data-testid="seed-status"]');
+        await page.goto('/dashboard');
 
         // Basic accessibility checks
         // Check for main landmark
