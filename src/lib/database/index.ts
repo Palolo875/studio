@@ -39,6 +39,14 @@ export interface DBTask {
     id: string;
     title: string;
     description?: string;
+    nlpHints?: {
+        detectedLang: string;
+        energySuggestion?: string;
+        effortSuggestion?: string;
+        confidence: number;
+        isUncertain: boolean;
+        rawText: string;
+    };
     duration: number;
     effort: 'low' | 'medium' | 'high';
     urgency: 'low' | 'medium' | 'high' | 'urgent';
@@ -75,6 +83,8 @@ export async function upsertTasks(tasks: DBTask[]): Promise<void> {
                 ...t,
                 createdAt: prev.createdAt,
                 activationCount: prev.activationCount,
+                nlpHints: t.nlpHints ?? prev.nlpHints,
+                tags: t.tags ?? prev.tags,
             };
         });
 
@@ -527,6 +537,26 @@ class KairuFlowDatabase extends Dexie {
                 }
             });
 
+        // Version 7: Phase 2 reversible NLP hints on tasks
+        this.version(7).stores({
+            tasks: 'id, status, urgency, deadline, category, createdAt, updatedAt',
+            sessions: 'id, timestamp, state, createdAt',
+            taskHistory: '++id, taskId, action, timestamp',
+            userPatterns: 'id, userId, patternType, updatedAt',
+            overrides: '++id, timestamp',
+            sleepData: '++id, date, createdAt',
+
+            brainDecisions: 'id, timestamp, brainVersion',
+            brainVersions: 'id, releasedAt',
+            decisionExplanations: 'id, decisionId, timestamp',
+            adaptationSignals: '++id, timestamp, type',
+            adaptationHistory: '++id, timestamp',
+            snapshots: '++id, timestamp, name',
+
+            eveningEntries: 'id, timestamp, updatedAt',
+            settings: 'key, updatedAt',
+        });
+
         logger.info('Database initialized');
 
     }
@@ -710,11 +740,19 @@ export async function createTask(task: Omit<DBTask, 'createdAt' | 'updatedAt' | 
  */
 export async function updateTask(taskId: string, updates: Partial<DBTask>): Promise<void> {
     try {
+        const safeUpdates: Partial<DBTask> = { ...updates };
+        if ('nlpHints' in safeUpdates && safeUpdates.nlpHints === undefined) {
+            delete (safeUpdates as Partial<DBTask>).nlpHints;
+        }
+        if ('tags' in safeUpdates && safeUpdates.tags === undefined) {
+            delete (safeUpdates as Partial<DBTask>).tags;
+        }
+
         await db.tasks.update(taskId, {
-            ...updates,
+            ...safeUpdates,
             updatedAt: new Date(),
         });
-        logger.debug('Task updated', { taskId, updates: Object.keys(updates) });
+        logger.debug('Task updated', { taskId, updates: Object.keys(safeUpdates) });
     } catch (error) {
         logger.error('Failed to update task', error as Error, { taskId });
         throw error;

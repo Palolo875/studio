@@ -119,7 +119,7 @@ export function useSettingsStore() {
     if (!settings.autoDetectLanguage) return settings.language;
     
     // Utiliser le détecteur SOTA
-    return LanguageDetector.detect(text);
+    return LanguageDetector.detect(text, settings.language).lang;
   };
 
   // Obtenir les langues préférées dans l'ordre

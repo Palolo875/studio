@@ -292,8 +292,8 @@ export async function classifyTask(
         // Déterminer si la classification est incertaine (Zone de Quarantaine)
         const isUncertain = energyConfidence < CONFIDENCE_THRESHOLD || effortConfidence < CONFIDENCE_THRESHOLD;
 
-        // Déterminer si la tâche est "unknown" (cas refusés augmentés)
-        const isUnknown = energyConfidence < 0.4 && effortConfidence < 0.4;
+        // Règle Phase 2: si confiance < 0.7 => "unknown" (sortie valide, non bloquante)
+        const isUnknown = isUncertain;
 
         logger.endTimer('classify-task');
 

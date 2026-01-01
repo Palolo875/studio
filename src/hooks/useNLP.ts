@@ -13,6 +13,7 @@ import { nlpTelemetryService } from '@/lib/nlp/TelemetryService';
 import { createNLPContractResult } from '@/lib/nlp/NLPContract';
 import { basicRawCapture, type RawCaptureTask } from '@/lib/nlp/basicRawCapture';
 import type { DBTask } from '@/lib/database';
+import type { TaskClassification } from '@/lib/nlp/RealTaskClassifier';
 
 function toContractMode(mode: unknown): 'RAW_CAPTURE_ONLY' | 'NORMAL' | undefined {
   if (mode === 'RAW_CAPTURE_ONLY') return 'RAW_CAPTURE_ONLY';
@@ -20,13 +21,26 @@ function toContractMode(mode: unknown): 'RAW_CAPTURE_ONLY' | 'NORMAL' | undefine
   return undefined;
 }
 
-function ensureClassificationShape(classification: unknown): unknown {
+type ClassificationShape = TaskClassification & { isUncertain: boolean; unknown?: boolean };
+
+function ensureClassificationShape(classification: unknown): ClassificationShape {
   if (classification && typeof classification === 'object') {
-    const c = classification as Record<string, unknown>;
-    if (typeof c.isUncertain === 'boolean') return classification;
-    return { ...c, isUncertain: false };
+    const c = classification as Partial<ClassificationShape>;
+    if (typeof c.isUncertain === 'boolean') return c as ClassificationShape;
+    return { ...(c as TaskClassification), isUncertain: false };
   }
-  return { isUncertain: true };
+
+  return {
+    energyType: 'admin',
+    energyConfidence: 0,
+    effort: 'M',
+    effortConfidence: 0,
+    sentiment: 'neutral',
+    urgency: 0,
+    autoTags: ['uncategorized'],
+    isUncertain: true,
+    unknown: true,
+  };
 }
 
 function rawCaptureToDbTasks(items: RawCaptureTask[], source: 'raw' | 'fallback'): DBTask[] {
@@ -75,13 +89,13 @@ export function useNLP() {
     
     try {
       // ÉTAPE 1 : Langue
-      const detectedLang = settings.autoDetectLanguage 
-        ? LanguageDetector.detect(text)
+      const detectedLang: 'fr' | 'en' | 'es' = settings.autoDetectLanguage
+        ? LanguageDetector.detect(text, settings.language).lang
         : settings.language;
       
       // ÉTAPE 2 : Extraction avec mesure du temps
       const extractionStartTime = performance.now();
-      const rawTasks = extractTasks(text, detectedLang as 'fr' | 'en' | 'es');
+      const rawTasks = extractTasks(text, detectedLang);
       const extractionTime = performance.now() - extractionStartTime;
       
       // Enregistrer les métriques de télémétrie
@@ -98,7 +112,7 @@ export function useNLP() {
       // ÉTAPE 4 : Fusion + Stockage ✅ NOUVEAU
       const fullTasks: DBTask[] = classifiedTasks.map(({ raw, classification }) => {
         const safeClassification = ensureClassificationShape(classification);
-        return createFullTask(raw, safeClassification as any);
+        return createFullTask(raw, safeClassification);
       });
       
       // Créer le résultat avec contrat NLP

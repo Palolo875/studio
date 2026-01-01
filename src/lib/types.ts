@@ -12,6 +12,14 @@ export type Task = {
   lastAccessed: string; // ISO string
   completionRate: number; // 0-100
   description?: string;
+  nlpHints?: {
+    detectedLang: string;
+    energySuggestion?: string;
+    effortSuggestion?: string;
+    confidence: number;
+    isUncertain: boolean;
+    rawText: string;
+  };
   priority?: "low" | "medium" | "high";
   energyRequired?: "low" | "medium" | "high";
   estimatedDuration?: number; // in minutes

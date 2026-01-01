@@ -3,6 +3,7 @@
  * Utilise des techniques avancées pour une précision maximale
  */
 export class LanguageDetector {
+
   // Modèles de langue basés sur des n-grammes et des caractéristiques linguistiques
   private static readonly LANGUAGE_MODELS = {
     fr: {
@@ -80,9 +81,10 @@ export class LanguageDetector {
     const scores = this.modelBasedDetection(cleanedText, words);
 
     // Trouver la langue avec le meilleur score
-    const best = Object.entries(scores).reduce((max, [lang, score]) =>
-      score > max.score ? { lang: lang as any, score } : max
-      , { lang: uiLang as any, score: 0 });
+    const best = (Object.entries(scores) as Array<['fr' | 'en' | 'es', number]>).reduce(
+      (max, [lang, score]) => (score > max.score ? { lang, score } : max),
+      { lang: uiLang, score: 0 }
+    );
 
     // Règle 2 : Texte mixte ou confiance basse
     if (best.score < 0.3) {
@@ -226,9 +228,10 @@ export class LanguageDetector {
     }
 
     // Trouver la langue avec le plus de caractères correspondants
-    const best = Object.entries(charCounts).reduce((max, [lang, count]) =>
-      count > max.count ? { lang: lang as any, count } : max
-      , { lang: 'fr' as any, count: 0 });
+    const best = (Object.entries(charCounts) as Array<['fr' | 'en' | 'es', number]>).reduce(
+      (max, [lang, count]) => (count > max.count ? { lang, count } : max),
+      { lang: 'fr' as const, count: 0 }
+    );
 
     return best.lang;
   }

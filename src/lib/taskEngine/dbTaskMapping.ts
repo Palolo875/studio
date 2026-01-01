@@ -43,7 +43,16 @@ export function dbTaskToEngineTask(dbTask: DBTask, history: DBTaskHistory[] = []
     activationCount: dbTask.activationCount,
     lastActivated: dbTask.lastActivated,
     createdAt: dbTask.createdAt,
-    nlpMetadata: undefined,
+    nlpMetadata: dbTask.nlpHints
+      ? {
+          detectedLang: dbTask.nlpHints.detectedLang,
+          energySuggestion: dbTask.nlpHints.energySuggestion,
+          effortSuggestion: dbTask.nlpHints.effortSuggestion,
+          confidence: dbTask.nlpHints.confidence,
+          isUncertain: dbTask.nlpHints.isUncertain,
+          rawText: dbTask.nlpHints.rawText,
+        }
+      : undefined,
     origin: dbTask.urgency === 'urgent' ? 'imposed' : 'self_chosen',
     hasTangibleResult: true,
   };

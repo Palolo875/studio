@@ -185,7 +185,7 @@ function EveningContent() {
     if (!text) return;
 
     try {
-      const lang = LanguageDetector.detect(text) as 'fr' | 'en' | 'es';
+      const lang = LanguageDetector.detect(text, 'fr').lang;
       const rawTasks = extractTasks(text, lang);
       const classified = await Promise.all(
         rawTasks.map(async (task) => ({ raw: task, classification: await classifyTask(task) }))

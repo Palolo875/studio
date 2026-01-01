@@ -353,6 +353,18 @@ Les sections ci-dessous sont conservées comme référence. Le suivi d’exécut
 | Énergie: stabilité `stable/volatile` prise en compte | ✅ | `src/components/dashboard/energy-check-in.tsx` ; `src/components/dashboard/dashboard-client.tsx` ; `src/lib/playlistClient.ts` |
 | Trace cohérente (pas de double moteur) | ✅ | `src/components/dashboard/playlist-generator.tsx` (trace UI supprimée) ; `src/lib/playlistClient.ts` (log décision alignée) |
 
+## Truth Table — Phase 2 (preuve-based)
+
+| Exigence Phase 2 | Statut | Preuves (fichiers) |
+|---|---:|---|
+| NLP = capteur structurant (pas décideur) | ✅ | `docs/PHASE_2_NLP_CAPTEUR_STRUCTURANT.md` ; suppression priorité: `src/components/capture/capture-client.tsx`, `src/ai/flows/analyze-capture-flow.ts` |
+| Détection langue: fallback UI si texte trop court | ✅ | `src/lib/nlp/LanguageDetector.ts` (`reason: too_short`, `confidence: 0.3`) ; test `src/lib/nlp/__tests__/LanguageDetector.test.ts` |
+| Extraction: 1 action max par clause + split tâches composées | ✅ | `src/lib/nlp/TaskExtractor.ts` (`splitCompoundSentence`, flag `split_from_compound`) ; test `src/lib/nlp/__tests__/TaskExtractor.test.ts` |
+| Classification: confiance < 0.7 => unknown (sortie valide) | ✅ | `src/lib/nlp/RealTaskClassifier.ts` ; test `src/lib/nlp/__tests__/RealTaskClassifier.test.ts` |
+| Fusion: en cas d’incertitude, DBTask neutre (pas de décisions) | ✅ | `src/lib/nlp/TaskFactory.ts` (defaults) ; test `src/lib/nlp/__tests__/TaskFactory.test.ts` |
+| Réversibilité: persister des hints NLP structurés | ✅ | `src/lib/database/index.ts` (`DBTask.nlpHints`, schema v7) ; `src/lib/taskEngine/dbTaskMapping.ts` ; `src/lib/taskMapping.ts` ; test `src/lib/__tests__/taskMapping.test.ts` |
+| Mise à jour DB sûre: updateTask ne doit pas effacer nlpHints/tags | ✅ | `src/lib/database/index.ts` (`safeUpdates`) ; test `src/lib/database/database.test.ts` |
+
 ### État actuel Phase 6 (Adaptation) — preuves
 - Persistance signaux (`adaptationSignals`) : ✅ (`src/lib/database/index.ts`, `src/lib/phase6Implementation.ts`)
 - Persistance paramètres via settings (`adaptation_parameters`) : ✅ (`src/lib/adaptationController.ts`, `src/lib/phase6Implementation.ts`)

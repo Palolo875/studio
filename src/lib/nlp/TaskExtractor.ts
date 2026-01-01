@@ -165,47 +165,57 @@ export function extractTasks(text: string, uiLang: 'fr' | 'en' | 'es' = 'fr'): R
 
   // 4. Traiter chaque phrase
   for (const sentence of sentences) {
-    // Extraire les verbes potentiels avec scores
-    const potentialVerbs = extractPotentialVerbsWithScores(sentence, lang);
+    const clauses = splitCompoundSentence(sentence, lang);
 
-    // Règle Phase 2 : Limiter à l'action la plus probable par phrase
-    let bestAction: [string, number] | null = null;
-    for (const [verb, score] of potentialVerbs) {
-      if (!bestAction || score > bestAction[1]) {
-        bestAction = [verb, score];
+    for (const clause of clauses) {
+      // Extraire les verbes potentiels avec scores
+      const potentialVerbs = extractPotentialVerbsWithScores(clause, lang);
+
+      // Règle Phase 2 : Limiter à l'action la plus probable par clause
+      let bestAction: [string, number] | null = null;
+      for (const [verb, score] of potentialVerbs) {
+        if (!bestAction || score > bestAction[1]) {
+          bestAction = [verb, score];
+        }
       }
-    }
 
-    if (bestAction && bestAction[1] > confidenceThreshold) {
-      const [verb, score] = bestAction;
+      if (bestAction && bestAction[1] > confidenceThreshold) {
+        const [verb, score] = bestAction;
 
-      const task = createTaskWithContract({
-        id: generateId(),
-        action: verb,
-        object: extractObject(sentence, verb),
-        deadline: parseDateNL(sentence, lang),
-        effortHint: guessEffort(sentence),
-        rawText: sentence,
-        sentence: sentence,
-        confidence: score * langDetection.confidence, // Pondérer par la confiance de la langue
-        entities: extractEntities(sentence, lang)
-      }, {
-        inferred: false,
-        decided: false,
-        corrected: false,
-        extracted: true,
-        classified: false,
-        confidence: score
-      }, {
-        low_confidence: score < 0.7,
-        mixed_language: langDetection.reason === 'low_model_score_fallback_to_char',
-        linguistic_fatigue: fatigueState.level !== 'LOW'
-      });
+        const isFromSplit = clause.trim() !== sentence.trim();
+        const task = createTaskWithContract(
+          {
+            id: generateId(),
+            action: verb,
+            object: extractObject(clause, verb),
+            deadline: parseDateNL(clause, lang),
+            effortHint: guessEffort(clause),
+            rawText: clause,
+            sentence: clause,
+            confidence: score * langDetection.confidence, // Pondérer par la confiance de la langue
+            entities: extractEntities(clause, lang),
+          },
+          {
+            inferred: false,
+            decided: false,
+            corrected: false,
+            extracted: true,
+            classified: false,
+            confidence: score,
+          },
+          {
+            low_confidence: score < 0.7,
+            mixed_language: langDetection.reason === 'low_model_score_fallback_to_char',
+            linguistic_fatigue: fatigueState.level !== 'LOW',
+            split_from_compound: isFromSplit,
+          }
+        );
 
-      // Injecter la langue détectée dans les métadonnées
-      task.metadata.detectedLang = lang;
+        // Injecter la langue détectée dans les métadonnées
+        task.metadata.detectedLang = lang;
 
-      tasks.push(task);
+        tasks.push(task);
+      }
     }
   }
 
@@ -214,6 +224,31 @@ export function extractTasks(text: string, uiLang: 'fr' | 'en' | 'es' = 'fr'): R
 
   // Limiter à 5 tâches maximum par session de capture
   return tasks.slice(0, 5);
+}
+
+function splitCompoundSentence(sentence: string, lang: string): string[] {
+  const normalized = sentence.trim();
+  if (!normalized) return [];
+
+  const verbMap = ACTION_VERBS[lang as keyof typeof ACTION_VERBS];
+  if (!verbMap) return [normalized];
+
+  const lower = normalized.toLowerCase();
+  const verbsInSentence = Array.from(verbMap.keys()).filter((v) => lower.includes(v));
+  if (verbsInSentence.length < 2) return [normalized];
+
+  const separators = /\s+(?:et|puis|ensuite)\s+|\s*[;,]\s*/i;
+  const parts = normalized
+    .split(separators)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const clauses = parts.filter((part) => {
+    const partLower = part.toLowerCase();
+    return Array.from(verbMap.keys()).some((v) => partLower.includes(v));
+  });
+
+  return clauses.length >= 2 ? clauses : [normalized];
 }
 
 /**

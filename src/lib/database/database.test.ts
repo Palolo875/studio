@@ -99,6 +99,30 @@ describe('Database', () => {
             expect(tasks?.title).toBe('Updated Title');
         });
 
+        it('should not clear nlpHints or tags when updateTask is called with undefined fields', async () => {
+            await createTask({
+                ...sampleTask,
+                nlpHints: {
+                    detectedLang: 'fr',
+                    confidence: 0.5,
+                    isUncertain: true,
+                    rawText: 'Appeler Marc',
+                },
+                tags: ['keep'],
+            });
+
+            await updateTask('task-1', {
+                title: 'Updated Title',
+                nlpHints: undefined,
+                tags: undefined,
+            });
+
+            const task = await db.tasks.get('task-1');
+            expect(task?.title).toBe('Updated Title');
+            expect(task?.nlpHints?.rawText).toBe('Appeler Marc');
+            expect(task?.tags).toEqual(['keep']);
+        });
+
         it('should complete a task', async () => {
             await createTask(sampleTask);
             await completeTask('task-1');

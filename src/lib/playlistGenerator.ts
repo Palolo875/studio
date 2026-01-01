@@ -104,9 +104,7 @@ function analyzeTaskLanguageContext(task: TaskLike): { primaryLanguage: 'fr' | '
     return { primaryLanguage: 'fr', confidence: 0.5 }; // Fallback par défaut
   }
   
-  const detected = LanguageDetector.detect(textToAnalyze) as unknown;
-  const detectedLanguage =
-    typeof (detected as any)?.lang === 'string' ? ((detected as any).lang as 'fr' | 'en' | 'es') : 'fr';
+  const detectedLanguage = LanguageDetector.detect(textToAnalyze, 'fr').lang;
 
   // Calculer la confiance basée sur la longueur du texte
   const confidence = Math.min(1, textToAnalyze.length / 50); // 100% de confiance à partir de 50 caractères

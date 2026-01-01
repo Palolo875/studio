@@ -23,10 +23,6 @@ const TaskSchema = z.object({
     .describe(
       'The suggested deadline in a human-readable format, e.g., "demain", "vendredi", "dans 2 semaines".'
     ),
-  priority: z
-    .enum(['high', 'medium', 'low'])
-    .optional()
-    .describe('The inferred priority of the task.'),
 });
 
 const AnalyzeCaptureOutputSchema = z.object({
@@ -77,27 +73,17 @@ async function analyzeCaptureLocal(input: AnalyzeCaptureInput): Promise<AnalyzeC
     const tasks = fallback.map(t => ({
       title: t.content,
       deadline: undefined,
-      priority: 'medium' as const,
     }));
     return { tasks, notes: undefined, sentiment: inferSentiment(text) };
   }
 }
 
-function mapRawTaskToOutput(task: RawTaskWithContract): { title: string; deadline?: string; priority?: 'high' | 'medium' | 'low' } {
+function mapRawTaskToOutput(task: RawTaskWithContract): { title: string; deadline?: string } {
   const title = [task.action, task.object].filter(Boolean).join(' ').trim() || task.rawText;
   return {
     title,
     deadline: task.deadline ?? undefined,
-    priority: inferPriority(task),
   };
-}
-
-function inferPriority(task: RawTaskWithContract): 'high' | 'medium' | 'low' {
-  const text = `${task.rawText} ${task.object}`.toLowerCase();
-  if (text.includes('urgent') || text.includes('asap')) return 'high';
-  if (text.includes('demain') || text.includes('tomorrow')) return 'high';
-  if (text.includes('rapid') || text.includes('vite') || text.includes('quick')) return 'medium';
-  return 'medium';
 }
 
 function inferSentiment(text: string): string | undefined {
