@@ -8,6 +8,8 @@ import {
     getTodoTasks,
     getTasksByStatus,
     completeTask,
+    recordTaskProposals,
+    recordTaskSkips,
     updateTask,
     deleteTask,
     createSession,
@@ -15,7 +17,8 @@ import {
     addTaskHistory,
     getTaskHistory,
     type DBTask,
-} from '../index';
+    type DBTaskHistory,
+} from './index';
 
 describe('Database', () => {
     beforeEach(async () => {
@@ -200,7 +203,69 @@ describe('Database', () => {
             const history = await getTaskHistory('task-1');
 
             expect(history).toHaveLength(2);
-            expect(history.some(h => h.action === 'completed')).toBe(true);
+            expect(history.some((h: DBTaskHistory) => h.action === 'completed')).toBe(true);
+        });
+
+        it('should store completion metadata when provided', async () => {
+            await createTask({
+                id: 'task-meta',
+                title: 'Task with metadata',
+                duration: 30,
+                effort: 'medium',
+                urgency: 'medium',
+                impact: 'medium',
+                category: 'test',
+                status: 'todo',
+            });
+
+            await completeTask('task-meta', { duration: 42, energyLevel: 'low', sessionId: 'session-x' });
+
+            const history = await getTaskHistory('task-meta');
+            const completed = history.find((h: DBTaskHistory) => h.action === 'completed');
+            expect(completed).toBeDefined();
+            expect(completed?.duration).toBe(42);
+            expect(completed?.energyLevel).toBe('low');
+            expect(completed?.sessionId).toBe('session-x');
+        });
+
+        it('should record task proposals in history', async () => {
+            await createTask({
+                id: 'task-prop',
+                title: 'Proposed task',
+                duration: 30,
+                effort: 'medium',
+                urgency: 'medium',
+                impact: 'medium',
+                category: 'test',
+                status: 'todo',
+            });
+
+            await recordTaskProposals(['task-prop'], 'session-prop');
+
+            const history = await getTaskHistory('task-prop');
+            expect(history.some((h: DBTaskHistory) => h.action === 'proposed')).toBe(true);
+            const proposed = history.find((h: DBTaskHistory) => h.action === 'proposed');
+            expect(proposed?.sessionId).toBe('session-prop');
+        });
+
+        it('should record task skips in history', async () => {
+            await createTask({
+                id: 'task-skip',
+                title: 'Skipped task',
+                duration: 30,
+                effort: 'medium',
+                urgency: 'medium',
+                impact: 'medium',
+                category: 'test',
+                status: 'todo',
+            });
+
+            await recordTaskSkips(['task-skip'], 'session-skip');
+
+            const history = await getTaskHistory('task-skip');
+            expect(history.some((h: DBTaskHistory) => h.action === 'skipped')).toBe(true);
+            const skipped = history.find((h: DBTaskHistory) => h.action === 'skipped');
+            expect(skipped?.sessionId).toBe('session-skip');
         });
     });
 });

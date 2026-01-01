@@ -12,13 +12,15 @@ interface TimerDisplayProps {
   breakDuration: number;
   onSessionComplete?: (isWorkSession: boolean) => void;
   onComplete?: () => void;
+  onWorkElapsedSecondsChange?: (elapsedSeconds: number) => void;
 }
 
 export function TimerDisplay({ 
   workDuration, 
   breakDuration, 
   onSessionComplete,
-  onComplete
+  onComplete,
+  onWorkElapsedSecondsChange
 }: TimerDisplayProps) {
   const { toast } = useToast();
   const { settings } = useFocusSettings();
@@ -26,6 +28,7 @@ export function TimerDisplay({
   const [isActive, setIsActive] = useState(false);
   const [isBreakTime, setIsBreakTime] = useState(false);
   const [sessionCount, setSessionCount] = useState(0);
+  const [elapsedWorkSeconds, setElapsedWorkSeconds] = useState(0);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -41,6 +44,9 @@ export function TimerDisplay({
     if (isActive && timeRemaining > 0) {
       interval = setInterval(() => {
         setTimeRemaining((time) => time - 1);
+        if (!isBreakTime) {
+          setElapsedWorkSeconds((prev) => prev + 1);
+        }
       }, 1000);
     } else if (timeRemaining === 0 && isActive) {
       // Session terminée
@@ -86,6 +92,10 @@ export function TimerDisplay({
     };
   }, [isActive, timeRemaining, isBreakTime, workDuration, breakDuration, toast, onSessionComplete, settings.soundEnabled]);
 
+  useEffect(() => {
+    onWorkElapsedSecondsChange?.(elapsedWorkSeconds);
+  }, [elapsedWorkSeconds, onWorkElapsedSecondsChange]);
+
   const toggleTimer = () => {
     setIsActive(!isActive);
   };
@@ -95,6 +105,7 @@ export function TimerDisplay({
     setIsBreakTime(false);
     setTimeRemaining(workDuration);
     setSessionCount(0);
+    setElapsedWorkSeconds(0);
   };
 
   const minutes = Math.floor(timeRemaining / 60);

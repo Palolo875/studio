@@ -18,6 +18,15 @@ La **source de vérité** est `PLAN.md` (audit, matrice Phase→Preuve→État, 
 - [ ] M2: Un seul moteur playlist/brain en production (invariants enforce au runtime).
 - [ ] M3: Local-first strict (aucune server action Dexie, aucun chemin cloud par défaut).
 
+### Avancement concret (preuve fichier)
+- [x] Phase 1: génération playlist active via `src/lib/playlistClient.ts` → `generateTaskPlaylist()`.
+- [x] Invariant « 70% terminable »: `proposed` vs `completed` (avec fallback heuristique).
+- [x] Dashboard: régénération marque les tâches restantes `skipped` + session précédente `EXHAUSTED`.
+- [x] Focus: logs `started` + `completed` avec `duration` + `sessionId`.
+- [x] Bibliothèque: changement deadline log `rescheduled`.
+- [x] Énergie: stabilité `stable/volatile` propagée (check-in → settings → playlist → sessions).
+- [x] Trace: supprimée de l’UI et déclenchée au niveau `generatePlaylistClient()` pour cohérence.
+
 ## P1 — Qualité & cohérence (M4→M6)
 - [ ] M4: NLP canonique unique (extraction + classification) + métriques de fallback.
 - [ ] M5: Phase 6 Adaptation opérationnelle (persistance Dexie, drift, rollback, journalisation).

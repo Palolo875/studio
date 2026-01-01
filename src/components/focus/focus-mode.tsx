@@ -14,7 +14,7 @@ interface FocusModeProps {
   taskName: string;
   taskId: string;
   onClose?: () => void;
-  onTaskComplete?: (taskId: string) => void | Promise<void>;
+  onTaskComplete?: (taskId: string, actualDurationMinutes?: number) => void | Promise<void>;
   onNoteSaved?: (taskId: string, note: string) => void | Promise<void>;
 }
 
@@ -29,6 +29,7 @@ export function FocusMode({
   const { toast } = useToast();
   const { settings } = useFocusSettings();
   const [sessionsCompleted, setSessionsCompleted] = useState(0);
+  const [elapsedWorkSeconds, setElapsedWorkSeconds] = useState(0);
 
   const handleSessionComplete = (isWorkSession: boolean) => {
     if (isWorkSession) {
@@ -51,7 +52,8 @@ export function FocusMode({
   };
 
   const handleTaskComplete = async () => {
-    await Promise.resolve(onTaskComplete?.(taskId));
+    const actualDurationMinutes = Math.max(0, Math.round(elapsedWorkSeconds / 60));
+    await Promise.resolve(onTaskComplete?.(taskId, actualDurationMinutes));
     
     // Afficher le toast de félicitations
     toast({
@@ -105,6 +107,7 @@ export function FocusMode({
               workDuration={settings.workDuration} 
               breakDuration={settings.breakDuration}
               onSessionComplete={handleSessionComplete}
+              onWorkElapsedSecondsChange={setElapsedWorkSeconds}
             />
             
             <p className="text-center text-sm text-muted-foreground">

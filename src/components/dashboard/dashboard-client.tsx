@@ -59,6 +59,8 @@ import {
   getSessionsByDate,
   recordOverride,
   recordSleepData,
+  recordTaskProposals,
+  recordTaskSkips,
   getSetting,
   setSetting,
 } from '@/lib/database';
@@ -99,6 +101,7 @@ export function DashboardClient() {
   });
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [energyLevel, setEnergyLevel] = useState<EnergyState>(null);
+  const [energyStability, setEnergyStability] = useState<'stable' | 'volatile'>('stable');
   const [intention, setIntention] = useState<string>('');
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -139,9 +142,11 @@ export function DashboardClient() {
       setMorningRitualCompleted(true);
 
       const storedEnergy = await getSetting<EnergyState>('morning.todayEnergyLevel');
+      const storedStability = await getSetting<'stable' | 'volatile'>('morning.todayEnergyStability');
       const storedIntention = await getSetting<string>('morning.todayIntention');
       if (cancelled) return;
       if (storedEnergy) setEnergyLevel(storedEnergy);
+      if (storedStability) setEnergyStability(storedStability);
       if (storedIntention) setIntention(storedIntention);
 
       // Charger depuis Dexie
@@ -190,6 +195,7 @@ export function DashboardClient() {
     const today = new Date().toISOString().split('T')[0];
     void setSetting('morning.lastCheckin', today);
     void setSetting('morning.todayEnergyLevel', energyLevel);
+    void setSetting('morning.todayEnergyStability', energyStability);
     void setSetting('morning.todayIntention', intention || '');
 
     if (typeof sleepHours === 'number' && Number.isFinite(sleepHours) && sleepHours >= 0 && sleepHours <= 24) {
@@ -241,6 +247,7 @@ export function DashboardClient() {
       if (mappedEnergy) {
         formData.append('energyLevel', mappedEnergy);
       }
+      formData.append('energyStability', energyStability);
       if (intention) {
         formData.append('intention', intention);
       }
@@ -261,6 +268,8 @@ export function DashboardClient() {
         const nowMs = Date.now();
 
         if (currentSessionId) {
+          const remainingTaskIds = tasks.filter((t: Task) => !t.completed).map((t: Task) => t.id);
+          await recordTaskSkips(remainingTaskIds, currentSessionId).catch(() => null);
           await updateDbSession(currentSessionId, {
             endTime: nowMs,
             state: 'EXHAUSTED',
@@ -277,9 +286,14 @@ export function DashboardClient() {
           completedTasks: 0,
           state: 'IN_PROGRESS',
           energyLevel: toDbEnergyLevel(energyLevel),
-          energyStability: 'stable',
+          energyStability,
           taskIds: response.tasks.map((t) => t.task.id),
         }).catch(() => null);
+
+        await recordTaskProposals(
+          response.tasks.map((t) => t.task.id),
+          nextSessionId
+        ).catch(() => null);
         setCurrentSessionId(nextSessionId);
 
         if (response.playlistShuffledCount) {
@@ -513,6 +527,7 @@ export function DashboardClient() {
             onEnergyChange={setEnergyLevel}
             onIntentionChange={setIntention}
             onSleepHoursChange={setSleepHours}
+            onStabilityChange={setEnergyStability}
           />
           <DialogFooter className="!justify-center pt-4">
             <Button

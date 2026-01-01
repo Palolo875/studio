@@ -36,6 +36,7 @@ export function MorningRitualDialog({
     onComplete,
 }: MorningRitualDialogProps) {
     const [energyLevel, setEnergyLevel] = useState<EnergyState>(null);
+    const [energyStability, setEnergyStability] = useState<'stable' | 'volatile'>('stable');
     const [intention, setIntention] = useState('');
     const { toast } = useToast();
 
@@ -52,6 +53,7 @@ export function MorningRitualDialog({
         const today = new Date().toISOString().split('T')[0];
         void setSetting('morning.lastCheckin', today);
         void setSetting('morning.todayEnergyLevel', energyLevel);
+        void setSetting('morning.todayEnergyStability', energyStability);
         void setSetting('morning.todayIntention', intention || '');
 
         onComplete(energyLevel, intention);
@@ -70,6 +72,7 @@ export function MorningRitualDialog({
                 <EnergyCheckIn
                     onEnergyChange={setEnergyLevel}
                     onIntentionChange={setIntention}
+                    onStabilityChange={setEnergyStability}
                 />
 
                 <DialogFooter className="!justify-center pt-4">

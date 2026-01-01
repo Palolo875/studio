@@ -13,6 +13,7 @@ import { Task, TaskPlaylist, EnergyState } from '../types';
 
 describe('invariantChecker', () => {
   const mockEnergy: EnergyState = { level: 'high', stability: 'stable' };
+  const now = new Date();
   const mockTasks: Task[] = [
     {
       id: '1',
@@ -22,7 +23,10 @@ describe('invariantChecker', () => {
       urgency: 'medium',
       impact: 'medium',
       completionHistory: [],
-      category: 'work'
+      category: 'work',
+      createdAt: now,
+      origin: 'self_chosen',
+      hasTangibleResult: true,
     },
     {
       id: '2',
@@ -32,7 +36,10 @@ describe('invariantChecker', () => {
       urgency: 'high',
       impact: 'high',
       completionHistory: [],
-      category: 'personal'
+      category: 'personal',
+      createdAt: now,
+      origin: 'self_chosen',
+      hasTangibleResult: true,
     },
     {
       id: '3',
@@ -42,7 +49,10 @@ describe('invariantChecker', () => {
       urgency: 'low',
       impact: 'low',
       completionHistory: [],
-      category: 'admin'
+      category: 'admin',
+      createdAt: now,
+      origin: 'self_chosen',
+      hasTangibleResult: true,
     }
   ];
 
@@ -110,10 +120,17 @@ describe('invariantChecker', () => {
       expect(result).toBe(true);
     });
 
-    it('should return true when tasks have good completion rate', () => {
+    it('should return true when tasks have >=70% completion rate based on proposals', () => {
       const tasksWithGoodHistory: Task[] = [
         {
           ...mockTasks[0],
+          proposalHistory: [
+            { date: new Date(), sessionId: 's1' },
+            { date: new Date(), sessionId: 's2' },
+            { date: new Date(), sessionId: 's3' },
+            { date: new Date(), sessionId: 's4' },
+            { date: new Date(), sessionId: 's5' }
+          ],
           completionHistory: [
             { date: new Date(), actualDuration: 25, energy: { level: 'medium', stability: 'stable' } },
             { date: new Date(), actualDuration: 30, energy: { level: 'medium', stability: 'stable' } }
@@ -124,10 +141,17 @@ describe('invariantChecker', () => {
       expect(result).toBe(true);
     });
 
-    it('should return false when tasks have poor completion rate', () => {
+    it('should return false when tasks have <70% completion rate based on proposals', () => {
       const tasksWithPoorHistory: Task[] = [
         {
           ...mockTasks[0],
+          proposalHistory: [
+            { date: new Date(), sessionId: 's1' },
+            { date: new Date(), sessionId: 's2' },
+            { date: new Date(), sessionId: 's3' },
+            { date: new Date(), sessionId: 's4' },
+            { date: new Date(), sessionId: 's5' }
+          ],
           completionHistory: [
             { date: new Date(), actualDuration: 60, energy: { level: 'medium', stability: 'stable' } }, // 2x planned time
             { date: new Date(), actualDuration: 60, energy: { level: 'medium', stability: 'stable' } }
@@ -136,6 +160,20 @@ describe('invariantChecker', () => {
       ];
       const result = checkCompletionRateInvariant(tasksWithPoorHistory);
       expect(result).toBe(false);
+    });
+
+    it('should fall back to duration heuristic when proposals are not available', () => {
+      const tasks: Task[] = [
+        {
+          ...mockTasks[0],
+          duration: 30,
+          completionHistory: [
+            { date: new Date(), actualDuration: 25, energy: { level: 'medium', stability: 'stable' } },
+          ]
+        }
+      ];
+      const result = checkCompletionRateInvariant(tasks);
+      expect(result).toBe(true);
     });
   });
 

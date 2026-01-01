@@ -305,6 +305,54 @@ Les sections ci-dessous sont conservées comme référence. Le suivi d’exécut
 - Capture persistance Dexie : ☐
 - Simulations restantes nettoyées : ☐
 
+### Implémentations récentes (preuve-based)
+- Invariant « 70% terminable » rendu mesurable via `proposed` vs `completed` : ✅
+  - Preuve: `src/lib/database/index.ts` (`DBTaskHistory.action` inclut `proposed`, helper `recordTaskProposals`)
+  - Preuve: `src/lib/taskEngine/types.ts` (`proposalHistory`)
+  - Preuve: `src/lib/taskEngine/dbTaskMapping.ts` (mapping `proposed` -> `proposalHistory`)
+  - Preuve: `src/lib/taskEngine/invariantChecker.ts` (calcul `completed/proposed` + fallback heuristique)
+  - Preuve: `src/components/dashboard/dashboard-client.tsx` (log `recordTaskProposals` lors création session)
+
+- Énergie: propagation `stable/volatile` end-to-end (check-in -> settings -> playlist -> sessions) : ✅
+  - Preuve: `src/components/dashboard/energy-check-in.tsx` (sélecteur stabilité)
+  - Preuve: `src/components/dashboard/dashboard-client.tsx` (stockage/chargement + FormData)
+  - Preuve: `src/lib/playlistClient.ts` (Zod + `energyStability`)
+
+- Unicité moteur playlist + trace cohérente (pas de double moteur UI) : ✅
+  - Preuve: `src/components/dashboard/playlist-generator.tsx` (suppression trace UI)
+  - Preuve: `src/lib/playlistClient.ts` (log décision alignée sur playlist générée)
+
+- Focus: historique réel `started/completed` + durée de focus capturée : ✅
+  - Preuve: `src/components/focus/timer-display.tsx` (elapsedWorkSeconds)
+  - Preuve: `src/components/focus/focus-mode.tsx` (passe actualDurationMinutes)
+  - Preuve: `src/app/dashboard/focus/[taskId]/page.tsx` (log `started` + `completed` avec duration/energy/sessionId)
+  - Preuve: `src/lib/database/index.ts` (`completeTask(...data)`)
+
+- Dashboard: régénération session -> log des tâches restantes comme `skipped` : ✅
+  - Preuve: `src/lib/database/index.ts` (`recordTaskSkips`)
+  - Preuve: `src/components/dashboard/dashboard-client.tsx` (appelle `recordTaskSkips` avant `EXHAUSTED`)
+
+- Bibliothèque: changement de deadline -> log `rescheduled` : ✅
+  - Preuve: `src/components/reservoir/reservoir-client.tsx` (log `addTaskHistory(..., 'rescheduled')`)
+
+## Truth Table — Phase 1 (preuve-based)
+
+| Exigence Phase 1 | Statut | Preuves (fichiers) |
+|---|---:|---|
+| Playlist déterministe (sans IA) | ✅ | `src/lib/playlistClient.ts` → `generateTaskPlaylist()` ; `src/lib/taskEngine/selector.ts` |
+| Invariant: max 5 tâches | ✅ | `src/lib/taskEngine/invariantChecker.ts` (`checkMaxTasksInvariant`) ; tests `src/lib/taskEngine/__tests__/invariantChecker.test.ts` |
+| Invariant: ≥ 1 quick win < 15min | ✅ | `src/lib/taskEngine/invariantChecker.ts` (`checkMinQuickWinInvariant`) ; `src/lib/taskEngine/selector.ts` (injectQuickWin) |
+| Invariant: charge ≤ capacité session | ✅ | `src/lib/taskEngine/invariantChecker.ts` (`checkTotalLoadInvariant`) ; `src/lib/taskEngine/capacityCalculator.ts` |
+| Invariant: pas de high effort si énergie basse | ✅ | `src/lib/taskEngine/invariantChecker.ts` (`checkEnergyMismatchInvariant`) ; `src/lib/taskEngine/energyModel.ts` |
+| Invariant: terminable ≥ 70% (mesurable) | ✅ | `src/lib/database/index.ts` (`DBTaskHistory.action` inclut `proposed`) ; `src/lib/taskEngine/invariantChecker.ts` (`completed/proposed`) |
+| Événement: log `proposed` lors génération playlist | ✅ | `src/lib/database/index.ts` (`recordTaskProposals`) ; `src/components/dashboard/dashboard-client.tsx` |
+| Événement: log `skipped` lors régénération/exhaust | ✅ | `src/lib/database/index.ts` (`recordTaskSkips`) ; `src/components/dashboard/dashboard-client.tsx` |
+| Événement: log `started` en Focus | ✅ | `src/app/dashboard/focus/[taskId]/page.tsx` (`addTaskHistory(..., 'started')`) |
+| Événement: log `completed` avec durée réelle | ✅ | `src/lib/database/index.ts` (`completeTask(taskId, {duration,...})`) ; `src/components/focus/timer-display.tsx` |
+| Événement: log `rescheduled` sur changement deadline | ✅ | `src/components/reservoir/reservoir-client.tsx` (`addTaskHistory(..., 'rescheduled')`) |
+| Énergie: stabilité `stable/volatile` prise en compte | ✅ | `src/components/dashboard/energy-check-in.tsx` ; `src/components/dashboard/dashboard-client.tsx` ; `src/lib/playlistClient.ts` |
+| Trace cohérente (pas de double moteur) | ✅ | `src/components/dashboard/playlist-generator.tsx` (trace UI supprimée) ; `src/lib/playlistClient.ts` (log décision alignée) |
+
 ### État actuel Phase 6 (Adaptation) — preuves
 - Persistance signaux (`adaptationSignals`) : ✅ (`src/lib/database/index.ts`, `src/lib/phase6Implementation.ts`)
 - Persistance paramètres via settings (`adaptation_parameters`) : ✅ (`src/lib/adaptationController.ts`, `src/lib/phase6Implementation.ts`)

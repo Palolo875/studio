@@ -62,6 +62,8 @@ export interface Task {
   scheduledTime?: string;
   /** Historique de complétion */
   completionHistory: CompletionRecord[];
+  /** Historique de proposition (pour mesurer proposed vs completed) */
+  proposalHistory?: ProposalRecord[];
   /** Diversité cognitive (catégorie de la tâche) */
   category: string;
   /** Statut de la tâche */
@@ -97,6 +99,13 @@ export interface CompletionRecord {
   actualDuration: number;
   /** Énergie perçue lors de la complétion */
   energy: EnergyState;
+}
+
+export interface ProposalRecord {
+  /** Date de proposition */
+  date: Date;
+  /** Identifiant de session (si disponible) */
+  sessionId?: string;
 }
 
 /**

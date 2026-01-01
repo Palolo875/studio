@@ -1,5 +1,5 @@
 import type { DBTask, DBTaskHistory } from '@/lib/database';
-import type { CompletionRecord, EnergyState, Task } from '@/lib/taskEngine/types';
+import type { CompletionRecord, EnergyState, ProposalRecord, Task } from '@/lib/taskEngine/types';
 
 function toEnergyState(level: EnergyState['level']): EnergyState {
   return {
@@ -17,6 +17,14 @@ function historyToCompletionRecords(history: DBTaskHistory[]): CompletionRecord[
   }));
 }
 
+function historyToProposalRecords(history: DBTaskHistory[]): ProposalRecord[] {
+  const proposed = history.filter((h) => h.action === 'proposed');
+  return proposed.map((h) => ({
+    date: h.timestamp,
+    sessionId: h.sessionId,
+  }));
+}
+
 export function dbTaskToEngineTask(dbTask: DBTask, history: DBTaskHistory[] = []): Task {
   return {
     id: dbTask.id,
@@ -29,6 +37,7 @@ export function dbTaskToEngineTask(dbTask: DBTask, history: DBTaskHistory[] = []
     deadline: dbTask.deadline,
     scheduledTime: dbTask.scheduledTime,
     completionHistory: historyToCompletionRecords(history),
+    proposalHistory: historyToProposalRecords(history),
     category: dbTask.category,
     status: dbTask.status === 'cancelled' ? 'frozen' : dbTask.status,
     activationCount: dbTask.activationCount,

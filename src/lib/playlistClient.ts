@@ -1,21 +1,23 @@
 import { z } from "zod";
 
 import { getAllTasks, getTaskHistoryForTaskIds } from "@/lib/database";
-import type { EnergyState as EngineEnergyState, TaskPlaylist as EngineTaskPlaylist } from "@/lib/taskEngine/types";
+import type { EnergyState as EngineEnergyState, Task as EngineTask, TaskPlaylist as EngineTaskPlaylist } from "@/lib/taskEngine/types";
 import { generateTaskPlaylist } from "@/lib/taskEngine";
 import { dbTaskToEngineTask } from "@/lib/taskEngine/dbTaskMapping";
+import type { BrainDecision, BrainInput } from "@/lib/taskEngine/brainContracts";
+import { logBrainDecision } from "@/lib/taskEngine/decisionLogger";
 
 type DailyRitualsLike = {
   playlistShuffledCount: number;
   completedTaskCount: number;
-  completedTasks: unknown[];
+  completedTasks: Array<{ id: string }>;
 };
 
 type TaskLike = {
   id: string;
   name: string;
   completed: boolean;
-  subtasks: unknown[];
+  subtasks: Array<unknown>;
   lastAccessed: string;
   completionRate: number;
   description?: string;
@@ -35,7 +37,7 @@ export type PlaylistItem = {
   reasonDetails?: string[];
 };
 
-function engineTaskToLegacyTask(task: import("@/lib/taskEngine/types").Task): TaskLike {
+function engineTaskToLegacyTask(task: EngineTask): TaskLike {
   return {
     id: task.id,
     name: task.title,
@@ -58,7 +60,8 @@ const generatePlaylistSchema = z.object({
   priorities: z.string().min(3, "Priorities must be at least 3 characters long."),
   dailyRituals: z.string(),
   energyLevel: z.enum(["high", "medium", "low"]),
-  intention: z.enum(["focus", "learning", "creativity", "planning"]),
+  energyStability: z.enum(["stable", "volatile"]).optional(),
+  intention: z.enum(["focus", "learning", "creativity", "planning"]).optional(),
 });
 
 export type GeneratePlaylistClientResult = {
@@ -75,6 +78,7 @@ export async function generatePlaylistClient(formData: FormData): Promise<Genera
       priorities: formData.get("priorities"),
       dailyRituals: formData.get("dailyRituals"),
       energyLevel: formData.get("energyLevel"),
+      energyStability: formData.get("energyStability"),
       intention: formData.get("intention"),
     });
 
@@ -86,7 +90,7 @@ export async function generatePlaylistClient(formData: FormData): Promise<Genera
       };
     }
 
-    const { dailyRituals: dailyRitualsString, energyLevel } = validatedFields.data;
+    const { dailyRituals: dailyRitualsString, energyLevel, energyStability } = validatedFields.data;
 
     const dailyRituals: DailyRitualsLike = JSON.parse(dailyRitualsString);
 
@@ -111,12 +115,118 @@ export async function generatePlaylistClient(formData: FormData): Promise<Genera
 
     const energyState: EngineEnergyState = {
       level: energyLevel,
-      stability: "stable",
+      stability: energyStability ?? "stable",
     };
 
     const playlist: EngineTaskPlaylist = generateTaskPlaylist(engineTasks, energyState, 5, now, {
       sessionDurationMinutes: 120,
     });
+
+    try {
+      const decisionId = `phase1_playlist_${Date.now()}`;
+      const input: BrainInput = {
+        tasks: engineTasks,
+        userState: {
+          energy: energyState.level,
+          stability: energyState.stability,
+          linguisticFatigue: false,
+        },
+        temporal: {
+          currentTime: now,
+          availableTime: 120,
+          timeOfDay: now.getHours() < 12 ? 'morning' : now.getHours() < 18 ? 'afternoon' : 'evening',
+        },
+        budget: {
+          daily: {
+            maxLoad: 100,
+            usedLoad: 0,
+            remaining: 100,
+            lockThreshold: 10,
+          },
+          session: {
+            maxDuration: 120,
+            maxTasks: 5,
+            maxComplexity: 10,
+          },
+        },
+        constraints: [],
+        history: [],
+        decisionPolicy: {
+          level: 'ASSISTED',
+          userConsent: true,
+          overrideCostVisible: true,
+        },
+      };
+
+      const allowedIds = new Set(playlist.tasks.map((t) => t.id));
+      const rejectedTasks = engineTasks.filter((t) => !allowedIds.has(t.id));
+
+      const decision: BrainDecision = {
+        id: decisionId,
+        timestamp: now,
+        brainVersion: {
+          id: 'phase1-playlist-v1',
+          algorithmVersion: '1.0.0',
+          rulesHash: 'phase1-selector',
+          modelId: 'taskEngine.generateTaskPlaylist',
+          releasedAt: now,
+        },
+        decisionType: 'TASK_SELECTION',
+        inputs: input,
+        outputs: {
+          session: {
+            allowedTasks: playlist.tasks,
+            maxTasks: 5,
+            estimatedDuration: playlist.tasks.reduce((sum, t) => sum + (t.duration ?? 0), 0),
+            budgetConsumed: 0,
+          },
+          rejected: {
+            tasks: rejectedTasks,
+            reasons: new Map(),
+          },
+          mode: {
+            current: 'NORMAL',
+            reason: playlist.explanation ?? 'Phase 1 playlist generation',
+          },
+          warnings: (playlist.warnings ?? []).map((message) => ({
+            type: 'overload_risk' as const,
+            message,
+            severity: 'medium' as const,
+          })),
+          explanations: {
+            summary: playlist.explanation ?? 'Phase 1 playlist generation',
+            perTask: new Map(),
+          },
+          guarantees: {
+            usedAIdecision: false,
+            inferredUserIntent: false,
+            optimizedForPerformance: false,
+            overrodeUserChoice: false,
+            forcedEngagement: false,
+            coachIsSubordinate: true,
+          },
+          metadata: {
+            decisionId,
+            timestamp: now,
+            brainVersion: 'phase1-playlist-v1',
+            policy: input.decisionPolicy,
+            overrideEvents: [],
+          },
+        },
+        invariantsChecked: [
+          'Phase 1 - maxTasks',
+          'Phase 1 - quickWin',
+          'Phase 1 - totalLoad',
+          'Phase 1 - energyMismatch',
+          'Phase 1 - completionRate',
+        ],
+        explanationId: '',
+      };
+
+      await logBrainDecision(decision);
+    } catch {
+      // ignore
+    }
 
     const scored: PlaylistItem[] = playlist.tasks.map((t) => ({
       task: engineTaskToLegacyTask(t),

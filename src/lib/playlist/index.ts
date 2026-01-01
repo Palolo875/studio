@@ -25,7 +25,3 @@ export type { Reward, UserProgress } from './services/rewardSystem';
 // Générateur de playlist principal
 export { PlaylistGeneratorSOTA } from './PlaylistGeneratorSOTA';
 export type { PlaylistTask } from './PlaylistGeneratorSOTA';
-
-// Version héritée
-export * as playlistGenerator from '../playlistGenerator';
-export * as scoringRules from '../scoringRules';

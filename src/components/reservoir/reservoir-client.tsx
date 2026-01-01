@@ -57,6 +57,7 @@ import {
   updateTask as updateDbTask,
   deleteTask as deleteDbTask,
   completeTask as completeDbTask,
+  addTaskHistory,
   type DBTask,
 } from '@/lib/database';
 import { dbTaskToUiTask } from '@/lib/taskMapping';
@@ -106,7 +107,8 @@ function uiPriorityToUrgency(priority?: Task['priority']): DBTask['urgency'] {
 
 function uiEnergyToEffort(energy?: Task['energyRequired']): DBTask['effort'] {
   if (!energy) return 'medium';
-  return energy as any;
+  if (energy === 'low' || energy === 'medium' || energy === 'high') return energy;
+  return 'medium';
 }
 
 export function ReservoirClient() {
@@ -265,6 +267,8 @@ export function ReservoirClient() {
         const newUiTask = dbToUiTask(newDbTask);
         setTasks(current => [newUiTask, ...current]);
       } else {
+        const prevScheduled = selectedTask.scheduledDate;
+        const nextScheduled = finalTaskData.scheduledDate;
         await updateDbTask(selectedTask.id, {
           title: (finalTaskData.name || '').trim() || selectedTask.name,
           description: finalTaskData.description,
@@ -277,6 +281,12 @@ export function ReservoirClient() {
           completedAt: finalTaskData.completed ? now : undefined,
         });
 
+        if (prevScheduled !== nextScheduled) {
+          await addTaskHistory(selectedTask.id, 'rescheduled', {
+            notes: nextScheduled ? `deadline:${nextScheduled}` : 'deadline:removed',
+          });
+        }
+
         setTasks(current => current.map((task) =>
           task.id === selectedTask.id ? { ...task, ...finalTaskData, lastAccessed: now.toISOString() } as ReservoirTask : task
         ));
@@ -286,7 +296,7 @@ export function ReservoirClient() {
     })();
   };
   
-  const handleSheetDataChange = (field: keyof ReservoirTask, value: any) => {
+  const handleSheetDataChange = (field: keyof ReservoirTask, value: unknown) => {
     setSheetTaskData(prev => ({ ...prev, [field]: value }));
   };
 

@@ -22,16 +22,23 @@ interface EnergyCheckInProps {
     onEnergyChange: (energy: EnergyStateId) => void;
     onIntentionChange: (intention: string) => void;
     onSleepHoursChange?: (hours: number | null) => void;
+    onStabilityChange?: (stability: 'stable' | 'volatile') => void;
 }
 
-export function EnergyCheckIn({ onEnergyChange, onIntentionChange, onSleepHoursChange }: EnergyCheckInProps) {
+export function EnergyCheckIn({ onEnergyChange, onIntentionChange, onSleepHoursChange, onStabilityChange }: EnergyCheckInProps) {
   const [selectedState, setSelectedState] = useState<string | null>(null);
   const [showIntention, setShowIntention] = useState(false);
+  const [stability, setStability] = useState<'stable' | 'volatile'>('stable');
 
   const handleSelectState = (id: EnergyStateId) => {
     setSelectedState(id);
     onEnergyChange(id);
     setTimeout(() => setShowIntention(true), 300);
+  };
+
+  const handleStabilityChange = (next: 'stable' | 'volatile') => {
+    setStability(next);
+    onStabilityChange?.(next);
   };
   
   const handleIntentionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,6 +90,30 @@ export function EnergyCheckIn({ onEnergyChange, onIntentionChange, onSleepHoursC
             transition={{ duration: 0.5, ease: "easeInOut" }}
             className="space-y-2"
           >
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground text-center block">
+                Stabilité (optionnel)
+              </label>
+              <div className="flex justify-center gap-2">
+                <Button
+                  type="button"
+                  variant={stability === 'stable' ? 'default' : 'outline'}
+                  className="rounded-full"
+                  onClick={() => handleStabilityChange('stable')}
+                >
+                  Stable
+                </Button>
+                <Button
+                  type="button"
+                  variant={stability === 'volatile' ? 'default' : 'outline'}
+                  className="rounded-full"
+                  onClick={() => handleStabilityChange('volatile')}
+                >
+                  Volatile
+                </Button>
+              </div>
+            </div>
+
             <label htmlFor="intention" className="text-sm font-medium text-muted-foreground text-center block">
               Une intention pour aujourd’hui ? (Optionnel)
             </label>

@@ -86,6 +86,25 @@ export async function upsertTasks(tasks: DBTask[]): Promise<void> {
     }
 }
 
+export async function recordTaskSkips(taskIds: string[], sessionId?: string): Promise<void> {
+    const uniqueIds = Array.from(new Set(taskIds)).filter(Boolean);
+    if (uniqueIds.length === 0) return;
+
+    const now = new Date();
+    try {
+        await db.taskHistory.bulkAdd(
+            uniqueIds.map((taskId) => ({
+                taskId,
+                action: 'skipped' as const,
+                timestamp: now,
+                sessionId,
+            }))
+        );
+    } catch (error) {
+        logger.error('Failed to record task skips', error as Error, { count: uniqueIds.length, sessionId });
+    }
+}
+
 /**
  * Récupère toutes les tâches (tous statuts)
  */
@@ -169,11 +188,12 @@ export interface DBSession {
 export interface DBTaskHistory {
     id?: number;
     taskId: string;
-    action: 'created' | 'started' | 'completed' | 'skipped' | 'rescheduled';
+    action: 'created' | 'started' | 'proposed' | 'completed' | 'skipped' | 'rescheduled';
     timestamp: Date;
     duration?: number;
     energyLevel?: 'low' | 'medium' | 'high';
     notes?: string;
+    sessionId?: string;
 }
 
 export interface DBUserPattern {
@@ -704,7 +724,10 @@ export async function updateTask(taskId: string, updates: Partial<DBTask>): Prom
 /**
  * Marque une tâche comme complétée
  */
-export async function completeTask(taskId: string): Promise<void> {
+export async function completeTask(
+    taskId: string,
+    data?: Pick<DBTaskHistory, 'duration' | 'energyLevel' | 'sessionId'>
+): Promise<void> {
     const now = new Date();
     try {
         await db.tasks.update(taskId, {
@@ -713,7 +736,7 @@ export async function completeTask(taskId: string): Promise<void> {
             updatedAt: now,
         });
 
-        await addTaskHistory(taskId, 'completed');
+        await addTaskHistory(taskId, 'completed', data);
         logger.info('Task completed', { taskId });
     } catch (error) {
         logger.error('Failed to complete task', error as Error, { taskId });
@@ -823,6 +846,25 @@ export async function addTaskHistory(
         });
     } catch (error) {
         logger.error('Failed to add task history', error as Error, { taskId, action });
+    }
+}
+
+export async function recordTaskProposals(taskIds: string[], sessionId?: string): Promise<void> {
+    const uniqueIds = Array.from(new Set(taskIds)).filter(Boolean);
+    if (uniqueIds.length === 0) return;
+
+    const now = new Date();
+    try {
+        await db.taskHistory.bulkAdd(
+            uniqueIds.map((taskId) => ({
+                taskId,
+                action: 'proposed' as const,
+                timestamp: now,
+                sessionId,
+            }))
+        );
+    } catch (error) {
+        logger.error('Failed to record task proposals', error as Error, { count: uniqueIds.length, sessionId });
     }
 }
 
@@ -966,7 +1008,7 @@ export async function markAdaptationHistoryReverted(id: number): Promise<void> {
 export async function getSnapshotsByNamePrefix(prefix: string, limit: number = 20): Promise<DBSnapshot[]> {
     try {
         const all = await db.snapshots.orderBy('timestamp').reverse().limit(limit * 5).toArray();
-        return all.filter((s) => typeof s.name === 'string' && s.name.startsWith(prefix)).slice(0, limit);
+        return all.filter((s: DBSnapshot) => typeof s.name === 'string' && s.name.startsWith(prefix)).slice(0, limit);
     } catch (error) {
         logger.error('Failed to get snapshots by prefix', error as Error);
         return [];

@@ -77,26 +77,37 @@ export function checkCompletionRateInvariant(playlist: Task[]): boolean {
     return true; // Une playlist vide respecte l'invariant
   }
 
-  // Compter combien de tâches ont un historique de complétion
-  const tasksWithHistory = playlist.filter(task => task.completionHistory.length > 0);
+  const tasksWithProposals = playlist.filter(task => (task.proposalHistory?.length ?? 0) > 0);
+  if (tasksWithProposals.length > 0) {
+    const proposalRates = tasksWithProposals.map(task => {
+      const proposedCount = task.proposalHistory?.length ?? 0;
+      const completedCount = task.completionHistory.length;
+      if (proposedCount <= 0) return 1;
+      return completedCount / proposedCount;
+    });
 
-  if (tasksWithHistory.length === 0) {
-    // Si aucune tâche n'a d'historique, on considère qu'elle est terminable
+    const averageProposalRate = proposalRates.reduce((sum, rate) => sum + rate, 0) / proposalRates.length;
+    return averageProposalRate >= 0.7;
+  }
+
+  // Fallback heuristique: basé sur la capacité observée à terminer dans une durée proche de l'estimation
+  const tasksWithCompletions = playlist.filter(task => task.completionHistory.length > 0);
+  if (tasksWithCompletions.length === 0) {
     return true;
   }
 
-  // Calculer le taux de complétion moyen
-  const completionRates = tasksWithHistory.map(task => {
-    const completedCount = task.completionHistory.length;
-    // On suppose qu'une tâche avec historique a été proposée au moins une fois
-    const proposedCount = Math.max(1, completedCount);
-    return completedCount / proposedCount;
+  const durationRates = tasksWithCompletions.map(task => {
+    const avgActualDuration =
+      task.completionHistory.reduce((sum, record) => sum + record.actualDuration, 0) /
+      task.completionHistory.length;
+
+    if (avgActualDuration <= 0) return 1;
+    if (task.duration <= 0) return 0;
+    return Math.min(1, task.duration / avgActualDuration);
   });
 
-  const averageCompletionRate = completionRates.reduce((sum, rate) => sum + rate, 0) / completionRates.length;
-
-  // L'invariant est respecté si le taux de complétion moyen est d'au moins 70%
-  return averageCompletionRate >= 0.7;
+  const averageDurationRate = durationRates.reduce((sum, rate) => sum + rate, 0) / durationRates.length;
+  return averageDurationRate >= 0.7;
 }
 
 /**
