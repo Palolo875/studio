@@ -4,6 +4,7 @@
 import { 
   AdaptationSignal, 
   Parameters, 
+  ParameterDelta,
   clampParameters,
   ADAPTATION_CONSTRAINTS
 } from './adaptationMemory';
@@ -25,6 +26,7 @@ import { createLogger } from '@/lib/logger';
 import {
   addAdaptationSignal as addAdaptationSignalToDb,
   getAllTasks,
+  getModeTransitionsByPeriod,
   getOverridesByPeriod,
   getSessionsByPeriod,
   recordAdaptationHistory,
@@ -35,18 +37,29 @@ const logger = createLogger('Phase6Implementation');
 
 const ADAPTATION_PARAMETERS_SETTING_KEY = 'adaptation_parameters';
 
-function computeParameterDeltas(before: Parameters, after: Parameters) {
-  const deltas: { parameterName: string; oldValue: any; newValue: any }[] = [];
-  const keys = Object.keys(after) as Array<keyof Parameters>;
-  for (const k of keys) {
-    if ((after as any)[k] !== (before as any)[k]) {
-      deltas.push({
-        parameterName: String(k),
-        oldValue: (before as any)[k],
-        newValue: (after as any)[k],
-      });
-    }
-  }
+function computeParameterDeltas(before: Parameters, after: Parameters): ParameterDelta[] {
+  const deltas: ParameterDelta[] = [];
+
+  if (before.maxTasks !== after.maxTasks) deltas.push({ parameterName: 'maxTasks', oldValue: before.maxTasks, newValue: after.maxTasks });
+  if (before.strictness !== after.strictness)
+    deltas.push({ parameterName: 'strictness', oldValue: before.strictness, newValue: after.strictness });
+  if (before.coachFrequency !== after.coachFrequency)
+    deltas.push({ parameterName: 'coachFrequency', oldValue: before.coachFrequency, newValue: after.coachFrequency });
+  if (before.coachEnabled !== after.coachEnabled)
+    deltas.push({ parameterName: 'coachEnabled', oldValue: before.coachEnabled, newValue: after.coachEnabled });
+  if (before.energyForecastMode !== after.energyForecastMode)
+    deltas.push({
+      parameterName: 'energyForecastMode',
+      oldValue: before.energyForecastMode,
+      newValue: after.energyForecastMode,
+    });
+  if (before.defaultMode !== after.defaultMode)
+    deltas.push({ parameterName: 'defaultMode', oldValue: before.defaultMode, newValue: after.defaultMode });
+  if (before.sessionBuffer !== after.sessionBuffer)
+    deltas.push({ parameterName: 'sessionBuffer', oldValue: before.sessionBuffer, newValue: after.sessionBuffer });
+  if (before.estimationFactor !== after.estimationFactor)
+    deltas.push({ parameterName: 'estimationFactor', oldValue: before.estimationFactor, newValue: after.estimationFactor });
+
   return deltas;
 }
 
@@ -95,20 +108,43 @@ export class AdaptationManager {
     const currentStart = now - weekMs;
     const previousStart = now - 2 * weekMs;
 
-    const [allTasks, currentWeekSessions, previousWeekSessions, overridesFromPreviousStart] = await Promise.all([
+    const [
+      allTasks,
+      currentWeekSessions,
+      previousWeekSessions,
+      overridesFromPreviousStart,
+      currentWeekModeTransitions,
+      previousWeekModeTransitions,
+    ] = await Promise.all([
       getAllTasks(),
       getSessionsByPeriod(currentStart, now),
       getSessionsByPeriod(previousStart, currentStart),
       getOverridesByPeriod(previousStart),
+      getModeTransitionsByPeriod(currentStart, now),
+      getModeTransitionsByPeriod(previousStart, currentStart),
     ]);
 
     const currentWeekOverrides = overridesFromPreviousStart.filter(o => o.timestamp >= currentStart && o.timestamp <= now);
     const previousWeekOverrides = overridesFromPreviousStart.filter(o => o.timestamp >= previousStart && o.timestamp < currentStart);
 
-    const brainQualityBefore = computeBrainQuality(previousWeekSessions, previousWeekOverrides, []);
-    const brainQualityAfter = computeBrainQuality(currentWeekSessions, currentWeekOverrides, []);
+    const brainQualityBefore = computeBrainQuality(previousWeekSessions, previousWeekOverrides, previousWeekModeTransitions);
+    const brainQualityAfter = computeBrainQuality(currentWeekSessions, currentWeekOverrides, currentWeekModeTransitions);
 
-    const progress = computeProgressMetrics(allTasks as any, currentWeekSessions as any, currentWeekOverrides as any);
+    const progress = computeProgressMetrics(
+      allTasks.map((t) => ({
+        tangibleResult: true,
+        status: t.status,
+        estimatedDuration: t.duration,
+        createdAt: t.createdAt,
+      })),
+      currentWeekSessions.map((s) => ({
+        plannedTasks: s.plannedTasks,
+        completedTasks: s.completedTasks,
+      })),
+      currentWeekOverrides.map((o) => ({
+        timestamp: o.timestamp,
+      }))
+    );
     
     // Mettre à jour les paramètres + persister
     const before = this.parameters;
@@ -149,12 +185,26 @@ export class AdaptationManager {
   }
   
   // Obtenir les métriques de progression
-  getProgressMetrics(tasks: any[], sessions: any[], overrides: any[]) {
+  getProgressMetrics(
+    tasks: Array<{ tangibleResult?: boolean; status?: string; estimatedDuration?: number; actualDuration?: number; createdAt?: Date | number }>,
+    sessions: Array<{ plannedTasks: number; completedTasks: number }>,
+    overrides: Array<{ timestamp: number }>
+  ) {
     return computeProgressMetrics(tasks, sessions, overrides);
   }
   
   // Évaluer la qualité du cerveau
-  evaluateBrainQuality(sessions: any[], overrides: any[], modeTransitions: any[]) {
+  evaluateBrainQuality(
+    sessions: Array<{
+      completionRate?: number;
+      completedTasks?: number;
+      plannedTasks?: number;
+      allowedTasks?: unknown[];
+      rejectedTasks?: unknown[];
+    }>,
+    overrides: unknown[],
+    modeTransitions: Array<{ triggeredBy?: string; userConfirmed?: boolean }>
+  ) {
     const quality = computeBrainQuality(sessions, overrides, modeTransitions);
     
     // Entrer en mode conservateur si la qualité est trop basse

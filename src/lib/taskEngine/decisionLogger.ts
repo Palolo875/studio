@@ -5,6 +5,8 @@ import { createLogger } from '@/lib/logger';
 
 const logger = createLogger('DecisionLogger');
 
+const decisionCache = new Map<string, BrainDecision>();
+
 /**
  * Loggue une décision du cerveau
  */
@@ -18,7 +20,12 @@ export async function logBrainDecision(decision: BrainDecision): Promise<void> {
     trace: decision,
   };
 
+  decisionCache.set(decision.id, decision);
   await db.brainDecisions.put(record);
+}
+
+export function getCachedBrainDecision(decisionId: string): BrainDecision | undefined {
+  return decisionCache.get(decisionId);
 }
 
 /**
@@ -26,7 +33,9 @@ export async function logBrainDecision(decision: BrainDecision): Promise<void> {
  */
 export async function getBrainDecision(decisionId: string): Promise<BrainDecision | undefined> {
   const record = await db.brainDecisions.get(decisionId);
-  return (record?.trace as BrainDecision | undefined) ?? undefined;
+  const resolved = (record?.trace as BrainDecision | undefined) ?? undefined;
+  if (resolved) decisionCache.set(decisionId, resolved);
+  return resolved;
 }
 
 /**

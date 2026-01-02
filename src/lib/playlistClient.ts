@@ -6,6 +6,7 @@ import { generateTaskPlaylist } from "@/lib/taskEngine";
 import { dbTaskToEngineTask } from "@/lib/taskEngine/dbTaskMapping";
 import type { BrainDecision, BrainInput } from "@/lib/taskEngine/brainContracts";
 import { logBrainDecision } from "@/lib/taskEngine/decisionLogger";
+import { generateDecisionExplanation } from '@/lib/taskEngine/decisionExplanation';
 
 type DailyRitualsLike = {
   playlistShuffledCount: number;
@@ -222,6 +223,9 @@ export async function generatePlaylistClient(formData: FormData): Promise<Genera
         ],
         explanationId: '',
       };
+
+      const explanation = generateDecisionExplanation(decision);
+      decision.explanationId = explanation.id;
 
       await logBrainDecision(decision);
     } catch {

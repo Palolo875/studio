@@ -18,7 +18,7 @@ export interface AdaptationHistoryLog {
 // Interface pour les préférences utilisateur
 export interface UserPreferences {
   userId: string;
-  preferences: Record<string, any>;
+  preferences: Record<string, unknown>;
 }
 
 // Classe pour gérer la gouvernance éthique des adaptations
@@ -121,7 +121,7 @@ export class AdaptationGovernanceManager {
   }
   
   // Vérifier si un changement va à l'encontre des préférences utilisateur
-  private isChangeAgainstPreferences(change: ParameterDelta, userPref: any): boolean {
+  private isChangeAgainstPreferences(change: ParameterDelta, userPref: unknown): boolean {
     // Implémentation simplifiée - dans une vraie application, cela serait plus complexe
     // Par exemple, si l'utilisateur préfère un nombre maximum de tâches et que le changement le dépasse
     if (change.parameterName === 'maxTasks' && 

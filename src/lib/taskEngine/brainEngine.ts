@@ -1,7 +1,7 @@
 // Moteur décisionnel principal du Cerveau - Phase 3
 import { BrainInput, BrainOutput, DecisionPolicy, BrainDecision, BrainVersion } from './brainContracts';
 import { applyDecisionPolicy } from './decisionPolicyManager';
-import { getBrainDecision, logBrainDecision, registerBrainVersion } from './decisionLogger';
+import { getBrainDecision, getCachedBrainDecision, logBrainDecision, registerBrainVersion } from './decisionLogger';
 
 import { generateDecisionExplanation } from './decisionExplanation';
 import { applyUserOverride } from './userChallenge';
@@ -74,7 +74,10 @@ export function decideSessionWithTrace(input: BrainInput): BrainDecision {
     timestamp: new Date(),
     brainVersion: CURRENT_BRAIN_VERSION,
     decisionType: "TASK_SELECTION",
-    inputs: JSON.parse(JSON.stringify(input)), // Deep clone for immutability
+    inputs:
+      typeof structuredClone === 'function'
+        ? structuredClone(input)
+        : (JSON.parse(JSON.stringify(input)) as BrainInput),
     outputs,
     invariantsChecked: [
       "I - No silent decision",
@@ -99,14 +102,15 @@ export function decideSessionWithTrace(input: BrainInput): BrainDecision {
  * Doit impérativement retourner le même résultat que l'original
  */
 export function replayDecision(decisionId: string): { original: BrainDecision, replayed: BrainOutput, match: boolean } | null {
-  // NOTE: replayDecision is async behind the scenes; this sync wrapper is kept for compatibility.
-  // If storage is not reachable, it returns null.
-  const originalPromise = getBrainDecision(decisionId);
+  const original = getCachedBrainDecision(decisionId);
+  if (!original) return null;
 
-  // Unsafe sync access is avoided; callers should migrate to async if needed.
-  // Returning null here keeps behavior deterministic.
-  void originalPromise;
-  return null;
+  const replayed = decideSession(original.inputs);
+  const match =
+    JSON.stringify(replayed.session.allowedTasks.map(t => t.id)) ===
+    JSON.stringify(original.outputs.session.allowedTasks.map(t => t.id));
+
+  return { original, replayed, match };
 }
 
 export async function replayDecisionAsync(

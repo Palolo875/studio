@@ -2,6 +2,9 @@
 import { BrainDecision, DecisionExplanation } from './brainContracts';
 import { db } from '@/lib/database';
 
+const explanationCacheById = new Map<string, DecisionExplanation>();
+const explanationCacheByDecisionId = new Map<string, DecisionExplanation>();
+
 /**
  * Génère une explication pour une décision
  */
@@ -40,6 +43,9 @@ export function generateDecisionExplanation(decision: BrainDecision): DecisionEx
     confidence: 0.95 // Confiance élevée car basé sur des règles explicites
   };
 
+  explanationCacheById.set(explanation.id, explanation);
+  explanationCacheByDecisionId.set(explanation.decisionId, explanation);
+
   db.decisionExplanations
     .put({
       id: explanation.id,
@@ -71,26 +77,34 @@ function generateSummary(decision: BrainDecision): string {
  * Récupère une explication par son ID
  */
 export function getDecisionExplanation(explanationId: string): DecisionExplanation | undefined {
-  void explanationId;
-  return undefined;
+  return explanationCacheById.get(explanationId);
 }
 
 /**
  * Récupère l'explication d'une décision
  */
 export function getExplanationForDecision(decisionId: string): DecisionExplanation | undefined {
-  void decisionId;
-  return undefined;
+  return explanationCacheByDecisionId.get(decisionId);
 }
 
 export async function getDecisionExplanationAsync(explanationId: string): Promise<DecisionExplanation | undefined> {
   const rec = await db.decisionExplanations.get(explanationId);
-  return rec?.explanation as DecisionExplanation | undefined;
+  const resolved = rec?.explanation as DecisionExplanation | undefined;
+  if (resolved) {
+    explanationCacheById.set(explanationId, resolved);
+    explanationCacheByDecisionId.set(resolved.decisionId, resolved);
+  }
+  return resolved;
 }
 
 export async function getExplanationForDecisionAsync(decisionId: string): Promise<DecisionExplanation | undefined> {
   const rec = await db.decisionExplanations.where('decisionId').equals(decisionId).first();
-  return rec?.explanation as DecisionExplanation | undefined;
+  const resolved = rec?.explanation as DecisionExplanation | undefined;
+  if (resolved) {
+    explanationCacheById.set(resolved.id, resolved);
+    explanationCacheByDecisionId.set(decisionId, resolved);
+  }
+  return resolved;
 }
 
 /**

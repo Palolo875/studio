@@ -1,10 +1,59 @@
 // Tests pour le moteur décisionnel du cerveau - Phase 3
-import { decideSession, decideSessionWithTrace, replayDecisionAsync } from '../brainEngine';
+import { describe, expect, it, vi } from 'vitest';
+
+type MemoryTable<T extends Record<string, any>, K extends keyof T> = {
+  put: (row: T) => Promise<void>;
+  get: (key: T[K]) => Promise<T | undefined>;
+  toArray: () => Promise<T[]>;
+  where: (field: keyof T) => {
+    equals: (value: unknown) => { first: () => Promise<T | undefined> };
+  };
+};
+
+function createMemoryTable<T extends Record<string, any>, K extends keyof T>(keyField: K): MemoryTable<T, K> {
+  const store = new Map<T[K], T>();
+  return {
+    put: async (row) => {
+      store.set(row[keyField], row);
+    },
+    get: async (key) => store.get(key),
+    toArray: async () => Array.from(store.values()),
+    where: (field) => ({
+      equals: (value) => ({
+        first: async () => {
+          for (const row of store.values()) {
+            if (row[field] === value) return row;
+          }
+          return undefined;
+        },
+      }),
+    }),
+  };
+}
+
+const brainDecisionsTable = createMemoryTable<any, 'id'>('id');
+const decisionExplanationsTable = createMemoryTable<any, 'id'>('id');
+const brainVersionsTable = createMemoryTable<any, 'id'>('id');
+
+vi.mock('@/lib/database', () => {
+  return {
+    db: {
+      brainDecisions: brainDecisionsTable,
+      decisionExplanations: decisionExplanationsTable,
+      brainVersions: brainVersionsTable,
+    },
+  };
+});
+
+import { decideSession, decideSessionWithTrace, replayDecision, replayDecisionAsync } from '../brainEngine';
 
 import { BrainInput, BrainOutput } from '../brainContracts';
 import { Task } from '../types';
+import { getBrainDecision } from '../decisionLogger';
+import { getExplanationForDecisionAsync } from '../decisionExplanation';
 
 describe('Brain Engine - Phase 3', () => {
+
   // Données de test
   const mockTasks: Task[] = [
     {
@@ -136,6 +185,31 @@ describe('Brain Engine - Phase 3', () => {
       
       // Vérifier que les entrées correspondent
       expect(result.inputs).toEqual(mockInput);
+    });
+
+    it('devrait persister la décision et l\'explication figée', async () => {
+      const decision = decideSessionWithTrace(mockInput);
+
+      const stored = await getBrainDecision(decision.id);
+      expect(stored?.id).toBe(decision.id);
+
+      const explanation = await getExplanationForDecisionAsync(decision.id);
+      expect(explanation?.decisionId).toBe(decision.id);
+      expect(typeof explanation?.summary).toBe('string');
+    });
+
+    it('replay async devrait matcher l\'output original (déterminisme)', async () => {
+      const decision = decideSessionWithTrace(mockInput);
+      const replay = await replayDecisionAsync(decision.id);
+      expect(replay).not.toBeNull();
+      expect(replay?.match).toBe(true);
+    });
+
+    it('replay sync devrait fonctionner si la décision est en cache', () => {
+      const decision = decideSessionWithTrace(mockInput);
+      const replay = replayDecision(decision.id);
+      expect(replay).not.toBeNull();
+      expect(replay?.match).toBe(true);
     });
   });
 

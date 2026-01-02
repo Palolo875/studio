@@ -60,7 +60,7 @@ export function aggregateWeek(signals: AdaptationSignal[]): AdaptationAggregate 
   modeOverrides.forEach(signal => {
     // Cette logique nécessiterait des données sur le mode précédent
     // Pour l'exemple, nous utilisons une valeur fictive
-    const fromMode = (signal.context as any).fromMode || "CURRENT";
+    const fromMode = signal.context.fromMode ?? 'CURRENT';
     const toMode = signal.context.mode;
     const transition = `${fromMode}→${toMode}`;
     modeFromTo.set(transition, (modeFromTo.get(transition) || 0) + 1);

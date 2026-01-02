@@ -49,7 +49,7 @@ export class AdaptationValidationManager {
   // Proposer une adaptation
   proposeAdaptationChange(change: Omit<AdaptationProposal, 'id' | 'timestamp' | 'consentGiven'>): AdaptationProposal {
     // Estimer l'impact si ce n'est pas déjà fourni
-    const impact = change.hasOwnProperty('impact') ? (change as any).impact : this.estimateImpact(change.proposedChanges);
+    const impact = 'impact' in change && change.impact ? change.impact : this.estimateImpact(change.proposedChanges);
     
     const proposal: AdaptationProposal = {
       id: this.generateId(),

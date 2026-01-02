@@ -12,7 +12,7 @@ import {
   SidebarInset,
 } from '@/components/ui/sidebar';
 import {Logo} from '@/components/logo';
-import {LayoutDashboard, Settings, BookCopy, BarChart, Feather} from 'lucide-react';
+import {LayoutDashboard, Settings, BookCopy, BarChart, Feather, ClipboardList} from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import {UserNav} from '@/components/user-nav';
 import {SidebarTrigger} from '@/components/ui/sidebar';
@@ -32,6 +32,7 @@ export default function DashboardLayout({
     { href: '/dashboard/bibliotheque', label: 'Bibliothèque', icon: BookCopy },
     { href: '/dashboard/capture', label: 'Capture', icon: Feather },
     { href: '/dashboard/stats', label: 'Statistiques', icon: BarChart },
+    { href: '/dashboard/audit', label: 'Audit', icon: ClipboardList },
     { href: '/dashboard/settings', label: 'Settings', icon: Settings },
   ];
 

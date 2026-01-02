@@ -16,6 +16,7 @@ export interface AdaptationSignal {
     energy: EnergyLevel;
     taskType: TaskType;
     mode: SystemMode;
+    fromMode?: SystemMode | 'CURRENT';
     sessionId?: string;
     taskId?: string;
     // Données supplémentaires contextuelles
@@ -38,12 +39,16 @@ export interface Parameters {
   estimationFactor: number;
 }
 
+export type ParameterName = keyof Parameters;
+
 // Interface pour les deltas de paramètres
-export interface ParameterDelta {
-  parameterName: string;
-  oldValue: any;
-  newValue: any;
-}
+export type ParameterDelta = {
+  [K in ParameterName]: {
+    parameterName: K;
+    oldValue: Parameters[K];
+    newValue: Parameters[K];
+  }
+}[ParameterName];
 
 // Interface pour l'historique des adaptations
 export interface AdaptationHistory {
@@ -55,12 +60,21 @@ export interface AdaptationHistory {
   userConsent: "ACCEPTED" | "REJECTED" | "POSTPONED";
 }
 
+export type PersistedAdaptationChange = {
+  id: string;
+  timestamp: number;
+  parameterChanges: ParameterDelta[];
+  qualityBefore?: number;
+  qualityAfter?: number;
+  progress?: unknown;
+  userConsent: AdaptationHistory['userConsent'];
+};
+
 // Interface pour les ajustements
 export interface Adjustment {
-  maxTasks?: number;
-  strictness?: number;
-  coachFrequency?: number;
-  [key: string]: any; // Pour d'autres paramètres
+  maxTasks?: Parameters['maxTasks'];
+  strictness?: Parameters['strictness'];
+  coachFrequency?: Parameters['coachFrequency'];
 }
 
 // Interface pour les agrégats d'adaptation

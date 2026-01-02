@@ -1,6 +1,7 @@
 // Système de contestation utilisateur - Phase 3.4
 import { OverrideEvent } from './brainContracts';
 import { createLogger } from '@/lib/logger';
+import { getUserChallengesByDecisionId, recordUserChallenge } from '@/lib/database';
 
 const logger = createLogger('UserChallenge');
 
@@ -31,6 +32,14 @@ let challengeDatabase: UserChallenge[] = [];
  */
 export function logUserChallenge(challenge: UserChallenge): void {
   challengeDatabase.push(challenge);
+  void recordUserChallenge({
+    id: challenge.id,
+    decisionId: challenge.decisionId,
+    reason: challenge.reason,
+    userAction: challenge.userAction,
+    acknowledgedRisks: challenge.acknowledgedRisks,
+    timestamp: challenge.timestamp.getTime(),
+  });
   logger.info('Contestation enregistrée', { challengeId: challenge.id });
 }
 
@@ -46,6 +55,24 @@ export function getUserChallenge(challengeId: string): UserChallenge | undefined
  */
 export function getChallengesForDecision(decisionId: string): UserChallenge[] {
   return challengeDatabase.filter(c => c.decisionId === decisionId);
+}
+
+export async function getChallengesForDecisionAsync(decisionId: string): Promise<UserChallenge[]> {
+  const rows = await getUserChallengesByDecisionId(decisionId);
+  const mapped: UserChallenge[] = rows.map((r) => ({
+    id: r.id,
+    decisionId: r.decisionId,
+    reason: r.reason,
+    userAction: r.userAction,
+    acknowledgedRisks: r.acknowledgedRisks,
+    timestamp: new Date(r.timestamp),
+  }));
+
+  for (const c of mapped) {
+    if (!challengeDatabase.some((x) => x.id === c.id)) challengeDatabase.push(c);
+  }
+
+  return mapped;
 }
 
 /**

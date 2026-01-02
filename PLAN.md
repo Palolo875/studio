@@ -365,22 +365,104 @@ Les sections ci-dessous sont conservées comme référence. Le suivi d’exécut
 | Réversibilité: persister des hints NLP structurés | ✅ | `src/lib/database/index.ts` (`DBTask.nlpHints`, schema v7) ; `src/lib/taskEngine/dbTaskMapping.ts` ; `src/lib/taskMapping.ts` ; test `src/lib/__tests__/taskMapping.test.ts` |
 | Mise à jour DB sûre: updateTask ne doit pas effacer nlpHints/tags | ✅ | `src/lib/database/index.ts` (`safeUpdates`) ; test `src/lib/database/database.test.ts` |
 
-### État actuel Phase 6 (Adaptation) — preuves
-- Persistance signaux (`adaptationSignals`) : ✅ (`src/lib/database/index.ts`, `src/lib/phase6Implementation.ts`)
-- Persistance paramètres via settings (`adaptation_parameters`) : ✅ (`src/lib/adaptationController.ts`, `src/lib/phase6Implementation.ts`)
-- Historique adaptations (`adaptationHistory`) : ✅ (`src/lib/database/index.ts`, `src/lib/phase6Implementation.ts`)
-- Rollback réel via inversion des deltas + settings : ✅ (`src/lib/adaptationController.ts`)
-- Rollback automatique (baisse qualité) : ✅ (`src/lib/phase6Implementation.ts`)
-- Pruning hebdomadaire : ✅ (`src/lib/adaptationController.ts`)
-- Export-before-prune local-first (Dexie `snapshots`) : ✅ (`src/lib/database/index.ts`, `src/lib/adaptationController.ts`)
-- Anti-doublon export (lastExportedCutoff) : ✅ (`src/lib/adaptationController.ts`)
+## Truth Table — Phase 3 (Replay/Audit) (preuve-based)
 
-### Phase 6 — reste à faire (ordre strict)
-1) Contrat `adaptationHistory.change` type-safe
-   - Valider `parameterChanges` (shape) + accepter champs supplémentaires (quality/progress/etc.) sans `any`.
-2) UI Transparence adaptation
-   - Brancher `AdaptationPanel` sur Dexie (history + snapshots) et afficher: derniers changements, rollback, exports.
-3) Mode transitions / modeTransitions persistant
-   - Définir et persister `modeTransitions` (table) ou intégrer au logger existant.
-4) Metric pipeline
-   - Éliminer les derniers `any` dans Phase 6/7 (sessions/overrides/tasks) et garantir inputs réels Dexie.
+| Exigence Phase 3 | Statut | Preuves (fichiers) |
+|---|---:|---|
+| Persister les décisions (brainDecisions) | ✅ | `src/lib/database/index.ts` (`DBBrainDecision`, table `brainDecisions`) ; `src/lib/taskEngine/decisionLogger.ts` (`logBrainDecision`) |
+| Persister les explications figées (decisionExplanations) | ✅ | `src/lib/database/index.ts` (`DBDecisionExplanation`, table `decisionExplanations`) ; `src/lib/taskEngine/decisionExplanation.ts` (put Dexie) |
+| Décision avec traçabilité (decisionId, brainVersion, inputs/outputs) | ✅ | `src/lib/taskEngine/brainEngine.ts` (`decideSessionWithTrace`) ; `src/lib/taskEngine/brainContracts.ts` (types BrainInput/BrainOutput/BrainDecision) |
+| Replay déterministe depuis la DB (async) | ✅ | `src/lib/taskEngine/brainEngine.ts` (`replayDecisionAsync`) |
+| Replay sync best-effort (même runtime) | ✅ | `src/lib/taskEngine/decisionLogger.ts` (cache `decisionCache`) ; `src/lib/taskEngine/brainEngine.ts` (`replayDecision`) |
+| Accès explication: getters async + cache sync | ✅ | `src/lib/taskEngine/decisionExplanation.ts` (`getExplanationForDecisionAsync` + caches) |
+| UI minimale Audit/Replay (local-first) | ✅ | `src/app/dashboard/audit/page.tsx` ; `src/app/dashboard/layout.tsx` (entrée menu `/dashboard/audit`) |
+| Tests non-régression (persist + explanation + replay match) | ✅ | `src/lib/taskEngine/__tests__/brainEngine.test.ts` |
+
+## Phase 3 — Release checklist (bloquants/preuves)
+- ☐ `npm run typecheck` OK
+- ☐ `npm run lint` OK
+- ☐ `npm run test` OK
+- ☐ Vérifier `/dashboard/audit` affiche décisions + explication + replay
+- ☐ Vérifier que `replayDecisionAsync` retourne `match=true` sur une décision persistée
+
+## Résumé audit/implémentation — Phase 3 (preuve-based)
+- **Problème initial**: tables `brainDecisions/decisionExplanations` existaient, mais la chaîne **log → lecture → replay → UI** n’était pas prouvée.
+- **Implémentation**:
+  - Persistance: `logBrainDecision` écrit en Dexie et conserve un cache runtime.
+  - Explications: `generateDecisionExplanation` persiste en Dexie + cache runtime + getters async.
+  - Replay: `replayDecisionAsync` rejoue depuis `inputs` persistés et compare les IDs de tâches sélectionnées.
+  - UI: page `/dashboard/audit` permet d’inspecter et valider le déterminisme.
+
+## Audit profond — Phase 3 (docs vs code)
+
+### Exigences docs (verifiables)
+- Décisions traçables, persistées, consultables.
+- Explication figée (anti-mensonge) persistée et liée à la décision (`explanationId`).
+- Replay déterministe (rejouer à partir des `inputs` persistés → output identique sur critères définis).
+- Garanties de pureté (`usedAIdecision=false`, etc.) présentes dans les sorties.
+
+### Constat initial (écarts détectés)
+- **Clonage destructif**: `JSON.parse(JSON.stringify(input))` dans `decideSessionWithTrace` cassait les `Date` (et potentiellement les structures), risquant un replay faux.
+  - Preuve: `src/lib/taskEngine/brainEngine.ts` (avant correction).
+- **Explication figée manquante sur logs Phase 1**: `playlistClient.ts` logge une `BrainDecision` avec `explanationId: ''`.
+  - Preuve: `src/lib/playlistClient.ts` (avant correction).
+- **Audit UI trompeur**: affichage brut `JSON.stringify` masquait les `Map` (vides) et les `Date` (strings), rendant l’audit illisible.
+  - Preuve: `src/app/dashboard/audit/page.tsx` (avant correction).
+- **Policy manager non conforme/fragile**: imports manquants, `any`, et valeurs “Simulation” dans `budgetConsumed`.
+  - Preuve: `src/lib/taskEngine/decisionPolicyManager.ts` (avant correction).
+
+### Corrections appliquées (preuves)
+- **Préservation types pour déterminisme**: remplacement du clone JSON par `structuredClone` (avec fallback).
+  - Preuve: `src/lib/taskEngine/brainEngine.ts`.
+- **Anti-mensonge**: génération + persistance d’une explication figée et remplissage de `explanationId` lors du logging Phase 1.
+  - Preuve: `src/lib/playlistClient.ts` (appel `generateDecisionExplanation(decision)` + `decision.explanationId = explanation.id`).
+- **Audit UI lisible**: rendu JSON avec replacer (`Map` → entries, `Date` → ISO).
+  - Preuve: `src/app/dashboard/audit/page.tsx` (`stringifyForAudit`).
+- **Policy manager durci**: imports, `RejectionReason` typé, suppression de `any`, suppression du “Simulation”, alignement `guarantees.coachIsSubordinate`.
+  - Preuve: `src/lib/taskEngine/decisionPolicyManager.ts`.
+
+### Risques résiduels / TODOs Phase 3
+- **Fallback `structuredClone`**: si indisponible, le fallback JSON reste destructif (Date/Map). À surveiller si l’app cible un runtime sans `structuredClone`.
+- **Contestations utilisateur**: persistées dans Dexie (audit-proof) + cache mémoire best-effort.
+  - Preuves: `src/lib/database/index.ts` (table `userChallenges`, schema v9, helpers `recordUserChallenge/getUserChallengesByDecisionId`) ; `src/lib/taskEngine/userChallenge.ts` (`recordUserChallenge`, `getChallengesForDecisionAsync`) ; `src/app/dashboard/audit/page.tsx` (section “Contestations utilisateur”).
+- **Sérialisation Map/Date en DB**: Dexie stocke `trace` en `unknown`; selon runtime, les `Map` peuvent ne pas être persistées comme attendu. La page audit affiche correctement les `Map` *en mémoire*, mais une politique de sérialisation stable pourrait être nécessaire.
+
+## Truth Table — Phase 6 (Adaptation) (preuve-based)
+
+| Exigence Phase 6 | Statut | Preuves (fichiers) |
+|---|---:|---|
+| Contrat `ParameterDelta` strict (pas de `any`) | ✅ | `src/lib/adaptationMemory.ts` (union discriminée `ParameterDelta`) |
+| Contrat `adaptationHistory.change` explicite | ✅ | `src/lib/adaptationMemory.ts` (`PersistedAdaptationChange`) ; garde-fous: `src/lib/adaptationController.ts` (`isPersistedAdaptationChange`) |
+| Application paramètres type-safe (pas d’indexing unsafe) | ✅ | `src/lib/adaptationController.ts` (`applyParameters` switch) |
+| Reset adaptation → enregistre historique | ✅ | `src/lib/adaptationController.ts` (`resetAdaptationToDefaults`) |
+| Rollback (delta inversé) sur paramètres persistés | ✅ | `src/lib/adaptationController.ts` (`rollbackAdaptation`, `invertDelta`) |
+| Rollback automatique si dégradation BrainQuality | ✅ | `src/lib/phase6Implementation.ts` (comparaison `brainQualityBefore/After` + `rollbackAdaptation`) |
+| Pruning hebdo des signaux (déterministe) | ✅ | `src/lib/adaptationController.ts` (`setupAdaptationPruning`) |
+| Export-before-prune via snapshots Dexie | ✅ | `src/lib/adaptationController.ts` (`exportEncryptedArchive`) ; `src/lib/database/index.ts` (`snapshots`) |
+| UI Transparence: panneau lit Dexie (history + snapshots) | ✅ | `src/lib/adaptationTransparency.ts` ; `src/components/settings/settings-form.tsx` (state typé via `ReturnType<typeof AdaptationPanel>`) |
+| Pipeline UI↔DB↔Engine: progress/quality sur données réelles | ✅ | `src/lib/phase6Implementation.ts` (map DB → `computeProgressMetrics`) ; `src/lib/brainQuality.ts` |
+| `modeTransitions` persistants + branchés à BrainQuality | ✅ | `src/lib/database/index.ts` (schema v8 + `modeTransitions`, helpers) ; `src/lib/phase6Implementation.ts` (utilise `getModeTransitionsByPeriod`) |
+| Élimination des `any` Phase 6 (contrats + tests) | ✅ | `src/lib/adaptationController.ts`, `src/lib/adaptationTransparency.ts`, `src/lib/adaptationAggregator.ts`, `src/lib/adaptationValidation.ts`, `src/lib/adaptationRollback.ts`, `src/lib/adaptationGovernance.ts` |
+| Tests non-régression sur règles/controller | ✅ | `src/lib/__tests__/adaptationRules.test.ts` ; `src/lib/__tests__/adaptationController.test.ts` |
+
+## Phase 6 — Release checklist (bloquants/preuves)
+- ☐ `npm run typecheck` OK
+- ☐ `npm run lint` OK
+- ☐ `npm run test` OK
+- ☐ Vérifier migration Dexie v8 en environnement réel (création table `modeTransitions`)
+- ☐ Vérifier UI Settings → section Adaptation: affichage paramètres/historique/exports
+- ☐ Vérifier rollback manuel (UI) et rollback auto (baisse qualité) sur données réelles
+- ☐ Vérifier export-before-prune crée des `snapshots` consultables
+
+## Résumé audit/implémentation — Phase 6 (preuve-based)
+- **Objectif**: passer d’un proto “adaptation” à un système local-first gouverné, observable, rollbackable, sans `any`.
+- **Contrats durcis**:
+  - `ParameterDelta` devenu une union discriminée → suppression des écritures `next[key] = ...` non sûres.
+  - `PersistedAdaptationChange` centralise le payload stocké dans `adaptationHistory.change`.
+- **Pipeline DB↔Engine stabilisé**:
+  - Calcul progress/quality branché sur données Dexie (sessions/overrides/tasks) plutôt que des placeholders.
+  - Ajout `modeTransitions` persistant (Dexie v8) + wiring dans `computeBrainQuality`.
+- **UI Transparence**:
+  - `AdaptationPanel` lit Dexie (history + snapshots) et l’état UI est strictement typé côté Settings.
+- **Non-régression**:
+  - Tests Phase 6 durcis pour éviter retour de `any` et vérifier rollback + règles.

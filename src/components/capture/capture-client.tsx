@@ -18,19 +18,11 @@ import { createFullTask } from '@/lib/nlp/TaskFactory';
 
 type AnalyzeCaptureOutput = {
   rawTasks: RawTaskWithContract[];
-  tasks: Array<{ title: string; deadline?: string; priority?: 'high' | 'medium' | 'low' }>;
+  tasks: Array<{ title: string; deadline?: string }>;
   dbTasks: DBTask[];
   notes?: string;
   sentiment?: string;
 };
-
-function inferPriority(task: RawTaskWithContract): 'high' | 'medium' | 'low' {
-  const text = `${task.rawText} ${task.object}`.toLowerCase();
-  if (text.includes('urgent') || text.includes('asap')) return 'high';
-  if (text.includes('demain') || text.includes('tomorrow')) return 'high';
-  if (text.includes('rapid') || text.includes('vite') || text.includes('quick')) return 'medium';
-  return 'medium';
-}
 
 function inferSentiment(text: string): string | undefined {
   const lower = text.toLowerCase();
@@ -63,7 +55,7 @@ async function analyzeCaptureLocal(text: string): Promise<AnalyzeCaptureOutput> 
 
     const tasks = rawTasks.map((t) => {
       const title = [t.action, t.object].filter(Boolean).join(' ').trim() || t.rawText;
-      return { title, deadline: t.deadline ?? undefined, priority: inferPriority(t) };
+      return { title, deadline: t.deadline ?? undefined };
     });
 
     createNLPContractResult(rawTasks);
@@ -100,7 +92,6 @@ async function analyzeCaptureLocal(text: string): Promise<AnalyzeCaptureOutput> 
     const tasks = fallback.map(t => ({
       title: t.content,
       deadline: undefined,
-      priority: 'medium' as const,
     }));
 
     return { rawTasks: [], tasks, dbTasks, notes: undefined, sentiment: inferSentiment(input) };
@@ -218,6 +209,7 @@ export function CaptureClient() {
                            <span className="font-medium">{task.title}</span>
                            <div className="flex items-center gap-2 mt-1">
                             {task.deadline && <Badge variant="outline">Pour: {task.deadline}</Badge>}
+                            {task.priority && <Badge variant="secondary">Priorité: {task.priority}</Badge>}
                            </div>
                         </li>
                       ))}

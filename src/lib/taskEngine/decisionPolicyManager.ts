@@ -1,6 +1,8 @@
 /**
  * Calcule le nombre maximum de tâches autorisé (Cap Dynamique - Phase 3.2)
  */
+import type { BrainInput, BrainOutput, DecisionPolicy, RejectionReason } from './brainContracts';
+
 export function calculateMaxTasks(input: BrainInput, policyLevel: string): number {
   let base = 3;
   let modifiers = 0;
@@ -34,15 +36,23 @@ export function applyStrictPolicy(input: BrainInput): BrainOutput {
     .slice(0, maxTasks);
 
   const rejectedTasks = input.tasks.filter(t => !allowedTasks.includes(t));
-  const reasons = new Map<string, any>();
-  rejectedTasks.forEach(t => reasons.set(t.id, "budget_exceeded" as const));
+  const reasons = new Map<string, RejectionReason>();
+  for (const task of rejectedTasks) {
+    if (task.effort === 'high' && input.userState.energy === 'low') {
+      reasons.set(task.id, 'energy_mismatch');
+      continue;
+    }
+    reasons.set(task.id, 'capacity_limit');
+  }
+
+  const estimatedDuration = allowedTasks.reduce((sum, t) => sum + (t.duration || 0), 0);
 
   return {
     session: {
       allowedTasks,
       maxTasks,
-      estimatedDuration: allowedTasks.reduce((sum, t) => sum + (t.duration || 0), 0),
-      budgetConsumed: allowedTasks.length * 2 // Simulation
+      estimatedDuration,
+      budgetConsumed: estimatedDuration
     },
     rejected: {
       tasks: rejectedTasks,
@@ -62,7 +72,8 @@ export function applyStrictPolicy(input: BrainInput): BrainOutput {
       inferredUserIntent: false,
       optimizedForPerformance: false,
       overrodeUserChoice: false,
-      forcedEngagement: false
+      forcedEngagement: false,
+      coachIsSubordinate: true
     },
     metadata: {
       decisionId: generateDecisionId(),
@@ -93,16 +104,22 @@ export function applyAssistedPolicy(input: BrainInput): BrainOutput {
   const allowedTasks = sortedTasks.slice(0, maxTasks);
   const rejectedTasks = input.tasks.filter(t => !allowedTasks.includes(t));
 
+  const estimatedDuration = allowedTasks.reduce((sum, t) => sum + (t.duration || 0), 0);
+  const reasons = new Map<string, RejectionReason>();
+  for (const task of rejectedTasks) {
+    reasons.set(task.id, 'capacity_limit');
+  }
+
   return {
     session: {
       allowedTasks,
       maxTasks,
-      estimatedDuration: allowedTasks.reduce((sum, t) => sum + (t.duration || 0), 0),
-      budgetConsumed: allowedTasks.length * 1.5
+      estimatedDuration,
+      budgetConsumed: estimatedDuration
     },
     rejected: {
       tasks: rejectedTasks,
-      reasons: new Map()
+      reasons
     },
     mode: {
       current: "NORMAL",
@@ -118,7 +135,8 @@ export function applyAssistedPolicy(input: BrainInput): BrainOutput {
       inferredUserIntent: false,
       optimizedForPerformance: false,
       overrodeUserChoice: false,
-      forcedEngagement: false
+      forcedEngagement: false,
+      coachIsSubordinate: true
     },
     metadata: {
       decisionId: generateDecisionId(),
@@ -142,16 +160,22 @@ export function applyEmergencyPolicy(input: BrainInput): BrainOutput {
   const allowedTasks = urgentTasks.slice(0, maxTasks);
   const rejectedTasks = input.tasks.filter(t => !allowedTasks.includes(t));
 
+  const estimatedDuration = allowedTasks.reduce((sum, t) => sum + (t.duration || 0), 0);
+  const reasons = new Map<string, RejectionReason>();
+  for (const task of rejectedTasks) {
+    reasons.set(task.id, 'capacity_limit');
+  }
+
   return {
     session: {
       allowedTasks,
       maxTasks,
-      estimatedDuration: allowedTasks.reduce((sum, t) => sum + (t.duration || 0), 0),
-      budgetConsumed: allowedTasks.length * 3
+      estimatedDuration,
+      budgetConsumed: estimatedDuration
     },
     rejected: {
       tasks: rejectedTasks,
-      reasons: new Map()
+      reasons
     },
     mode: {
       current: "EMERGENCY",
@@ -171,7 +195,8 @@ export function applyEmergencyPolicy(input: BrainInput): BrainOutput {
       inferredUserIntent: false,
       optimizedForPerformance: false,
       overrodeUserChoice: false,
-      forcedEngagement: false
+      forcedEngagement: false,
+      coachIsSubordinate: true
     },
     metadata: {
       decisionId: generateDecisionId(),

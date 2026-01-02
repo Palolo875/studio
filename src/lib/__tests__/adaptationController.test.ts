@@ -1,5 +1,7 @@
 // Tests pour le contrôleur d'adaptation - Phase 6
 import { describe, expect, test, vi, beforeEach } from 'vitest';
+import type { Parameters, PersistedAdaptationChange } from '../adaptationMemory';
+import type { DBAdaptationHistory } from '../database';
 
 vi.mock('@/lib/logger', () => {
   return {
@@ -15,14 +17,16 @@ vi.mock('@/lib/logger', () => {
 type StoredSetting = unknown;
 
 let settings: Record<string, StoredSetting> = {};
-let latestHistory: any = undefined;
+let latestHistory: DBAdaptationHistory | undefined = undefined;
+
 const setSettingMock = vi.fn(async (key: string, value: unknown) => {
   settings[key] = value;
 });
-const recordHistoryMock = vi.fn(async (entry: any) => {
+const recordHistoryMock = vi.fn(async (entry: Omit<DBAdaptationHistory, 'id'>) => {
   latestHistory = { id: 123, ...entry };
   return 123;
 });
+
 const markRevertedMock = vi.fn(async (_id: number) => undefined);
 const saveSnapshotMock = vi.fn(async () => 1);
 
@@ -122,7 +126,7 @@ describe('Adaptation Controller', () => {
       defaultMode: 'STRICT',
       sessionBuffer: 10,
       estimationFactor: 1.0,
-    };
+    } satisfies Parameters;
 
     latestHistory = {
       id: 777,
@@ -130,17 +134,25 @@ describe('Adaptation Controller', () => {
       reverted: false,
       change: {
         id: 'adaptation_123',
+        timestamp: Date.now(),
         parameterChanges: [
           { parameterName: 'maxTasks', oldValue: 5, newValue: 7 },
         ],
+        userConsent: 'ACCEPTED',
       },
     };
 
     // Simulate that the adaptation was applied (maxTasks=7). Rollback should bring it back to 5.
     settings['adaptation_parameters'] = {
-      ...(settings['adaptation_parameters'] as any),
       maxTasks: 7,
-    };
+      strictness: 0.6,
+      coachFrequency: 1 / 30,
+      coachEnabled: true,
+      energyForecastMode: 'ACCURATE',
+      defaultMode: 'STRICT',
+      sessionBuffer: 10,
+      estimationFactor: 1.0,
+    } satisfies Parameters;
 
     await rollbackLatestAdaptation();
 
@@ -148,8 +160,8 @@ describe('Adaptation Controller', () => {
     expect(markRevertedMock).toHaveBeenCalledWith(777);
     const lastSet = setSettingMock.mock.calls[setSettingMock.mock.calls.length - 1];
     expect(lastSet?.[0]).toBe('adaptation_parameters');
-    const payload = lastSet?.[1] as any;
-    expect(payload?.maxTasks).toBe(5);
+    const payload = lastSet?.[1] as Parameters;
+    expect(payload.maxTasks).toBe(5);
   });
 
   test('runAdaptationTransparencyAction dispatches resetAdaptation', async () => {

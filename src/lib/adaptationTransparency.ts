@@ -1,5 +1,5 @@
 // Transparence des adaptations - Phase 6
-import { Parameters } from './adaptationMemory';
+import { Parameters, PersistedAdaptationChange } from './adaptationMemory';
 import { getSetting, getRecentAdaptationHistory, getSnapshotsByNamePrefix, type DBAdaptationHistory } from './database/index';
 
 // Interface pour les logs d'adaptation
@@ -10,26 +10,19 @@ interface AdaptationLogEntry {
   adaptationId?: string;
 }
 
-type PersistedAdaptationChange = {
-  id?: string;
-  timestamp?: number;
-  parameterChanges?: Array<{ parameterName?: string; oldValue?: unknown; newValue?: unknown }>;
-  qualityBefore?: number;
-  qualityAfter?: number;
-  progress?: unknown;
-  userConsent?: string;
-};
-
 function getChangeEnvelope(entry: DBAdaptationHistory): PersistedAdaptationChange | undefined {
   if (!entry.change || typeof entry.change !== 'object') return undefined;
-  return entry.change as PersistedAdaptationChange;
+  const v = entry.change as Partial<PersistedAdaptationChange>;
+  if (typeof v.id !== 'string') return undefined;
+  if (typeof v.timestamp !== 'number') return undefined;
+  if (!Array.isArray(v.parameterChanges)) return undefined;
+  if (v.userConsent !== 'ACCEPTED' && v.userConsent !== 'REJECTED' && v.userConsent !== 'POSTPONED') return undefined;
+
+  return v as PersistedAdaptationChange;
 }
 
-function formatDeltaLine(delta: { parameterName?: string; oldValue?: unknown; newValue?: unknown }): string {
-  const name = typeof delta.parameterName === 'string' ? delta.parameterName : 'unknown';
-  const oldV = delta.oldValue;
-  const newV = delta.newValue;
-  return `${name}: ${String(oldV)} → ${String(newV)}`;
+function formatDeltaLine(delta: PersistedAdaptationChange['parameterChanges'][number]): string {
+  return `${delta.parameterName}: ${String(delta.oldValue)} → ${String(delta.newValue)}`;
 }
 
 // Component exemple pour l'UI de transparence

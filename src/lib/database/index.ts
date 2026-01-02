@@ -264,6 +264,15 @@ export interface DBDecisionExplanation {
     explanation: unknown;
 }
 
+export interface DBUserChallenge {
+    id: string;
+    decisionId: string;
+    reason: string;
+    userAction: 'OVERRIDE' | 'IGNORE' | 'ASK_REVIEW';
+    acknowledgedRisks: boolean;
+    timestamp: number;
+}
+
 export interface DBBrainVersion {
     id: string;
     algorithmVersion: string;
@@ -284,6 +293,17 @@ export interface DBAdaptationHistory {
     timestamp: number;
     change: unknown;
     reverted?: boolean;
+}
+
+export interface DBModeTransition {
+    id?: number;
+    timestamp: number;
+    userId: string;
+    fromMode: string;
+    toMode: string;
+    triggeredBy: 'SYSTEM' | 'USER';
+    userConfirmed: boolean;
+    source?: 'adaptation_signal';
 }
 
 export interface DBSnapshot {
@@ -336,8 +356,10 @@ class KairuFlowDatabase extends Dexie {
     brainDecisions!: Table<DBBrainDecision, string>;
     brainVersions!: Table<DBBrainVersion, string>;
     decisionExplanations!: Table<DBDecisionExplanation, string>;
+    userChallenges!: Table<DBUserChallenge, string>;
     adaptationSignals!: Table<DBAdaptationSignal, number>;
     adaptationHistory!: Table<DBAdaptationHistory, number>;
+    modeTransitions!: Table<DBModeTransition, number>;
     snapshots!: Table<DBSnapshot, number>;
     eveningEntries!: Table<DBEveningEntry, string>;
     settings!: Table<DBSetting, string>;
@@ -551,6 +573,49 @@ class KairuFlowDatabase extends Dexie {
             decisionExplanations: 'id, decisionId, timestamp',
             adaptationSignals: '++id, timestamp, type',
             adaptationHistory: '++id, timestamp',
+            snapshots: '++id, timestamp, name',
+
+            eveningEntries: 'id, timestamp, updatedAt',
+            settings: 'key, updatedAt',
+        });
+
+        // Version 8: persisted mode transitions
+        this.version(8).stores({
+            tasks: 'id, status, urgency, deadline, category, createdAt, updatedAt',
+            sessions: 'id, timestamp, state, createdAt',
+            taskHistory: '++id, taskId, action, timestamp',
+            userPatterns: 'id, userId, patternType, updatedAt',
+            overrides: '++id, timestamp',
+            sleepData: '++id, date, createdAt',
+
+            brainDecisions: 'id, timestamp, brainVersion',
+            brainVersions: 'id, releasedAt',
+            decisionExplanations: 'id, decisionId, timestamp',
+            adaptationSignals: '++id, timestamp, type',
+            adaptationHistory: '++id, timestamp',
+            modeTransitions: '++id, timestamp, userId, triggeredBy, fromMode, toMode',
+            snapshots: '++id, timestamp, name',
+
+            eveningEntries: 'id, timestamp, updatedAt',
+            settings: 'key, updatedAt',
+        });
+
+        // Version 9: persisted user challenges (Phase 3.4)
+        this.version(9).stores({
+            tasks: 'id, status, urgency, deadline, category, createdAt, updatedAt',
+            sessions: 'id, timestamp, state, createdAt',
+            taskHistory: '++id, taskId, action, timestamp',
+            userPatterns: 'id, userId, patternType, updatedAt',
+            overrides: '++id, timestamp',
+            sleepData: '++id, date, createdAt',
+
+            brainDecisions: 'id, timestamp, brainVersion',
+            brainVersions: 'id, releasedAt',
+            decisionExplanations: 'id, decisionId, timestamp',
+            userChallenges: 'id, decisionId, timestamp, userAction',
+            adaptationSignals: '++id, timestamp, type',
+            adaptationHistory: '++id, timestamp',
+            modeTransitions: '++id, timestamp, userId, triggeredBy, fromMode, toMode',
             snapshots: '++id, timestamp, name',
 
             eveningEntries: 'id, timestamp, updatedAt',
@@ -964,10 +1029,77 @@ export async function addAdaptationSignal(signal: Omit<DBAdaptationSignal, 'id'>
     try {
         const id = await db.adaptationSignals.add(signal);
         logger.debug('Adaptation signal recorded', { id, type: signal.type });
+
+        if (signal.type === 'MODE_OVERRIDE') {
+            const payload = signal.payload;
+            if (payload && typeof payload === 'object') {
+                const v = payload as Record<string, unknown>;
+                const userId = typeof v.userId === 'string' ? v.userId : undefined;
+                const ts = typeof v.timestamp === 'number' ? v.timestamp : signal.timestamp;
+                const ctx = v.context;
+                if (userId && ctx && typeof ctx === 'object') {
+                    const c = ctx as Record<string, unknown>;
+                    const toMode = typeof c.mode === 'string' ? c.mode : undefined;
+                    const fromMode = typeof c.fromMode === 'string' ? c.fromMode : 'CURRENT';
+                    if (toMode) {
+                        void recordModeTransition({
+                            timestamp: ts,
+                            userId,
+                            fromMode,
+                            toMode,
+                            triggeredBy: 'USER',
+                            userConfirmed: true,
+                            source: 'adaptation_signal',
+                        });
+                    }
+                }
+            }
+        }
+
         return id;
     } catch (error) {
         logger.error('Failed to record adaptation signal', error as Error);
         return undefined;
+    }
+}
+
+export async function recordModeTransition(entry: Omit<DBModeTransition, 'id'>): Promise<number | undefined> {
+    try {
+        const id = await db.modeTransitions.add(entry);
+        logger.debug('Mode transition recorded', { id, fromMode: entry.fromMode, toMode: entry.toMode });
+        return id;
+    } catch (error) {
+        logger.error('Failed to record mode transition', error as Error);
+        return undefined;
+    }
+}
+
+export async function getModeTransitionsByPeriod(startTimestamp: number, endTimestamp: number): Promise<DBModeTransition[]> {
+    try {
+        return await db.modeTransitions
+            .where('timestamp')
+            .between(startTimestamp, endTimestamp)
+            .toArray();
+    } catch (error) {
+        logger.error('Failed to get mode transitions by period', error as Error);
+        return [];
+    }
+}
+
+export async function recordUserChallenge(entry: DBUserChallenge): Promise<void> {
+    try {
+        await db.userChallenges.put(entry);
+    } catch (error) {
+        logger.error('Failed to record user challenge', error as Error);
+    }
+}
+
+export async function getUserChallengesByDecisionId(decisionId: string): Promise<DBUserChallenge[]> {
+    try {
+        return await db.userChallenges.where('decisionId').equals(decisionId).toArray();
+    } catch (error) {
+        logger.error('Failed to get user challenges for decision', error as Error);
+        return [];
     }
 }
 

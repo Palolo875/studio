@@ -92,7 +92,7 @@ export function SettingsForm() {
   const { setTheme, theme } = useTheme();
   const restoreFileInputRef = useRef<HTMLInputElement | null>(null);
   const [backupPassphrase, setBackupPassphrase] = useState('');
-  const [adaptationPanel, setAdaptationPanel] = useState<any>(null);
+  const [adaptationPanel, setAdaptationPanel] = useState<Awaited<ReturnType<typeof AdaptationPanel>> | null>(null);
   const [adaptationLoading, setAdaptationLoading] = useState(false);
 
   async function encryptPayload(plainText: string, passphrase: string): Promise<string> {
