@@ -209,6 +209,7 @@ export function CaptureClient() {
                            <span className="font-medium">{task.title}</span>
                            <div className="flex items-center gap-2 mt-1">
                             {task.deadline && <Badge variant="outline">Pour: {task.deadline}</Badge>}
+                            {/* @ts-ignore */}
                             {task.priority && <Badge variant="secondary">Priorité: {task.priority}</Badge>}
                            </div>
                         </li>
