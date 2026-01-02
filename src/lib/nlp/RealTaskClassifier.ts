@@ -61,7 +61,7 @@ async function loadClassifier(): Promise<void> {
 
             classifierPipeline = await pipeline(
                 'zero-shot-classification',
-                'Xenova/mobilebert-uncased-mnli',
+                'Xenova/distilbert-base-multilingual-cased-sentiments-student',
                 {
                     progress_callback: (progress: any) => {
                         if (progress.status === 'progress') {
