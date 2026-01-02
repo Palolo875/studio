@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/dialog';
 import { useRouter } from 'next/navigation';
 import { TimelineView } from './timeline-view';
+import { TaskList } from './task-list';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { EnergyCheckIn } from './energy-check-in';
@@ -211,7 +212,7 @@ export function DashboardClient() {
   const persistTasks = async (newTasks: Task[], options: { incrementShuffle?: boolean } = {}) => {
     setTasks(newTasks);
     setInitialTaskCount(newTasks.length);
-    const dbTasks = newTasks.map(uiTaskToDbTask);
+    const dbTasks = newTasks.map(t => uiTaskToDbTask(t));
     await upsertTasks(dbTasks);
     if (options.incrementShuffle) {
       setDailyRituals((prev: DailyRituals) => ({
@@ -263,7 +264,7 @@ export function DashboardClient() {
           description: response.message,
         });
       } else {
-        await persistTasks(response.tasks.map((t) => t.task), { incrementShuffle: true });
+        await persistTasks(response.tasks.map((t: any) => t.task as Task), { incrementShuffle: true });
 
         const nowMs = Date.now();
 
