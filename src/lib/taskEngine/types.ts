@@ -6,8 +6,8 @@
 export interface EnergyState {
   /** Niveau d'énergie : faible, moyen ou élevé */
   level: 'low' | 'medium' | 'high';
-  /** Stabilité de l'énergie (0.0-1.0) */
-  stability: number;
+  /** Stabilité de l'énergie : volatile ou stable */
+  stability: 'volatile' | 'stable';
   /** Confiance dans l'état d'énergie (0.0-1.0) */
   confidence?: number;
   /** Date de dernière mise à jour */
