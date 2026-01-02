@@ -53,6 +53,38 @@ export class GovernanceDashboard {
     this.notifyUpdate();
   }
 
+  // Enregistrer une décision utilisateur (override)
+  recordUserDecision(): void {
+    const newMetrics = {
+      ...this.metrics,
+      userDecisions: this.metrics.userDecisions + 1,
+      totalDecisions: this.metrics.totalDecisions + 1,
+    };
+    newMetrics.autonomyIntegrityScore = calculateAutonomyIntegrityScore(
+      newMetrics.userDecisions,
+      newMetrics.systemDecisions,
+      newMetrics.totalDecisions
+    );
+    this.metrics = newMetrics;
+    this.notifyUpdate();
+  }
+
+  // Enregistrer une décision système (refus accepté)
+  recordSystemDecision(): void {
+    const newMetrics = {
+      ...this.metrics,
+      systemDecisions: this.metrics.systemDecisions + 1,
+      totalDecisions: this.metrics.totalDecisions + 1,
+    };
+    newMetrics.autonomyIntegrityScore = calculateAutonomyIntegrityScore(
+      newMetrics.userDecisions,
+      newMetrics.systemDecisions,
+      newMetrics.totalDecisions
+    );
+    this.metrics = newMetrics;
+    this.notifyUpdate();
+  }
+
   private getIntegrityAssessment(): string {
     const score = this.metrics.autonomyIntegrityScore;
     if (score >= 0.8) return 'Excellent';

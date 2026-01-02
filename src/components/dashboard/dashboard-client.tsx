@@ -418,6 +418,23 @@ export function DashboardClient() {
     }
 
     if (violations.length > 0 || (phase7Manager.getSovereigntyManager().currentMode === SovereigntyMode.PROTECTIVE)) {
+      try {
+        const burnoutResult = await phase7Manager.checkBurnoutAndProtect();
+        if (burnoutResult?.signals) {
+          setBurnoutSignals({
+            chronicOverload: burnoutResult.signals.chronicOverload,
+            sleepDebt: burnoutResult.signals.sleepDebt,
+            constantOverrides: burnoutResult.signals.overrideAbuse,
+            zeroCompletion: burnoutResult.signals.completionCollapse,
+            erraticBehavior: burnoutResult.signals.erraticBehavior,
+            taskAccumulation: burnoutResult.signals.taskAccumulation,
+          });
+          setIsProtectiveNotificationOpen(true);
+        }
+      } catch {
+        // ignore
+      }
+
       // Déclencher le ConflictResolutionModal
       setCurrentConflict({
         userRequest: { title: urgentTaskName, priority: "URGENT", effort: "HEAVY" },

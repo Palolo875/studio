@@ -135,13 +135,12 @@ export class SovereigntyManager {
       // Vérifier le taux d'overrides (sur les 7 derniers jours)
       const weekAgo = now - (7 * 24 * 60 * 60 * 1000);
       const recentOverrides = overrides.filter(o => o.timestamp > weekAgo);
-      
-      // Pour cet exemple, nous simulons un nombre de décisions
-      const totalDecisions = 100; // Valeur simulée
+
+      const weekSessions = sessions.filter(s => s.timestamp > weekAgo);
+      const totalDecisions = weekSessions.reduce((sum, s) => sum + (s.plannedTasks ?? 0), 0);
       const overrideRate = totalDecisions > 0 ? recentOverrides.length / totalDecisions : 0;
       
       // Vérifier le taux de complétion (sur les 7 derniers jours)
-      const weekSessions = sessions.filter(s => s.timestamp > weekAgo);
       let totalPlanned = 0;
       let totalCompleted = 0;
       

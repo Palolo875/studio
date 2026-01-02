@@ -254,7 +254,14 @@ export class DatabaseSnapshotManager {
         .join('');
     }
 
-    throw new Error('WebCrypto unavailable: cannot compute SHA-256 checksum');
+    // Fallback deterministic (non-crypto) checksum for environments without WebCrypto (ex: some test runners).
+    // This is used only to detect accidental mismatches, not for security.
+    let hash = 2166136261;
+    for (let i = 0; i < jsonString.length; i++) {
+      hash ^= jsonString.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return `fnv1a_${(hash >>> 0).toString(16)}`;
   }
 
   /**

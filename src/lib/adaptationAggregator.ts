@@ -21,9 +21,10 @@ export function aggregateWeek(signals: AdaptationSignal[]): AdaptationAggregate 
   const rejectedSuggestions = signals.filter(s => s.type === "REJECTED_SUGGESTION");
   const overruns = signals.filter(s => s.type === "SESSION_OVERRUN");
   const modeOverrides = signals.filter(s => s.type === "MODE_OVERRIDE");
+  const energyMismatches = signals.filter(s => s.type === "ENERGY_MISMATCH");
   
-  // Calculer les ratios
-  const totalTasks = signals.length; // Approximation - devrait être basé sur les tâches réelles
+  // Calculer les ratios (approximation acceptable: ratios sur signaux observés)
+  const totalSignals = Math.max(signals.length, 1);
   
   // Agréger les forced tasks
   const forcedByEnergy = new Map<EnergyLevel, number>();
@@ -47,7 +48,8 @@ export function aggregateWeek(signals: AdaptationSignal[]): AdaptationAggregate 
     totalOverrunMinutes += signal.context.duration || 15; // Valeur par défaut de 15 minutes
     
     // Classification par heure de la journée (nécessiterait des données réelles)
-    const timeOfDay = signal.context.timeOfDay || "afternoon";
+    const raw = String(signal.context.timeOfDay ?? 'afternoon').toLowerCase();
+    const timeOfDay = (raw === 'morning' || raw === 'afternoon' || raw === 'evening') ? raw : 'afternoon';
     timeOfDayCount[timeOfDay] = (timeOfDayCount[timeOfDay] || 0) + 1;
   });
   
@@ -67,9 +69,18 @@ export function aggregateWeek(signals: AdaptationSignal[]): AdaptationAggregate 
   });
   
   // Déterminer les signaux dérivés
-  const forcedTasksRatio = forcedTasks.length / Math.max(totalTasks, 1);
+  const forcedTasksRatio = forcedTasks.length / totalSignals;
   const needsMoreFlexibility = forcedTasksRatio > 0.6;
-  const needsMoreStructure = forcedTasksRatio < 0.1 && rejectedSuggestions.length / Math.max(totalTasks, 1) > 0.7;
+  const rejectedRatio = rejectedSuggestions.length / totalSignals;
+  const needsMoreStructure = forcedTasksRatio < 0.1 && rejectedRatio > 0.7;
+
+  // Signal: énergie souvent incompatible avec la réalité (Phase 6: energy mismatch)
+  const energyMismatchRatio = energyMismatches.length / totalSignals;
+  const energyEstimatesOff = energyMismatchRatio > 0.3;
+
+  // Signal: mode trop souvent overridé (mismatch mode)
+  const modeOverrideRatio = modeOverrides.length / totalSignals;
+  const modeMismatch = modeOverrideRatio > 0.3;
   
   // Retourner l'objet agrégé
   return {
@@ -83,7 +94,7 @@ export function aggregateWeek(signals: AdaptationSignal[]): AdaptationAggregate 
       },
       rejected_suggestions: {
         count: rejectedSuggestions.length,
-        ratio: rejectedSuggestions.length / Math.max(totalTasks, 1),
+        ratio: rejectedRatio,
         common_reasons: [] // À implémenter avec une analyse des motifs
       },
       overrun_sessions: {
@@ -99,8 +110,8 @@ export function aggregateWeek(signals: AdaptationSignal[]): AdaptationAggregate 
     signals: {
       needs_more_flexibility: needsMoreFlexibility,
       needs_more_structure: needsMoreStructure,
-      energy_estimates_off: false, // À implémenter
-      mode_mismatch: modeOverrides.length > 5 // Valeur arbitraire pour l'exemple
+      energy_estimates_off: energyEstimatesOff,
+      mode_mismatch: modeMismatch
     }
   };
 }

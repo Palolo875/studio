@@ -29,6 +29,7 @@ export class Phase7Manager {
   private governanceDashboard: GovernanceDashboard;
   private conflictResolver: ConflictResolver;
   private protectiveModeManager: ProtectiveModeManager;
+  private lastBurnoutResult: BurnoutDetectionResult | null = null;
 
   constructor() {
     // Initialiser le contrat d'autorité
@@ -89,10 +90,11 @@ export class Phase7Manager {
   }
 
   // Vérifier les signaux de burnout et activer le mode protectif si nécessaire
-  async checkBurnoutAndProtect(): Promise<void> {
+  async checkBurnoutAndProtect(): Promise<BurnoutDetectionResult | null> {
     try {
       // Calculer le score de burnout via le moteur connecté à la DB
       const burnoutResult = await calculateBurnoutScore();
+      this.lastBurnoutResult = burnoutResult;
 
       // Mettre à jour le risque de burnout dans le tableau de bord
       this.governanceDashboard.updateBurnoutRisk(burnoutResult.score);
@@ -124,9 +126,16 @@ export class Phase7Manager {
       if (this.protectiveModeManager.isActive()) {
         this.protectiveModeManager.applyRestrictions();
       }
+
+      return burnoutResult;
     } catch (error) {
       logger.error('Erreur lors de la vérification du burnout', error as Error);
+      return this.lastBurnoutResult;
     }
+  }
+
+  getLastBurnoutResult(): BurnoutDetectionResult | null {
+    return this.lastBurnoutResult;
   }
 
   // Calculer le coût d'un override en récupérant le contexte actuel

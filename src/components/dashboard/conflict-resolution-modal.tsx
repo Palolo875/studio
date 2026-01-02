@@ -53,9 +53,9 @@ export function ConflictResolutionModal({
     {
       id: 1,
       title: "Forcer la tâche (avec coût)",
-      description: "Vous pouvez forcer la tâche mais cela aura un impact sur votre budget futur.",
+      description: "Vous pouvez forcer la tâche mais cela aura un impact sur votre budget futur (coût calculé à l'étape suivante).",
       icon: <AlertTriangle className="h-5 w-5" />,
-      cost: "30%"
+      cost: null
     },
     // Options contextuelles
     ...(userRequest.priority === "URGENT" && systemRejection.code === "BURNOUT" ? [

@@ -142,6 +142,15 @@ export function applyAdjustmentRules(
 ): Parameters {
   let newParams = { ...currentParams };
   const changes: string[] = [];
+
+  const toModeCounts = new Map<string, number>();
+  aggregate.patterns.mode_overrides.from_to.forEach((count, transition) => {
+    const parts = transition.split('→');
+    const to = parts[1] ?? '';
+    if (!to) return;
+    toModeCounts.set(to, (toModeCounts.get(to) || 0) + count);
+  });
+  const mostUsedMode = [...toModeCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] as any;
   
   // Règle 1 : Trop de forces
   if (aggregate.patterns.forced_tasks.ratio > 0.6) {
@@ -158,28 +167,28 @@ export function applyAdjustmentRules(
   
   // Règle 2 : Trop de rejets suggestions
   if (aggregate.patterns.rejected_suggestions.ratio > 0.7) {
-    // Implémentation dépendante de la structure du système
-    // newParams.coachFrequency *= 0.8;
-    // newParams.coachProactivity = "OFF";
+    newParams.coachFrequency = Math.max(1 / 365, newParams.coachFrequency * 0.8);
+    newParams.coachEnabled = false;
     changes.push(RULES.too_many_rejections.action.reason);
   }
   
   // Règle 3 : Sessions systématiquement dépassées
   if (aggregate.patterns.overrun_sessions.count > 0 && 
       aggregate.patterns.overrun_sessions.avg_overrun_minutes > 30) {
-    // Implémentation dépendante de la structure du système
-    // newParams.sessionBuffer += 15;
-    // newParams.estimationFactor *= 1.2;
+    newParams.sessionBuffer = Math.min(120, Math.max(0, newParams.sessionBuffer + 15));
+    newParams.estimationFactor = Math.min(3, Math.max(0.5, newParams.estimationFactor * 1.2));
     changes.push(RULES.consistent_overruns.action.reason);
   }
   
   // Règle 4 : Mode constamment overridé
-  // Implémentation dépendante de l'accès aux données de mode
+  if (aggregate.signals.mode_mismatch && mostUsedMode) {
+    newParams.defaultMode = mostUsedMode;
+    changes.push(RULES.mode_mismatch.action.reason);
+  }
   
   // Règle 5 : Énergie mal estimée
   if (aggregate.signals.energy_estimates_off) {
-    // Implémentation dépendante de la structure du système
-    // newParams.energyForecastMode = "CONSERVATIVE";
+    newParams.energyForecastMode = 'CONSERVATIVE';
     changes.push(RULES.energy_prediction_off.action.reason);
   }
   

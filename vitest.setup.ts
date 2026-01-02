@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
+import 'fake-indexeddb/auto';
 
 // Mock pour les APIs du navigateur non disponibles dans Node
 Object.defineProperty(window, 'matchMedia', {
