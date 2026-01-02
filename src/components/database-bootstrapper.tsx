@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { db } from '@/lib/database';
 import { getAdaptationSignalsByPeriod, getSetting, setSetting } from '@/lib/database';
 import { createLocalBackupSnapshot, openDbWithCorruptionRecovery, performPeriodicHealthCheck } from '@/lib/dbCorruptionRecovery';
@@ -20,7 +20,14 @@ const PHASE6_LAST_WEEKLY_ADAPTATION_KEY = 'phase6_last_weekly_adaptation_ts';
 const logger = createLogger('DatabaseBootstrapper');
 
 export function DatabaseBootstrapper() {
+  const [isMounted, setIsMounted] = useState(false);
+
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
     let cancelled = false;
     let healthInterval: ReturnType<typeof setInterval> | undefined;
     let growthInterval: ReturnType<typeof setInterval> | undefined;
@@ -42,7 +49,7 @@ export function DatabaseBootstrapper() {
       try {
         await performStartupIntegrityCheck(db);
       } catch (error) {
-        logger.warn('Startup integrity check failed', error as Error);
+        logger.warn('Startup integrity check failed', { error: (error as Error).message });
       }
 
       if (cancelled) return;
@@ -126,7 +133,8 @@ export function DatabaseBootstrapper() {
       memoryMonitor.stopMonitoring();
       dbUsageMonitor.stop();
     };
-  }, []);
+  }, [isMounted]);
 
+  if (!isMounted) return null;
   return null;
 }
