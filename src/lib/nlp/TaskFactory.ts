@@ -10,7 +10,7 @@ export function createFullTask(
   rawTask: RawTaskWithContract,
   classification: TaskClassification & { isUncertain: boolean; unknown?: boolean }
 ): DBTask {
-  const baseContent = `${rawTask.action} ${rawTask.object}`.trim();
+  const baseContent = rawTask.action === 'tâche' ? rawTask.object : `${rawTask.action} ${rawTask.object}`.trim();
   const now = new Date();
 
   const shouldApplySuggestions = !classification.isUncertain && classification.unknown !== true;

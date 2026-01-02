@@ -54,7 +54,7 @@ async function analyzeCaptureLocal(text: string): Promise<AnalyzeCaptureOutput> 
     const dbTasks = classified.map(({ raw, classification }) => createFullTask(raw, classification));
 
     const tasks = rawTasks.map((t) => {
-      const title = [t.action, t.object].filter(Boolean).join(' ').trim() || t.rawText;
+      const title = t.action === 'tâche' ? t.object : ([t.action, t.object].filter(Boolean).join(' ').trim() || t.rawText);
       return { title, deadline: t.deadline ?? undefined };
     });
 

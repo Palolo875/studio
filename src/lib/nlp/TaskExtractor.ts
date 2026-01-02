@@ -60,7 +60,21 @@ const ACTION_VERBS = {
     ['commencer', 0.7],
     ['mettre à jour', 0.75],
     ['vérifier', 0.7],
-    ['confirmer', 0.75]
+    ['confirmer', 0.75],
+    ['acheter', 0.8],
+    ['commander', 0.8],
+    ['voir', 0.6],
+    ['aller', 0.6],
+    ['manger', 0.6],
+    ['boire', 0.6],
+    ['courir', 0.7],
+    ['sport', 0.7],
+    ['musique', 0.6],
+    ['jouer', 0.7],
+    ['travailler', 0.7],
+    ['étudier', 0.7],
+    ['apprendre', 0.7],
+    ['réviser', 0.8]
   ]),
   en: new Map([
     ['call', 0.9],
@@ -153,7 +167,8 @@ export function extractTasks(text: string, uiLang: 'fr' | 'en' | 'es' = 'fr'): R
 
   // 2. Détecter la fatigue linguistique
   const fatigueState = linguisticFatigueDetector.detectFatigue(text);
-  const confidenceThreshold = fatigueState.processingThreshold;
+  // Réduire radicalement le seuil pour ne pas bloquer l'utilisateur
+  const confidenceThreshold = 0.1; 
 
   // Normaliser le texte
   const normalizedText = text.trim();
@@ -214,6 +229,36 @@ export function extractTasks(text: string, uiLang: 'fr' | 'en' | 'es' = 'fr'): R
         // Injecter la langue détectée dans les métadonnées
         task.metadata.detectedLang = lang;
 
+        tasks.push(task);
+      } else {
+        // FALLBACK: Si aucune action n'est détectée avec certitude, on prend toute la clause comme tâche
+        const isFromSplit = clause.trim() !== sentence.trim();
+        const task = createTaskWithContract(
+          {
+            id: generateId(),
+            action: 'tâche',
+            object: clause.trim(),
+            deadline: parseDateNL(clause, lang),
+            effortHint: guessEffort(clause),
+            rawText: clause,
+            sentence: clause,
+            confidence: 0.5,
+            entities: extractEntities(clause, lang),
+          },
+          {
+            inferred: true,
+            decided: false,
+            corrected: false,
+            extracted: true,
+            classified: false,
+            confidence: 0.5,
+          },
+          {
+            unknown: true,
+            split_from_compound: isFromSplit,
+          }
+        );
+        task.metadata.detectedLang = lang;
         tasks.push(task);
       }
     }
