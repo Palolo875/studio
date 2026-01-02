@@ -57,7 +57,13 @@ async function loadClassifier(): Promise<void> {
     loadingPromise = (async () => {
         try {
             // Import dynamique pour éviter les problèmes de build
-            const { pipeline } = await import('@xenova/transformers');
+            const { pipeline, env } = await import('@xenova/transformers');
+
+            // Configurer explicitement pour l'environnement Replit/Browser
+            env.allowLocalModels = false;
+            env.useBrowserCache = true;
+            env.remoteHost = 'https://huggingface.co';
+            env.remotePathTemplate = '{model}/resolve/{revision}/';
 
             classifierPipeline = await pipeline(
                 'zero-shot-classification',
