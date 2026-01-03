@@ -106,9 +106,43 @@ export function CaptureClient() {
   const [isPending, setIsPending] = useState(false);
   const { toast } = useToast();
 
+  const DRAFT_KEY = 'kairuflow.capture.draft.v1';
+
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const existing = window.sessionStorage.getItem(DRAFT_KEY);
+      if (existing && !content) {
+        setContent(existing);
+      }
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const timer = window.setTimeout(() => {
+      try {
+        if (content) {
+          window.sessionStorage.setItem(DRAFT_KEY, content);
+        } else {
+          window.sessionStorage.removeItem(DRAFT_KEY);
+        }
+      } catch {
+        // ignore
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [content]);
   
   const handleAddToTasks = async () => {
     if (!analysis) return;
@@ -119,6 +153,13 @@ export function CaptureClient() {
         title: 'Ajouté',
         description: `${analysis.dbTasks.length} tâche(s) ajoutée(s) à la bibliothèque.`,
       });
+      try {
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.removeItem(DRAFT_KEY);
+        }
+      } catch {
+        // ignore
+      }
       setContent('');
       setAnalysis(null);
     } catch {

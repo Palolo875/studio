@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import {
   SidebarProvider,
   Sidebar,
@@ -13,7 +14,7 @@ import {
 } from '@/components/ui/sidebar';
 import {Logo} from '@/components/logo';
 import {LayoutDashboard, Settings, BookCopy, BarChart, Feather, ClipboardList} from 'lucide-react';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {UserNav} from '@/components/user-nav';
 import {SidebarTrigger} from '@/components/ui/sidebar';
 import {ScrollArea} from '@/components/ui/scroll-area';
@@ -24,7 +25,6 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
 
   const menuItems = [
@@ -55,12 +55,11 @@ export default function DashboardLayout({
                 const Icon = item.icon;
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton 
-                      onClick={() => router.push(item.href)}
-                      isActive={pathname === item.href}
-                    >
-                      <Icon />
-                      {item.label}
+                    <SidebarMenuButton asChild isActive={pathname === item.href}>
+                      <Link href={item.href} prefetch>
+                        <Icon />
+                        {item.label}
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );

@@ -133,21 +133,55 @@ export function ReservoirClient() {
   const [sheetTaskData, setSheetTaskData] = useState<Partial<ReservoirTask>>({});
   const [newSubtask, setNewSubtask] = useState('');
 
+  const loadTasks = async (signal?: { cancelled: boolean }) => {
+    try {
+      const dbTasks = await getAllTasks();
+      if (signal?.cancelled) return;
+      setTasks(dbTasks.map(dbToUiTask));
+    } catch {
+      if (signal?.cancelled) return;
+      setTasks([]);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const dbTasks = await getAllTasks();
-        if (cancelled) return;
-        setTasks(dbTasks.map(dbToUiTask));
-      } catch {
-        if (cancelled) return;
-        setTasks([]);
-      }
-    })();
+    void loadTasks({ cancelled });
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const onFocus = () => {
+      void loadTasks({ cancelled });
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void loadTasks({ cancelled });
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', onFocus);
+    }
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisibility);
+    }
+
+    return () => {
+      cancelled = true;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', onFocus);
+      }
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisibility);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
