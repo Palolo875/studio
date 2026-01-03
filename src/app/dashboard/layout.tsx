@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, Suspense } from 'react';
 import {
   SidebarProvider,
   Sidebar,
@@ -39,7 +39,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen overflow-hidden">
         <DatabaseBootstrapper />
         <Sidebar>
           <SidebarHeader>
@@ -70,15 +70,19 @@ export default function DashboardLayout({
             </SidebarMenu>
           </SidebarContent>
         </Sidebar>
-        <SidebarInset>
-          <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
+        <SidebarInset className="flex flex-col h-screen overflow-hidden">
+          <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
             <SidebarTrigger className="md:hidden" />
             <div className="flex-1" />
             <UserNav />
           </header>
-          <main className="flex-1 p-4 md:p-6 lg:p-8">
+          <main className="flex-1 overflow-hidden relative">
             <ScrollArea className="h-full">
-              <div className="pr-4">{children}</div>
+              <div className="p-4 md:p-6 lg:p-8">
+                <Suspense fallback={<div className="flex items-center justify-center h-full">Chargement...</div>}>
+                  {children}
+                </Suspense>
+              </div>
             </ScrollArea>
           </main>
         </SidebarInset>
