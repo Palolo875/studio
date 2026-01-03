@@ -21,6 +21,50 @@ export interface UserBehavior {
   completionRates?: number[];           // Taux complétion
 }
 
+function convertStringArrayToMap(arr: string[]): Map<string, number> {
+  const map = new Map<string, number>();
+  arr.forEach((item) => {
+    map.set(item, (map.get(item) || 0) + 1);
+  });
+  return map;
+}
+
+function calculateArraySimilarity(arr1: number[], arr2: number[]): number {
+  if (arr1.length !== arr2.length) {
+    return 0;
+  }
+
+  let sum = 0;
+  for (let i = 0; i < arr1.length; i++) {
+    sum += 1 - Math.abs(arr1[i] - arr2[i]) / Math.max(arr1[i], arr2[i], 1);
+  }
+
+  return sum / arr1.length;
+}
+
+export function compareBehaviorPatterns(current: UserBehavior, baseline: HistoricalBehaviorData): number {
+  const taskShift = klDivergence(
+    current.taskTypesDistribution || new Map(),
+    convertStringArrayToMap(baseline.baselineTaskTypes)
+  );
+
+  const energyShift = 1 - correlation(current.energyPatterns || [], baseline.baselineEnergyLevels || []);
+
+  const scheduleShift = 1 - calculateArraySimilarity(current.scheduledTimes || [], baseline.baselineDailySchedule || []);
+
+  const completionShift = Math.abs(
+    (current.completionRates?.reduce((a, b) => a + b, 0) / (current.completionRates?.length || 1) || 0) -
+      (baseline.baselineTaskCompletionRate || 0)
+  );
+
+  return (
+    0.3 * normalize(taskShift, 0, 5) +
+    0.3 * normalize(energyShift, 0, 1) +
+    0.2 * normalize(scheduleShift, 0, 1) +
+    0.2 * normalize(completionShift, 0, 1)
+  );
+}
+
 // Interface pour les données historiques de comportement
 export interface HistoricalBehaviorData {
   userId: string;

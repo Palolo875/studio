@@ -1,6 +1,8 @@
 // authorityAndAbuse.test.ts
 // Tests unitaires bloquants pour l'autorité et la prévention de l'abus
 
+import { describe, test, expect, vi } from 'vitest';
+
 import { UserContractManager } from '../userFacingContract';
 import { NonNegotiablesManager } from '../nonNegotiables';
 import { AbuseProtectionManager } from '../abuseProtection';
@@ -136,7 +138,7 @@ describe('Authority & Abuse', () => {
     const abuseProtectionManager = new AbuseProtectionManager();
     
     // Espionner la méthode showBenevolentMessage
-    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     
     // Déclencher la détection d'abus
     (abuseProtectionManager as any).showBenevolentMessage({
@@ -144,9 +146,9 @@ describe('Authority & Abuse', () => {
       title: 'Pattern détecté',
       body: `J'ai remarqué que tu forces beaucoup de décisions depuis 2 semaines.\n\n**Deux possibilités :**\n1. Les règles par défaut ne te correspondent pas\n2. Tu traverses une période exceptionnelle\n\nQu'est-ce qui correspond le mieux ?`,
       actions: [
-        { label: 'Ajuster les règles', action: jest.fn() },
-        { label: 'Période temporaire', action: jest.fn() },
-        { label: 'Passer en mode manuel', action: jest.fn() }
+        { label: 'Ajuster les règles', action: vi.fn() },
+        { label: 'Période temporaire', action: vi.fn() },
+        { label: 'Passer en mode manuel', action: vi.fn() }
       ]
     });
     
