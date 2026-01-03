@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
     process.env.NODE_ENV === 'development'
       ? [
           'https://6c99c0df-1cb0-482a-9c0b-59237eea8ddb-00-3neiw8wt7yfxb.picard.replit.dev',
+          '*.replit.dev',
           'http://127.0.0.1:5000',
           'http://localhost:5000',
         ]

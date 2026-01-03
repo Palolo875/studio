@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   SidebarProvider,
   Sidebar,
@@ -18,6 +18,7 @@ import {UserNav} from '@/components/user-nav';
 import {SidebarTrigger} from '@/components/ui/sidebar';
 import {ScrollArea} from '@/components/ui/scroll-area';
 import { SidebarCloseButton } from '@/components/ui/sidebar-close-button';
+import { DatabaseBootstrapper } from '@/components/database-bootstrapper';
 
 export default function DashboardLayout({
   children,
@@ -27,18 +28,19 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
 
-  const menuItems = [
+  const menuItems = useMemo(() => [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/dashboard/bibliotheque', label: 'Bibliothèque', icon: BookCopy },
     { href: '/dashboard/capture', label: 'Capture', icon: Feather },
     { href: '/dashboard/stats', label: 'Statistiques', icon: BarChart },
     { href: '/dashboard/audit', label: 'Audit', icon: ClipboardList },
     { href: '/dashboard/settings', label: 'Settings', icon: Settings },
-  ];
+  ], []);
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen">
+        <DatabaseBootstrapper />
         <Sidebar>
           <SidebarHeader>
             <div className="flex items-center justify-between w-full">

@@ -28,10 +28,6 @@ export function DatabaseBootstrapper() {
 
   useEffect(() => {
     if (!isMounted) return;
-    // Vérifier si nous sommes dans un environnement de développement pour éviter les boucles de refresh
-    if (process.env.NODE_ENV === 'development') {
-      console.log('DatabaseBootstrapper: Client-side mounted');
-    }
     let cancelled = false;
     let healthInterval: ReturnType<typeof setInterval> | undefined;
     let growthInterval: ReturnType<typeof setInterval> | undefined;
@@ -49,6 +45,16 @@ export function DatabaseBootstrapper() {
       }
 
       if (cancelled) return;
+
+      // On s'assure que les tâches sont bien présentes
+      try {
+        const count = await db.tasks.count();
+        if (count === 0) {
+           logger.info('Database empty, checking for sync needed');
+        }
+      } catch (e) {
+        logger.error('Error checking task count', e as Error);
+      }
 
       try {
         await performStartupIntegrityCheck(db);

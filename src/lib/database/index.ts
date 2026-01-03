@@ -67,6 +67,7 @@ export interface DBTask {
  * Upsert en masse des tâches (utilisé pour synchroniser depuis le Brain/playlist)
  */
 export async function upsertTasks(tasks: DBTask[]): Promise<void> {
+    if (!tasks.length) return;
     try {
         const ids = tasks.map(t => t.id);
         const existing = await db.tasks.bulkGet(ids);
@@ -77,7 +78,15 @@ export async function upsertTasks(tasks: DBTask[]): Promise<void> {
 
         const merged = tasks.map((t) => {
             const prev = existingById.get(t.id);
-            if (!prev) return t;
+            if (!prev) {
+                return {
+                    ...t,
+                    status: t.status || 'todo',
+                    activationCount: t.activationCount || 0,
+                    createdAt: t.createdAt || new Date(),
+                    updatedAt: new Date()
+                };
+            }
 
             return {
                 ...t,
@@ -85,6 +94,7 @@ export async function upsertTasks(tasks: DBTask[]): Promise<void> {
                 activationCount: prev.activationCount,
                 nlpHints: t.nlpHints ?? prev.nlpHints,
                 tags: t.tags ?? prev.tags,
+                updatedAt: new Date()
             };
         });
 
