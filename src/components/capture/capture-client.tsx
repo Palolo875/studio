@@ -18,7 +18,7 @@ import { createFullTask } from '@/lib/nlp/TaskFactory';
 
 type AnalyzeCaptureOutput = {
   rawTasks: RawTaskWithContract[];
-  tasks: Array<{ title: string; deadline?: string }>;
+  tasks: Array<{ title: string; deadline?: string; priority?: 'low' | 'medium' | 'high' | 'urgent' }>;
   dbTasks: DBTask[];
   notes?: string;
   sentiment?: string;
@@ -41,6 +41,14 @@ function deriveNotes(text: string, tasks: RawTaskWithContract[]): string | undef
   return remaining.length ? remaining.join('. ') : undefined;
 }
 
+function urgencyToPriority(urgency: number | undefined): 'low' | 'medium' | 'high' | 'urgent' | undefined {
+  if (urgency == null || Number.isNaN(urgency)) return undefined;
+  if (urgency >= 0.9) return 'urgent';
+  if (urgency >= 0.7) return 'high';
+  if (urgency >= 0.4) return 'medium';
+  return 'low';
+}
+
 async function analyzeCaptureLocal(text: string): Promise<AnalyzeCaptureOutput> {
   const input = text.trim();
   if (!input) return { rawTasks: [], tasks: [], dbTasks: [], notes: undefined, sentiment: undefined };
@@ -53,9 +61,16 @@ async function analyzeCaptureLocal(text: string): Promise<AnalyzeCaptureOutput> 
     );
     const dbTasks = classified.map(({ raw, classification }) => createFullTask(raw, classification));
 
-    const tasks = rawTasks.map((t) => {
-      const title = t.action === 'tâche' ? t.object : ([t.action, t.object].filter(Boolean).join(' ').trim() || t.rawText);
-      return { title, deadline: t.deadline ?? undefined };
+    const tasks = classified.map(({ raw, classification }) => {
+      const title =
+        raw.action === 'tâche'
+          ? raw.object
+          : ([raw.action, raw.object].filter(Boolean).join(' ').trim() || raw.rawText);
+      return {
+        title,
+        deadline: raw.deadline ?? undefined,
+        priority: urgencyToPriority(classification.urgency),
+      };
     });
 
     createNLPContractResult(rawTasks);

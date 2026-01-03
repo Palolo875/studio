@@ -267,8 +267,8 @@ export function extractTasks(text: string, uiLang: 'fr' | 'en' | 'es' = 'fr'): R
   // Trier par confiance décroissante
   tasks.sort((a, b) => b.confidence - a.confidence);
 
-  // Limiter à 5 tâches maximum par session de capture
-  return tasks.slice(0, 5);
+  // Limiter à 20 tâches maximum par session de capture
+  return tasks.slice(0, 20);
 }
 
 function splitCompoundSentence(sentence: string, lang: string): string[] {
@@ -300,14 +300,26 @@ function splitCompoundSentence(sentence: string, lang: string): string[] {
  * Divise le texte en phrases avec détection avancée
  */
 function splitIntoSentences(text: string, lang: string): string[] {
-  // Amélioration : utiliser des règles linguistiques plus précises
-  const sentenceEndings = /[.!?]+(?=\s+[A-ZÀ-ÖØ-Þ])/g;
-  const sentences = text.split(sentenceEndings);
+  const raw = text.replace(/\r\n/g, '\n').trim();
+  if (!raw) return [];
 
-  // Nettoyer et filtrer les phrases
-  return sentences
-    .map(s => s.trim())
-    .filter(s => s.length > 0 && /[a-zA-ZÀ-ÖØ-öø-ÿ]/.test(s)); // Au moins une lettre
+  const blocks = raw
+    .split(/\n{2,}/)
+    .flatMap((block) =>
+      block
+        .split(/\n\s*(?:[-*•]|\d+[.)]|\[[x ]\])\s+/g)
+        .map((s) => s.trim())
+        .filter(Boolean)
+    );
+
+  const sentences = blocks.flatMap((block) =>
+    block
+      .split(/[.!?]+|\s*[;:]+\s*|\s*[，、]+\s*/g)
+      .map((s) => s.trim())
+      .filter(Boolean)
+  );
+
+  return sentences.filter((s) => s.length > 0 && /[a-zA-ZÀ-ÖØ-öø-ÿ]/.test(s));
 }
 
 /**
