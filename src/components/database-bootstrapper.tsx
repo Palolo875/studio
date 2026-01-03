@@ -28,6 +28,10 @@ export function DatabaseBootstrapper() {
 
   useEffect(() => {
     if (!isMounted) return;
+    // Vérifier si nous sommes dans un environnement de développement pour éviter les boucles de refresh
+    if (process.env.NODE_ENV === 'development') {
+      console.log('DatabaseBootstrapper: Client-side mounted');
+    }
     let cancelled = false;
     let healthInterval: ReturnType<typeof setInterval> | undefined;
     let growthInterval: ReturnType<typeof setInterval> | undefined;
