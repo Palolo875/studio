@@ -1,5 +1,3 @@
-'use server';
-
 /**
  * @fileOverview Local-only capture analysis (no cloud). Parses unstructured text
  * into actionable tasks using the deterministic TaskExtractor pipeline.

@@ -1,10 +1,10 @@
-# Plan d’implémentation SOTA (local-first, zéro cloud)
+# Plan d’implémentation SOTA (local-first, zéro exfiltration de données)
 
 ## Objectif
 Livrer une version **cohérente**, **local-first**, **preuve-based** (tests + fichiers) et **sans simulation cachée**.
 
 ## Principes non négociables
-- Local-first strict : aucune lecture/écriture IndexedDB/Dexie côté serveur. Aucun appel cloud par défaut.
+- Local-first strict : aucune lecture/écriture IndexedDB/Dexie côté serveur. Aucun envoi de données utilisateur vers des serveurs. Téléchargement d’assets (ex: modèles) autorisé si configuré, puis usage local/offline.
 - Source de vérité : Dexie (IndexedDB) pour données métier (tâches, sessions, décisions, adaptations, snapshots). `localStorage` uniquement pour préférences UI non critiques.
 - Unicité : un seul modèle de tâche métier et un seul moteur “playlist/brain” utilisé en production.
 - Définition du Done : intégré au flux principal, persisté, test (unit + e2e) + preuve (fichiers/paths) + suppression des stubs.
@@ -114,7 +114,7 @@ Les sections ci-dessous sont conservées comme référence. Le suivi d’exécut
    - Onboarding : /onboarding/* utilise localStorage (ok pour onboarding) mais non intégré au moteur ensuite. /onboarding-test redirige vers /dashboard.
 2) Server actions (src/app/actions.ts)
    - "use server" ok, mais handleGeneratePlaylist appelle generateMagicalPlaylist sans currentTime requis par MagicalPlaylistOptions → bug potentiel.
-   - handleAnalyzeCapture appelle Genkit/Gemini (analyze-capture-flow) ⇒ contradiction “zéro cloud”.
+   - handleAnalyzeCapture appelle Genkit/Gemini (analyze-capture-flow) ⇒ contradiction “local-first / zéro exfiltration”.
    - handleGetRecommendations : stub local tri par priorité.
 3) NLP : deux pipelines concurrents
    - Pipeline réel UI Capture : handleAnalyzeCapture (cloud Gemini) + tâches proposées, ajout à la bibliothèque non branché (console.log).
@@ -195,7 +195,7 @@ Les sections ci-dessous sont conservées comme référence. Le suivi d’exécut
 - Data integrity / Source of truth : Rouge — double DB (Dexie vs taskDatabase), localStorage massif, stubs console.
 - Determinisme / Async correctness : Orange — phase7 partiellement awaité, generateMagicalPlaylist options incohérentes.
 - Offline / local-first : Rouge — capture cloud active, pipeline local stub.
-- Security/consent cloud : Rouge — flux LLM sans consent toggle, promesse “zéro cloud” rompue.
+- Security/consent cloud : Rouge — flux LLM sans consent toggle, promesse “local-first / zéro exfiltration” rompue.
 - Tests/CI : Orange — workflows présents, mais coverage réelle non vérifiée, npm audit continue-on-error.
 
 ## Backlog P0/P1/P2 (corrigés par priorité)

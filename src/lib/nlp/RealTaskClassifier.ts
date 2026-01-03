@@ -14,6 +14,14 @@ import { RawTaskWithContract } from '@/lib/nlp/NLPContract';
 
 const logger = createLogger('RealTaskClassifier');
 
+declare const process: { env?: Record<string, string | undefined> } | undefined;
+
+function allowModelDownloads(): boolean {
+    const v = typeof process !== 'undefined' ? process?.env?.NEXT_PUBLIC_ALLOW_MODEL_DOWNLOADS : undefined;
+    if (!v) return true;
+    return v === '1' || v === 'true' || v === 'yes';
+}
+
 // Types pour la classification
 export interface TaskClassification {
     energyType: 'creative' | 'focus' | 'admin' | 'relationnel' | 'perso';
@@ -59,11 +67,26 @@ async function loadClassifier(): Promise<void> {
             // Import dynamique pour éviter les problèmes de build
             const { pipeline, env } = await import('@xenova/transformers');
 
+            const downloadsAllowed = allowModelDownloads();
+            logger.info('Transformer model policy', {
+                downloadsAllowed,
+                note: 'local-first: downloads fetch model assets only; no user data is uploaded',
+            });
+
+            if (!downloadsAllowed) {
+                logger.warn('Model downloads disabled. Falling back to heuristic classifier (no network).');
+                classifierPipeline = null;
+                return;
+            }
+
             // Configurer explicitement pour l'environnement Replit/Browser
-            env.allowLocalModels = false;
+            env.allowLocalModels = true;
             env.useBrowserCache = true;
             env.remoteHost = 'https://huggingface.co';
             env.remotePathTemplate = '{model}/resolve/{revision}/';
+            if ('allowRemoteModels' in env) {
+                (env as any).allowRemoteModels = true;
+            }
 
             classifierPipeline = await pipeline(
                 'zero-shot-classification',

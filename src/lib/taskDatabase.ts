@@ -1,4 +1,5 @@
 import {
+  db as dexieDb,
   getTodoTasksBulk as getTodoTasksBulkDexie,
   getTaskHistoryBulk as getTaskHistoryBulkDexie,
   updateUserPatternsInDB as updateUserPatternsInDBDexie,
@@ -24,7 +25,7 @@ type TaskLike = {
 
 type UserPatternsLike = Record<string, unknown>;
 
-export const db = {} as const;
+export const db = dexieDb;
 
 /**
  * Récupère toutes les tâches 'todo' avec bulkGet

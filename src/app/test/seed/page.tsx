@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation';
 
 import { db, setSetting, upsertTasks, type DBTask } from '@/lib/database';
 
+declare const process: { env?: { NODE_ENV?: string } } | undefined;
+
 function parseBool(v: string | null): boolean {
   return v === '1' || v === 'true' || v === 'yes';
 }
@@ -61,6 +63,14 @@ export default function TestSeedPage() {
     const run = async () => {
       setStatus('working');
       setMessage('');
+
+      const isProd = typeof process !== 'undefined' && process?.env?.NODE_ENV === 'production';
+      if (isProd) {
+        if (cancelled) return;
+        setStatus('error');
+        setMessage('disabled');
+        return;
+      }
 
       try {
         const reset = parseBool(params.get('reset'));

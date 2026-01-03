@@ -7,11 +7,13 @@
 import { modelMemoryManager } from '../modelMemoryManager';
 import { storageGuard } from '../storageGuard';
 import { adaptiveTimeout } from '../adaptiveTimeout';
-import { WorkerCommunication, createOptimizedWorker } from '../workerCommunication';
+import { WorkerCommunication } from '../workerCommunication';
 import { memoryMonitor } from '../memoryMonitor';
 import { performanceTracker } from '../performanceTracker';
 import { progressiveFallback } from '../progressiveFallback';
 import { batteryAwareness } from '../batteryAwareness';
+
+declare const process: { memoryUsage?: () => { heapUsed: number } } | undefined;
 
 // Interfaces pour les tests
 interface TestResult {
@@ -26,37 +28,37 @@ interface TestResult {
  */
 export class Phase4PerformanceTests {
   private results: TestResult[] = [];
-  
+
   /**
    * Exécute tous les tests de performance
    */
   async runAllTests(): Promise<TestResult[]> {
     console.log('=== Tests de Performance Phase 4 ===');
-    
+
     // Test 6: Lazy loading models
     await this.testLazyLoadingModels();
-    
+
     // Test 7: Worker communication overhead
     await this.testWorkerCommunicationOverhead();
-    
+
     // Test 8: Long-running session
     await this.testLongRunningSession();
-    
+
     // Test 9: Concurrent operations
     await this.testConcurrentOperations();
-    
+
     // Test 10: Quota exceeded
     await this.testQuotaExceeded();
-    
+
     // Test 11: Network offline/online transitions
     await this.testNetworkTransitions();
-    
+
     // Test 12: Battery saver mode
     await this.testBatterySaverMode();
-    
+
     return this.results;
   }
-  
+
   /**
    * Test 6: Lazy loading models
    * - User n'utilise jamais Coach
@@ -65,27 +67,28 @@ export class Phase4PerformanceTests {
    */
   private async testLazyLoadingModels(): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
       // Simuler un utilisateur qui n'utilise jamais le Coach
       const initialModelCount = modelMemoryManager.getLoadedModelCount();
-      
+
       // Essayer de charger un modèle de coach
       const coachLoaded = modelMemoryManager.loadModel('coach_model');
-      
+
       // Vérifier que le modèle n'est pas chargé si l'utilisateur n'utilise pas le Coach
       // Dans une vraie implémentation, cela dépendrait de l'état de l'application
       const finalModelCount = modelMemoryManager.getLoadedModelCount();
-      
+
       // Vérifier l'utilisation mémoire
-      const memoryUsage = process.memoryUsage?.().heapUsed || 0;
+      const memoryUsage =
+        typeof process !== 'undefined' ? (process?.memoryUsage?.().heapUsed ?? 0) : 0;
       const memoryUsageMB = memoryUsage / (1024 * 1024);
-      
+
       const passed = memoryUsageMB < 60;
-      const message = passed 
+      const message = passed
         ? `Utilisation mémoire: ${memoryUsageMB.toFixed(2)}MB < 60MB`
         : `Utilisation mémoire: ${memoryUsageMB.toFixed(2)}MB >= 60MB`;
-      
+
       this.results.push({
         name: 'Lazy Loading Models',
         passed,
@@ -101,7 +104,7 @@ export class Phase4PerformanceTests {
       });
     }
   }
-  
+
   /**
    * Test 7: Worker communication overhead
    * - 100 tâches brain decision
@@ -110,7 +113,7 @@ export class Phase4PerformanceTests {
    */
   private async testWorkerCommunicationOverhead(): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
       // Créer un worker factice pour le test
       // Note: Dans un vrai environnement, nous créerions un worker réel
@@ -118,33 +121,33 @@ export class Phase4PerformanceTests {
         new Blob([`self.onmessage = function(e) { self.postMessage({id: e.data.id, result: 'ok'}); };`], 
         { type: 'application/javascript' })
       ));
-      
+
       const workerComm = new WorkerCommunication(worker);
-      
+
       // Mesurer le temps de transfert pour 100 messages
       const transferTimes: number[] = [];
-      
+
       for (let i = 0; i < 100; i++) {
         const msgStartTime = Date.now();
         try {
-          await workerComm.sendMessage('TEST', { task: `task_${i}` });
+          await workerComm.sendMessage('PING', { task: `task_${i}` });
           const msgEndTime = Date.now();
           transferTimes.push(msgEndTime - msgStartTime);
         } catch (error) {
           // Ignorer les erreurs pour ce test
         }
       }
-      
+
       worker.terminate();
-      
+
       // Calculer le temps moyen de transfert
       const avgTransferTime = transferTimes.reduce((sum, time) => sum + time, 0) / transferTimes.length;
-      
+
       const passed = avgTransferTime < 10;
-      const message = passed 
+      const message = passed
         ? `Temps de transfert moyen: ${avgTransferTime.toFixed(2)}ms < 10ms`
         : `Temps de transfert moyen: ${avgTransferTime.toFixed(2)}ms >= 10ms`;
-      
+
       this.results.push({
         name: 'Worker Communication Overhead',
         passed,
@@ -160,7 +163,7 @@ export class Phase4PerformanceTests {
       });
     }
   }
-  
+
   /**
    * Test 8: Long-running session
    * - 8h session, 50 actions
@@ -169,40 +172,44 @@ export class Phase4PerformanceTests {
    */
   private async testLongRunningSession(): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
       // Simuler une session longue de 8 heures avec 50 actions
-      const initialMemory = process.memoryUsage?.().heapUsed || 0;
-      
+      const initialMemory =
+        typeof process !== 'undefined' ? (process?.memoryUsage?.().heapUsed ?? 0) : 0;
+
       // Simuler 50 actions
       for (let i = 0; i < 50; i++) {
         // Simuler des opérations
         await new Promise(resolve => setTimeout(resolve, 10)); // 10ms entre chaque action
-        
+
         // Enregistrer des métriques de performance
         performanceTracker.record('session_action', (i % 100));
-        
+
         // Vérifier la mémoire périodiquement
         if (i % 10 === 0) {
-          const currentMemory = process.memoryUsage?.().heapUsed || 0;
+          const currentMemory =
+            typeof process !== 'undefined' ? (process?.memoryUsage?.().heapUsed ?? 0) : 0;
           const memoryDiff = Math.abs(currentMemory - initialMemory);
           const memoryDiffMB = memoryDiff / (1024 * 1024);
-          
+
           // Si la mémoire augmente trop, c'est peut-être une fuite
           if (memoryDiffMB > 10) {
             throw new Error(`Potentielle fuite mémoire: ${memoryDiffMB.toFixed(2)}MB`);
           }
         }
       }
-      
-      const finalMemory = process.memoryUsage?.().heapUsed || 0;
+
+      const finalMemory =
+        typeof process !== 'undefined' ? (process?.memoryUsage?.().heapUsed ?? 0) : 0;
       const memoryDiff = Math.abs(finalMemory - initialMemory);
       const memoryDiffMB = memoryDiff / (1024 * 1024);
-      
+
       const passed = memoryDiffMB <= 5;
-      const message = passed 
+      const message = passed
         ? `Variation mémoire: ${memoryDiffMB.toFixed(2)}MB ≤ 5MB`
         : `Variation mémoire: ${memoryDiffMB.toFixed(2)}MB > 5MB`;
+
       
       this.results.push({
         name: 'Long Running Session',
@@ -462,12 +469,4 @@ export class Phase4PerformanceTests {
       console.log('⚠️  Certains tests ont échoué. Veuillez vérifier les problèmes identifiés.');
     }
   }
-}
-
-// Exécuter les tests si ce fichier est exécuté directement
-if (typeof window === 'undefined' && require.main === module) {
-  const tests = new Phase4PerformanceTests();
-  tests.runAllTests().then(results => {
-    tests.printReport(results);
-  });
 }

@@ -1,11 +1,30 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: [
-    'https://6c99c0df-1cb0-482a-9c0b-59237eea8ddb-00-3neiw8wt7yfxb.picard.replit.dev',
-    'http://127.0.0.1:5000',
-    'http://localhost:5000',
-  ],
+  allowedDevOrigins:
+    process.env.NODE_ENV === 'development'
+      ? [
+          'https://6c99c0df-1cb0-482a-9c0b-59237eea8ddb-00-3neiw8wt7yfxb.picard.replit.dev',
+          'http://127.0.0.1:5000',
+          'http://localhost:5000',
+        ]
+      : [],
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()'
+          },
+        ],
+      },
+    ];
+  },
   typescript: {
     ignoreBuildErrors: false,
   },

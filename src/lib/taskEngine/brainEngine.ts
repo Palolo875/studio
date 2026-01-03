@@ -10,15 +10,30 @@ import { createLogger } from '@/lib/logger';
 
 const logger = createLogger('BrainEngine');
 
+function fnv1a32(input: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return `fnv1a32_${(h >>> 0).toString(16).padStart(8, '0')}`;
+}
+
 /**
  * Version actuelle du cerveau
  */
 const CURRENT_BRAIN_VERSION: BrainVersion = {
   id: "v1.0.0",
   algorithmVersion: "1.0.0",
-  rulesHash: "abc123def456",
+  rulesHash: fnv1a32(
+    JSON.stringify({
+      algorithmVersion: '1.0.0',
+      policy: { level: 'STRICT', userConsent: true, overrideCostVisible: true },
+      component: 'applyDecisionPolicy',
+    })
+  ),
   modelId: "kairuflow-phase3-v1",
-  releasedAt: new Date()
+  releasedAt: new Date('2026-01-01T00:00:00.000Z')
 };
 
 // Enregistrer la version du cerveau

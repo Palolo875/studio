@@ -1,5 +1,3 @@
-'use server';
-
 /**
  * Genkit is disabled (local-first). Stub kept to avoid import errors.
  */

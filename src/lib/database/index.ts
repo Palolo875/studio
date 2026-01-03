@@ -198,7 +198,7 @@ export interface DBSession {
 export interface DBTaskHistory {
     id?: number;
     taskId: string;
-    action: 'created' | 'started' | 'proposed' | 'completed' | 'skipped' | 'rescheduled';
+    action: 'created' | 'started' | 'note_saved' | 'proposed' | 'completed' | 'skipped' | 'rescheduled';
     timestamp: Date;
     duration?: number;
     energyLevel?: 'low' | 'medium' | 'high';

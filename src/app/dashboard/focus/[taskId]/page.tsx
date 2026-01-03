@@ -59,7 +59,7 @@ export default function FocusPage() {
 
   const handleNoteSaved = async (id: string, note: string) => {
     if (!id || id === 'task-id-placeholder') return;
-    await addTaskHistory(id, 'started', { notes: note, sessionId, energyLevel });
+    await addTaskHistory(id, 'note_saved', { notes: note, sessionId, energyLevel });
   };
 
   return (

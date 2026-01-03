@@ -6,24 +6,24 @@ KairuFlow n'est pas une simple "To-Do List". C'est un **système d'exploitation 
 
 ---
 
-## 🚀 Piliers du Système
+## Piliers du Système
 
-### 🧠 1. Intelligence Artificielle Locale & Privée (Phases 1-3)
+### 1. Intelligence Artificielle Locale & Privée (Phases 1-3)
 *   **Pipeline NLP Quad-Core** : Détection de langue, Extraction structurelle (winkNLP), Classification contextuelle (mmBERT Int8) et Fusion sémantique en moins de 1.1s.
 *   **Analyse d'Impact & Momentum** : Évaluation automatique de la valeur réelle de chaque tâche pour éviter le "faux travail".
-*   **Zéro Cloud** : Tout le traitement IA se fait dans votre navigateur. Vos données ne quittent jamais votre appareil.
+*   **Local-first** : Tout le traitement IA se fait dans votre navigateur. Vos données ne quittent jamais votre appareil. Des assets (ex: modèles) peuvent être téléchargés puis mis en cache localement.
 
-### 🛡️ 2. Résilience & Performance Critique (Phases 4-5)
+### 2. Résilience & Performance Critique (Phases 4-5)
 *   **Architecture à Haute Disponibilité** : Web Workers pour le parallélisme, Fallbacks progressifs en cas de surcharge CPU/RAM.
 *   **Intégrité Totale** : Monitoring en temps réel de la corruption de base de données (IndexedDB) avec protocoles d'auto-réparation et snapshots atomiques.
 *   **Storage Guard** : Gestion préventive des quotas de stockage pour éviter les pertes de données système.
 
-### 📈 3. Auto-Apprentissage & Adaptation (Phase 6)
+### 3. Auto-Apprentissage & Adaptation (Phase 6)
 *   **Adaptation Memory** : KairuFlow apprend de vos patterns (tâches forcées, reports, succès) pour ajuster ses algorithmes de suggestion.
 *   **Anti-Overfitting Engine** : Le système utilise des mécanismes de validation temporelle pour ne pas s'adapter à des anomalies passagères.
 *   **Rollback de Paramètres** : Chaque ajustement du système est réversible en un clic si l'adaptation ne vous convient pas.
 
-### ⚖️ 4. Gouvernance, Souveraineté & Éthique (Phase 7)
+### 4. Gouvernance, Souveraineté & Éthique (Phase 7)
 *   **Contrat d'Autorité** : Un cadre formel définit qui a le dernier mot (Utilisateur vs Système) selon le contexte.
 *   **Protection contre le Burnout** : Détection de signaux faibles (dette de sommeil, surcharge chronique) déclenchant un **Mode Protectif** non-négociable.
 *   **Résolution de Conflits** : En cas de désaccord, un moteur de consensus propose des solutions (Découpage de tâches, Arbitrage tiers, Report sans coût).

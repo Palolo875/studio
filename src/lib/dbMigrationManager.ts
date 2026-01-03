@@ -46,12 +46,15 @@ export async function importEncryptedBackup(backup: string): Promise<void> {
 /**
  * Calcule le hash d'une chaîne de caractères
  * @param data Données à hasher
- * @returns Hash MD5 (simulation)
+ * @returns Hash FNV-1a
  */
 export function hash(data: string): string {
-  // Dans une implémentation réelle, utiliseriez une bibliothèque de hash comme crypto-js
-  // Pour cette simulation, nous retournons une chaîne fixe
-  return "hash_" + data.substring(0, 10);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < data.length; i++) {
+    h ^= data.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return `fnv1a32_${(h >>> 0).toString(16).padStart(8, '0')}`;
 }
 
 /**
@@ -64,6 +67,7 @@ export async function migrateWithRollback(db: any, migration: Migration): Promis
   const snapshot = await DatabaseSnapshotManager.createSnapshot();
   const snapshotString = DatabaseSnapshotManager.exportSnapshot(snapshot);
   const hashVal = hash(snapshotString);
+  logger.info('Snapshot pre-migration created', { hash: hashVal, size: snapshotString.length });
 
   try {
     // 2. Application migration
