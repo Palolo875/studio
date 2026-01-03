@@ -84,6 +84,8 @@ async function loadClassifier(): Promise<void> {
             env.useBrowserCache = true;
             env.remoteHost = 'https://huggingface.co';
             env.remotePathTemplate = '{model}/resolve/{revision}/';
+            
+            // @ts-ignore - Forcer l'autorisation des modèles distants si la propriété existe
             if ('allowRemoteModels' in env) {
                 (env as any).allowRemoteModels = true;
             }

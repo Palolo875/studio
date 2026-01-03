@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
     process.env.NODE_ENV === 'development'
       ? [
           'https://6c99c0df-1cb0-482a-9c0b-59237eea8ddb-00-3neiw8wt7yfxb.picard.replit.dev',
+          '*.replit.dev',
           'http://127.0.0.1:5000',
           'http://localhost:5000',
         ]
@@ -14,6 +15,7 @@ const nextConfig: NextConfig = {
       {
         source: '/:path*',
         headers: [
+          { key: 'Cache-Control', value: 'no-store, max-age=0, must-revalidate' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-Frame-Options', value: 'DENY' },

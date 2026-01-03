@@ -46,6 +46,16 @@ export function DatabaseBootstrapper() {
 
       if (cancelled) return;
 
+      // On s'assure que les tâches sont bien présentes
+      try {
+        const count = await db.tasks.count();
+        if (count === 0) {
+           logger.info('Database empty, checking for sync needed');
+        }
+      } catch (e) {
+        logger.error('Error checking task count', e as Error);
+      }
+
       try {
         await performStartupIntegrityCheck(db);
       } catch (error) {
