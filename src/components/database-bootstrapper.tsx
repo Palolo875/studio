@@ -60,8 +60,7 @@ export function DatabaseBootstrapper() {
         await performStartupIntegrityCheck(db);
         // Préchauffage du moteur NLP
         import('@/lib/nlp/RealTaskClassifier').then(m => {
-          if (m.classifyTask) { // On vérifie si le module est chargé (l'export default ou nommé)
-             // On peut appeler une fonction d'init si elle existe ou simplement laisser l'import faire son effet
+          if (m && typeof m === 'object') {
              logger.info('NLP module preloaded');
           }
         }).catch((e: Error) => logger.error('NLP import failed', e));
