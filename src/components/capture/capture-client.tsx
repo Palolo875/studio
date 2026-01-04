@@ -59,7 +59,18 @@ async function analyzeCaptureLocal(text: string): Promise<AnalyzeCaptureOutput> 
     const classified = await Promise.all(
       rawTasks.map(async (task) => ({ raw: task, classification: await classifyTask(task) }))
     );
-    const dbTasks = classified.map(({ raw, classification }) => createFullTask(raw, classification));
+    const dbTasks = classified.map(({ raw, classification }) => {
+      const task = createFullTask(raw, classification);
+      return {
+        ...task,
+        nlpHints: {
+          detectedLang: (raw as any).metadata?.detectedLang || 'fr',
+          confidence: raw.confidence,
+          isUncertain: (classification as any).isUncertain || false,
+          rawText: raw.rawText
+        }
+      };
+    });
 
     const tasks = classified.map(({ raw, classification }) => {
       const title =

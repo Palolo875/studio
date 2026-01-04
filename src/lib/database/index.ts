@@ -89,7 +89,9 @@ export async function upsertTasks(tasks: DBTask[]): Promise<void> {
             }
 
             return {
+                ...prev,
                 ...t,
+                id: prev.id, // Garder l'ID original
                 createdAt: prev.createdAt,
                 activationCount: prev.activationCount,
                 nlpHints: t.nlpHints ?? prev.nlpHints,
