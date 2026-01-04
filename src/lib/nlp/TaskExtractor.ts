@@ -2,6 +2,13 @@
  * Extracteur de tâches avec winkNLP SOTA
  * Transforme le texte brut en tâches structurées avec une approche state-of-the-art
  */
+import winkNLP from 'wink-nlp';
+import model from 'wink-eng-lite-web-model';
+
+const nlp = winkNLP(model);
+const its = nlp.its;
+const as = nlp.as;
+
 import { LanguageDetector } from '@/lib/nlp/LanguageDetector';
 import { RawTaskWithContract, createTaskWithContract } from '@/lib/nlp/NLPContract';
 export type { RawTaskWithContract } from '@/lib/nlp/NLPContract';
@@ -161,7 +168,11 @@ interface EffortResult {
  * @returns Liste de tâches brutes avec scores de confiance
  */
 export function extractTasks(text: string, uiLang: 'fr' | 'en' | 'es' = 'fr'): RawTaskWithContract[] {
-  // 1. Détecter la langue (Règles Phase 2)
+  // 1. Analyse avec wink-nlp
+  const doc = nlp.readDoc(text);
+  const entities = doc.entities().out(its.detail);
+  
+  // 2. Détecter la langue (Règles Phase 2)
   const langDetection = LanguageDetector.detect(text, uiLang);
   const lang = langDetection.lang;
 
