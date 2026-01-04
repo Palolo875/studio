@@ -3,8 +3,8 @@ import * as path from 'path';
 
 const nextConfig: NextConfig = {
   experimental: {
-    serverExternalPackages: ['@huggingface/transformers'],
   },
+  serverExternalPackages: ['@huggingface/transformers'],
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
