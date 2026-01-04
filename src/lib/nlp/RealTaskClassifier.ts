@@ -80,7 +80,7 @@ async function loadClassifier(): Promise<void> {
             }
 
             // Configurer explicitement pour l'environnement Replit/Browser
-            env.allowLocalModels = true;
+            env.allowLocalModels = false; // Forcer le téléchargement depuis HF
             env.useBrowserCache = true;
             env.remoteHost = 'https://huggingface.co';
             env.remotePathTemplate = '{model}/resolve/{revision}/';
@@ -90,15 +90,21 @@ async function loadClassifier(): Promise<void> {
                 (env as any).allowRemoteModels = true;
             }
 
+            // Utilisation du modèle distilmBERT small pour de meilleures performances/taille
             classifierPipeline = await pipeline(
                 'zero-shot-classification',
                 'Xenova/distilbert-base-multilingual-cased-sentiments-student',
                 {
                     progress_callback: (progress: any) => {
+                        if (progress.status === 'done') {
+                            logger.info('Modèle NLP chargé avec succès');
+                        }
                         if (progress.status === 'progress') {
                             logger.debug(`Model loading: ${Math.round(progress.progress)}%`);
                         }
-                    },
+                    }
+                }
+            );
                 }
             );
 

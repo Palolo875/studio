@@ -58,6 +58,9 @@ export function DatabaseBootstrapper() {
 
       try {
         await performStartupIntegrityCheck(db);
+        // Préchauffage du moteur NLP
+        const { getClassifier } = await import('@/lib/nlp/RealTaskClassifier');
+        void getClassifier().catch(e => logger.error('NLP warm up failed', e));
       } catch (error) {
         logger.warn('Startup integrity check failed', { error: (error as Error).message });
       }
