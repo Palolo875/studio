@@ -25,9 +25,10 @@ export async function getMmBertExtractor() {
   try {
     extractor = await pipeline(
       'feature-extraction',
-      'Xenova/distilbert-base-multilingual-cased', // Alternative légère et compatible
+      'jhu-clsp/mmBERT-small', // Utilisation de mmBERT-small comme suggéré
       { 
         device: 'webgpu',
+        dtype: 'q8', // Optimisation pour mobile (quantisation)
         progress_callback: (p: any) => {
           console.log(`[mmBERT] Loading: ${p.status} ${p.progress?.toFixed(2) || ''}%`);
         }
@@ -38,7 +39,8 @@ export async function getMmBertExtractor() {
     console.error('[mmBERT] WebGPU failed, falling back to CPU', error);
     extractor = await pipeline(
       'feature-extraction',
-      'Xenova/distilbert-base-multilingual-cased'
+      'jhu-clsp/mmBERT-small',
+      { dtype: 'q8' }
     );
     return extractor;
   } finally {
