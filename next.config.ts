@@ -1,6 +1,18 @@
 import type {NextConfig} from 'next';
+import * as path from 'path';
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverExternalPackages: ['@huggingface/transformers'],
+  },
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      sharp$: false,
+      'onnxruntime-node$': false,
+    };
+    return config;
+  },
   allowedDevOrigins:
     process.env.NODE_ENV === 'development'
       ? [
