@@ -4,6 +4,9 @@
  */
 
 import { TaskWithContext } from './types';
+import { OptimizationScope, DEFAULT_OPTIMIZATION_SCOPE } from './phase3/OptimizationScope';
+import { SecureDecisionPolicy } from './phase3/SecureDecisionPolicy';
+import { OutcomeType, OutcomeBasedTaskResult } from './phase3/OutcomeTypeSystem';
 
 // Decision Policy with explicit consent requirement
 export type DecisionPolicyLevel = "STRICT" | "ASSISTED" | "EMERGENCY";
@@ -19,7 +22,7 @@ export interface DecisionPolicy {
 // Corrected invariant - now includes explicit consent
 export interface InvariantI {
   id: 'user_autonomy';
-  description: 'The brain makes NO final decisions without explicit user consent';
+  description: string;
   appliesTo: DecisionPolicyLevel[];
   consentRequired: boolean;
   enforces: boolean;
@@ -31,8 +34,10 @@ export type TaskOrigin = "IMPOSED" | "SELF_CHOSEN";
 // Updated TaskWithContext with origin and consent tracking
 export interface EnhancedTaskWithContext extends TaskWithContext {
   origin: TaskOrigin;
-  tangibleResult?: boolean;
-  tangibleResultConfidence?: number;
+  outcomeType?: OutcomeType;  // NEW: Replaces tangibleResult with more nuanced outcome type
+  outcomeConfidence?: number; // NEW: Confidence in outcome type classification
+  tangibleResult?: boolean;   // DEPRECATED: Kept for backward compatibility
+  tangibleResultConfidence?: number; // DEPRECATED: Kept for backward compatibility
   priorityBoosts?: Array<{
     source: string;
     value: number;
@@ -85,7 +90,11 @@ export interface TaskOutcome {
   completed: boolean;
   actualDuration: number;
   perceivedEffort: number;
-  tangibleResult: boolean;
+  outcomeType: OutcomeType;  // NEW: Replaces tangibleResult
+  outcomeDescription: string;  // NEW: Description of the outcome
+  outcomeValue: number;     // NEW: Value of the outcome (0-1)
+  outcomeConfidence: number; // NEW: Confidence in outcome classification (0-1)
+  tangibleResult?: boolean;  // DEPRECATED: Kept for backward compatibility
   declaredByUser?: boolean;
   inferredBySystem?: boolean;
   confidence?: number;
@@ -111,7 +120,8 @@ export interface BrainInput {
   };
   constraints: TemporalConstraint[];
   history: BehaviorHistory;
-  decisionPolicy: DecisionPolicy;
+  decisionPolicy: SecureDecisionPolicy; // UPDATED: Using secure decision policy
+  optimizationScope: OptimizationScope; // NEW: Defines what the brain can optimize
 }
 
 export interface DailyCognitiveBudget {
@@ -166,11 +176,16 @@ export interface BrainOutput {
   guarantees: {
     usedAIdecision: false;
     inferredUserIntent: false;
-    optimizedForPerformance: false;
+    optimizedForPerformance: false; // NEW: Explicitly states we don't optimize for performance
     overrodeUserChoice: false;
     forcedEngagement: false;
     // NEW: Explicitly states that decisions require consent
     decisionsRequireExplicitConsent: true;
+    // NEW: Explicitly states optimization scope
+    optimizationScope: {
+      forbidden: ["performance", "importance", "valeur"],
+      allowed: ["faisabilité", "charge", "continuité"]
+    };
   };
 }
 
@@ -268,14 +283,24 @@ export function calculateMaxTasks(input: BrainInput): number {
 export function applyPriorityBoosts(task: EnhancedTaskWithContext, userPreferences: UserPreferences): EnhancedTaskWithContext {
   const boosts = [];
   
-  // Boost for tangible results if user prefers them
-  if (userPreferences.favorTangibleResults && task.tangibleResult) {
-    boosts.push({
-      source: "user preference: favor tangible results",
-      value: 0.2,
-      explanation: "Boosted because task produces tangible result (user preference)",
-      visible: true
-    });
+  // Boost for outcome types if user prefers certain outcomes
+  if (userPreferences.favorTangibleResults && task.outcomeType) {
+    // Give higher boost to DELIVERABLE outcomes
+    if (task.outcomeType === 'DELIVERABLE') {
+      boosts.push({
+        source: "user preference: favor deliverable outcomes",
+        value: 0.3,
+        explanation: "Boosted because task produces deliverable result (user preference)",
+        visible: true
+      });
+    } else if (task.outcomeType === 'PROGRESS') {
+      boosts.push({
+        source: "user preference: favor progress outcomes",
+        value: 0.2,
+        explanation: "Boosted because task produces progress result (user preference)",
+        visible: true
+      });
+    }
   }
   
   // Boost for already started tasks
@@ -309,14 +334,18 @@ export function applyPriorityBoosts(task: EnhancedTaskWithContext, userPreferenc
 
 // User preferences that affect task scoring
 export interface UserPreferences {
-  favorTangibleResults: boolean;
+  favorTangibleResults: boolean;  // DEPRECATED: Will be replaced by outcome preferences
   favorStartedTasks: boolean;
   favorLowEffort: boolean;
+  favoredOutcomeTypes?: OutcomeType[];  // NEW: Preferred outcome types
+  prioritizeFinitude: boolean;        // NEW: Whether to prioritize task completion/finitude
 }
 
 // Default preferences
 export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   favorTangibleResults: false,
   favorStartedTasks: false,
-  favorLowEffort: false
+  favorLowEffort: false,
+  favoredOutcomeTypes: ['DELIVERABLE', 'PROGRESS'],
+  prioritizeFinitude: true
 };
