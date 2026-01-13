@@ -121,7 +121,9 @@ describe('Brain Engine - Phase 3', () => {
     history: [],
     decisionPolicy: {
       level: 'STRICT',
-      userConsent: true,
+      consentRequired: false,
+      consentGiven: true,
+      canRevoke: true,
       overrideCostVisible: true,
     },
   };
@@ -153,10 +155,10 @@ describe('Brain Engine - Phase 3', () => {
     });
 
     it('devrait fonctionner avec différents niveaux d\'énergie', () => {
-      const inputs = [
-        { ...mockInput, userState: { ...mockInput.userState, energy: "high" } },
-        { ...mockInput, userState: { ...mockInput.userState, energy: "medium" } },
-        { ...mockInput, userState: { ...mockInput.userState, energy: "low" } }
+      const inputs: BrainInput[] = [
+        { ...mockInput, userState: { ...mockInput.userState, energy: 'high' } },
+        { ...mockInput, userState: { ...mockInput.userState, energy: 'medium' } },
+        { ...mockInput, userState: { ...mockInput.userState, energy: 'low' } }
       ];
       
       inputs.forEach(input => {

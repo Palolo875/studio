@@ -29,7 +29,17 @@ export interface DailyCognitiveBudget {
   maxLoad: number;
   usedLoad: number;
   remaining: number;
-  lockThreshold: number; // Seuil à partir duquel le système bloque
+  lockThreshold: number;
+
+  recommended?: number;
+  overrun?: number;
+  debt?: {
+    type: 'cognitive';
+    amount: number;
+    impact: string;
+    acknowledged: boolean;
+    timestamp: Date;
+  };
 }
 
 /**
@@ -51,6 +61,7 @@ export interface BrainInput {
     energy: "low" | "medium" | "high";
     stability: "volatile" | "stable";
     linguisticFatigue: boolean;
+    linguisticFatigueSignals?: string[];
   };
 
   temporal: {
@@ -67,8 +78,17 @@ export interface BrainInput {
   constraints: TemporalConstraint[];
   history: BehaviorHistory[];
 
-  // Nouveau Phase 3.2
   decisionPolicy: DecisionPolicy;
+
+  userPreferences?: UserPreferences;
+}
+
+/**
+ * Préférences utilisateur (opt-in) qui autorisent certains boosts visibles
+ */
+export interface UserPreferences {
+  favorTangibleResults: boolean;
+  favorStartedTasks: boolean;
 }
 
 /**
@@ -110,7 +130,10 @@ export interface Warning {
  */
 export interface DecisionPolicy {
   level: "STRICT" | "ASSISTED" | "EMERGENCY";
-  userConsent: boolean; // Renommé consentRequired -> userConsent pour Phase 3.2
+  consentRequired: boolean;
+  consentGiven: boolean;
+  consentTimestamp?: Date;
+  canRevoke: true;
   overrideCostVisible: true;
 }
 
@@ -123,7 +146,7 @@ export interface OverrideEvent {
   estimatedCognitiveDebt: number;
   acknowledged: boolean;
   timestamp: Date;
-  reversible: boolean; // Ajouté pour Phase 3.2
+  reversible: boolean; 
   undoWindowExpired?: boolean;
 }
 
@@ -156,17 +179,19 @@ export interface BrainOutput {
     perTask: Map<string, string>; // taskId -> explanation
   };
 
-  // INVARIANTS DE PURETÉ - Garanties absolues (Loi 1 et 3)
   guarantees: {
     usedAIdecision: false;
     inferredUserIntent: false;
     optimizedForPerformance: false;
     overrodeUserChoice: false;
     forcedEngagement: false;
-    coachIsSubordinate: boolean; // Ajouté pour Phase 3.2
+    coachIsSubordinate: boolean; 
+    decisionsRequireExplicitConsent: true;
+    priorityModificationsVisible: true;
+    budgetProtectedWithExplicitDebt: true;
+    emergencyModeRequiresConsent: true;
   };
 
-  // Métadonnées de traçabilité
   metadata: {
     decisionId: string;
     timestamp: Date;

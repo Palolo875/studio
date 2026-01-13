@@ -54,7 +54,9 @@ describe('Decision Policy Manager - Phase 3.2', () => {
     history: [],
     decisionPolicy: {
       level: 'STRICT',
-      userConsent: true,
+      consentRequired: false,
+      consentGiven: true,
+      canRevoke: true,
       overrideCostVisible: true,
     },
   };
@@ -69,7 +71,7 @@ describe('Decision Policy Manager - Phase 3.2', () => {
       
       // Vérifier la politique
       expect(result.metadata.policy.level).toBe("STRICT");
-      expect(result.metadata.policy.userConsent).toBe(true);
+      expect(result.metadata.policy.consentGiven).toBe(true);
       
       // Vérifier les garanties
       expect(result.guarantees.usedAIdecision).toBe(false);
@@ -87,7 +89,7 @@ describe('Decision Policy Manager - Phase 3.2', () => {
       
       // Vérifier la politique
       expect(result.metadata.policy.level).toBe("ASSISTED");
-      expect(result.metadata.policy.userConsent).toBe(true);
+      expect(result.metadata.policy.consentGiven).toBe(true);
       
       // Vérifier que des tâches sont sélectionnées
       expect(result.session.allowedTasks.length).toBeGreaterThanOrEqual(0);
@@ -104,7 +106,7 @@ describe('Decision Policy Manager - Phase 3.2', () => {
       
       // Vérifier la politique
       expect(result.metadata.policy.level).toBe("EMERGENCY");
-      expect(result.metadata.policy.userConsent).toBe(true);
+      expect(result.metadata.policy.consentGiven).toBe(true);
       
       // Vérifier les avertissements
       expect(result.warnings.length).toBeGreaterThan(0);

@@ -28,7 +28,13 @@ const CURRENT_BRAIN_VERSION: BrainVersion = {
   rulesHash: fnv1a32(
     JSON.stringify({
       algorithmVersion: '1.0.0',
-      policy: { level: 'STRICT', userConsent: true, overrideCostVisible: true },
+      policy: {
+        level: 'STRICT',
+        consentRequired: false,
+        consentGiven: true,
+        canRevoke: true,
+        overrideCostVisible: true
+      },
       component: 'applyDecisionPolicy',
     })
   ),
@@ -44,7 +50,9 @@ registerBrainVersion(CURRENT_BRAIN_VERSION).catch(() => null);
  */
 const DEFAULT_POLICY: DecisionPolicy = {
   level: "STRICT",
-  userConsent: true,
+  consentRequired: false,
+  consentGiven: true,
+  canRevoke: true,
   overrideCostVisible: true
 };
 
@@ -65,7 +73,11 @@ export function decideSession(input: BrainInput): BrainOutput {
     optimizedForPerformance: false,
     overrodeUserChoice: false,
     forcedEngagement: false,
-    coachIsSubordinate: true
+    coachIsSubordinate: true,
+    decisionsRequireExplicitConsent: true,
+    priorityModificationsVisible: true,
+    budgetProtectedWithExplicitDebt: true,
+    emergencyModeRequiresConsent: true
   };
 
   const executionTime = Date.now() - startTime;

@@ -63,7 +63,9 @@ describe('Brain Contracts - Phase 3', () => {
         history: [],
         decisionPolicy: {
           level: 'STRICT',
-          userConsent: true,
+          consentRequired: false,
+          consentGiven: true,
+          canRevoke: true,
           overrideCostVisible: true,
         },
       };
@@ -102,7 +104,12 @@ describe('Brain Contracts - Phase 3', () => {
           inferredUserIntent: false,
           optimizedForPerformance: false,
           overrodeUserChoice: false,
-          forcedEngagement: false
+          forcedEngagement: false,
+          coachIsSubordinate: true,
+          decisionsRequireExplicitConsent: true,
+          priorityModificationsVisible: true,
+          budgetProtectedWithExplicitDebt: true,
+          emergencyModeRequiresConsent: true
         },
         metadata: {
           decisionId: "test-decision-123",
@@ -110,7 +117,9 @@ describe('Brain Contracts - Phase 3', () => {
           brainVersion: "1.0.0",
           policy: {
             level: "STRICT",
-            userConsent: true,
+            consentRequired: false,
+            consentGiven: true,
+            canRevoke: true,
             overrideCostVisible: true
           },
           overrideEvents: []
@@ -129,17 +138,25 @@ describe('Brain Contracts - Phase 3', () => {
       const policies: DecisionPolicy[] = [
         {
           level: "STRICT",
-          userConsent: true,
+          consentRequired: false,
+          consentGiven: true,
+          canRevoke: true,
           overrideCostVisible: true
         },
         {
           level: "ASSISTED",
-          userConsent: true,
+          consentRequired: true,
+          consentGiven: true,
+          consentTimestamp: new Date(),
+          canRevoke: true,
           overrideCostVisible: true
         },
         {
           level: "EMERGENCY",
-          userConsent: true,
+          consentRequired: true,
+          consentGiven: true,
+          consentTimestamp: new Date(),
+          canRevoke: true,
           overrideCostVisible: true
         }
       ];
@@ -147,7 +164,7 @@ describe('Brain Contracts - Phase 3', () => {
       policies.forEach(policy => {
         expect(policy).toBeDefined();
         expect(['STRICT', 'ASSISTED', 'EMERGENCY']).toContain(policy.level);
-        expect(policy.userConsent).toBe(true);
+        expect(policy.consentGiven).toBe(true);
       });
     });
   });

@@ -3,6 +3,11 @@
  */
 import type { BrainInput, BrainOutput, DecisionPolicy, RejectionReason } from './brainContracts';
 
+function policyHasValidConsent(policy: DecisionPolicy): boolean {
+  if (!policy.consentRequired) return true;
+  return policy.consentGiven === true;
+}
+
 export function calculateMaxTasks(input: BrainInput, policyLevel: string): number {
   let base = 3;
   let modifiers = 0;
@@ -73,13 +78,23 @@ export function applyStrictPolicy(input: BrainInput): BrainOutput {
       optimizedForPerformance: false,
       overrodeUserChoice: false,
       forcedEngagement: false,
-      coachIsSubordinate: true
+      coachIsSubordinate: true,
+      decisionsRequireExplicitConsent: true,
+      priorityModificationsVisible: true,
+      budgetProtectedWithExplicitDebt: true,
+      emergencyModeRequiresConsent: true
     },
     metadata: {
       decisionId: generateDecisionId(),
       timestamp: new Date(),
       brainVersion: "1.1.0",
-      policy: { level: "STRICT", userConsent: true, overrideCostVisible: true },
+      policy: {
+        level: "STRICT",
+        consentRequired: false,
+        consentGiven: true,
+        canRevoke: true,
+        overrideCostVisible: true
+      },
       overrideEvents: []
     }
   };
@@ -92,10 +107,17 @@ export function applyStrictPolicy(input: BrainInput): BrainOutput {
 export function applyAssistedPolicy(input: BrainInput): BrainOutput {
   const maxTasks = calculateMaxTasks(input, 'ASSISTED');
 
-  // Tri intelligent : Tangibles d'abord, puis par urgence
+  // Correction Contradiction #2: boost tangible uniquement si opt-in (préférence explicite)
+  const preferTangible = input.userPreferences?.favorTangibleResults === true;
+
+  // Tri intelligent (explicable):
+  // - si opt-in: résultats tangibles d'abord
+  // - sinon: ne pas utiliser hasTangibleResult (évite modification silencieuse des priorités)
   const sortedTasks = [...input.tasks].sort((a, b) => {
-    if (a.hasTangibleResult && !b.hasTangibleResult) return -1;
-    if (!a.hasTangibleResult && b.hasTangibleResult) return 1;
+    if (preferTangible) {
+      if (a.hasTangibleResult && !b.hasTangibleResult) return -1;
+      if (!a.hasTangibleResult && b.hasTangibleResult) return 1;
+    }
     // Puis urgence
     const urgencyScore = { urgent: 4, high: 3, medium: 2, low: 1 };
     return urgencyScore[b.urgency] - urgencyScore[a.urgency];
@@ -136,13 +158,24 @@ export function applyAssistedPolicy(input: BrainInput): BrainOutput {
       optimizedForPerformance: false,
       overrodeUserChoice: false,
       forcedEngagement: false,
-      coachIsSubordinate: true
+      coachIsSubordinate: true,
+      decisionsRequireExplicitConsent: true,
+      priorityModificationsVisible: true,
+      budgetProtectedWithExplicitDebt: true,
+      emergencyModeRequiresConsent: true
     },
     metadata: {
       decisionId: generateDecisionId(),
       timestamp: new Date(),
       brainVersion: "1.1.0",
-      policy: { level: "ASSISTED", userConsent: true, overrideCostVisible: true },
+      policy: {
+        level: "ASSISTED",
+        consentRequired: true,
+        consentGiven: true,
+        consentTimestamp: new Date(),
+        canRevoke: true,
+        overrideCostVisible: true
+      },
       overrideEvents: []
     }
   };
@@ -196,13 +229,24 @@ export function applyEmergencyPolicy(input: BrainInput): BrainOutput {
       optimizedForPerformance: false,
       overrodeUserChoice: false,
       forcedEngagement: false,
-      coachIsSubordinate: true
+      coachIsSubordinate: true,
+      decisionsRequireExplicitConsent: true,
+      priorityModificationsVisible: true,
+      budgetProtectedWithExplicitDebt: true,
+      emergencyModeRequiresConsent: true
     },
     metadata: {
       decisionId: generateDecisionId(),
       timestamp: new Date(),
       brainVersion: "1.1.0",
-      policy: { level: "EMERGENCY", userConsent: true, overrideCostVisible: true },
+      policy: {
+        level: "EMERGENCY",
+        consentRequired: true,
+        consentGiven: true,
+        consentTimestamp: new Date(),
+        canRevoke: true,
+        overrideCostVisible: true
+      },
       overrideEvents: []
     }
   };
@@ -219,6 +263,20 @@ function generateDecisionId(): string {
  * Applique la politique de décision appropriée
  */
 export function applyDecisionPolicy(input: BrainInput, policy: DecisionPolicy): BrainOutput {
+  // Correction Contradiction #1: pas de politique non-STRICT sans consentement explicite
+  if (policy.level !== 'STRICT' && !policyHasValidConsent(policy)) {
+    return applyStrictPolicy({
+      ...input,
+      decisionPolicy: {
+        level: 'STRICT',
+        consentRequired: false,
+        consentGiven: true,
+        canRevoke: true,
+        overrideCostVisible: true
+      }
+    });
+  }
+
   switch (policy.level) {
     case "STRICT":
       return applyStrictPolicy(input);
